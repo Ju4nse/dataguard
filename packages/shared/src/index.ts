@@ -1,4 +1,4 @@
-/** Tipos de dato sensible que reconoce SecureData AI. */
+/** Tipos de dato sensible que reconoce DataGuard. */
 export const DETECTION_TYPES = [
   'EMAIL',
   'TELEFONO',

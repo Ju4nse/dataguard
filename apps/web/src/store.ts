@@ -78,6 +78,8 @@ interface State {
   backToReview: () => void;
   /** Volver al último resultado aplicado. */
   backToResult: () => void;
+  /** Navegación con el botón atrás del navegador: va a un paso si tiene sentido con lo que hay cargado. */
+  goToStep: (step: Step) => void;
   reset: () => void;
 }
 
@@ -312,6 +314,13 @@ export const useStore = create<State>((set, get) => ({
 
   // El resultado mostrado es el último aplicado; lo cambiado en la revisión queda como borrador.
   backToResult: () => set({ step: 'resultado' }),
+
+  goToStep: (step) => {
+    const { result, docResult } = get();
+    if (step === 'subir') get().reset();
+    else if (result || docResult) set({ step });
+    else get().reset();
+  },
 
   reset: () => set({ ...empty }),
 }));

@@ -72,13 +72,18 @@ export function ResultStep() {
       />
 
       <Card className="overflow-hidden">
-        <div className="flex items-baseline justify-between border-b border-slate-200 px-5 py-3">
-          <h2 className="text-sm font-medium text-slate-900">Así queda tu archivo</h2>
-          <span className="text-xs text-slate-500">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-slate-200 px-4 py-3 sm:px-5">
+          <h2 className="text-sm font-semibold text-slate-900">Así queda tu archivo</h2>
+          <span className="text-xs text-slate-600">
             {Math.min(PREVIEW_ROWS, table.rows.length)} de {table.rows.length.toLocaleString('es-AR')} filas · {table.headers.length} columnas
           </span>
         </div>
-        <div className="overflow-x-auto">
+        {/* Tabla de datos: en pantallas chicas se desliza de costado (con aviso); el resto de la página no se mueve. */}
+        <p className="flex items-center gap-1.5 border-b border-slate-100 px-4 py-2 text-xs text-slate-600 md:hidden">
+          Deslizá la tabla para ver todas las columnas
+          <Icon name="arrowRight" className="h-3.5 w-3.5" />
+        </p>
+        <div className="overflow-x-auto overscroll-x-contain">
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs text-slate-500">
               <tr>

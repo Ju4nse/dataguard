@@ -1,17 +1,12 @@
 import { DETECTION_LABELS, type DetectionType } from '@securedata/shared';
 import type { ReactNode } from 'react';
 import { useStore } from '../store';
-import { Button, Card, Icon } from './ui';
+import { BackLink, Button, Card, Icon, useCountUp } from './ui';
 
 /** Volver al inicio para procesar otro archivo (arriba de cada pantalla del flujo). */
 export function BackToStart() {
   const reset = useStore((s) => s.reset);
-  return (
-    <button type="button" onClick={reset} className="inline-flex items-center gap-1.5 rounded-md text-sm font-medium text-slate-600 hover:text-slate-900">
-      <Icon name="arrowLeft" className="h-4 w-4" />
-      Nuevo archivo
-    </button>
-  );
+  return <BackLink onClick={reset}>Nuevo archivo</BackLink>;
 }
 
 /**
@@ -39,6 +34,7 @@ export function ResultSummary({
   const { fileName, session, backToReview } = useStore();
   const policyApplied = session && Object.keys(session.politica).length > 0;
   const isProtected = protectedCount > 0;
+  const shownCount = useCountUp(protectedCount);
 
   return (
     <div className="space-y-4">
@@ -47,7 +43,7 @@ export function ResultSummary({
         <div className="space-y-5 p-5 sm:p-7">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
             <div
-              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${isProtected ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}
+              className={`flex h-12 w-12 shrink-0 animate-pop items-center justify-center rounded-xl ${isProtected ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}
             >
               <Icon name={isProtected ? 'shield' : 'check'} className="h-6 w-6" />
             </div>
@@ -64,7 +60,17 @@ export function ResultSummary({
                 </span>
               </div>
               <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-                {isProtected ? `Protegimos ${protectedCount.toLocaleString('es-AR')} datos sensibles` : 'No encontramos datos sensibles'}
+                {isProtected ? (
+                  <>
+                    {/* El número cuenta hasta el total; el lector de pantalla lee directamente el valor final. */}
+                    <span className="sr-only">Protegimos {protectedCount.toLocaleString('es-AR')} datos sensibles</span>
+                    <span aria-hidden="true">
+                      Protegimos <span className="tabular-nums">{shownCount.toLocaleString('es-AR')}</span> datos sensibles
+                    </span>
+                  </>
+                ) : (
+                  'No encontramos datos sensibles'
+                )}
               </h1>
               <p className="text-slate-700">
                 {detail} Ya podés usarlo en cualquier herramienta de IA: <strong className="font-semibold">no hace falta que revises nada</strong>.

@@ -6,7 +6,7 @@
 
 ---
 
-**Project:** SecureData AI
+**Project:** DataGuard (marca; antes "SecureData AI")
 **Generated:** 2026-10-02 01:55:02
 **Category:** B2B Service
 **Design Dials:** Variance 3/10 (Centered / Minimal) | Density 5/10 (Standard)
@@ -21,6 +21,8 @@
 - **Tarjetas estáticas sin efecto hover** (ni elevación ni cursor pointer): el hover se reserva para lo que es clickeable.
 - **Gráficos**: paleta validada para daltonismo de la skill dataviz (ver `apps/panel/src/index.css`).
 - **Íconos**: un solo set de línea (trazo 1.8) definido en `components/ui.tsx`; sin emojis.
+- **Botones secundarios**: borde azul de la marca (`ring-brand-600/45`, más intenso al hover). Todos los botones responden al toque con `active:scale-[0.97]`.
+- **Movimiento** (tokens en `theme.css`): entradas con desaceleración (`animate-fade-up`, escalonadas 80ms), fondos oscuros con brillos que derivan lento (`<DarkGlow>`, solo `transform`), aparición al scroll con CSS puro (`<Reveal>`, scroll-driven animations; si el navegador no las soporta, el contenido se ve sin animación). Máximo 1-2 elementos animados por vista y **todo se apaga con `prefers-reduced-motion`**.
 
 ## Global Rules
 

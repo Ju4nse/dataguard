@@ -71,7 +71,7 @@ export function DocumentResultStep() {
             {text.length.toLocaleString('es-AR')} caracteres
           </span>
         </div>
-        <pre className="max-h-[28rem] overflow-auto whitespace-pre-wrap break-words px-5 py-4 font-sans text-sm leading-relaxed text-slate-700">
+        <pre className="whitespace-pre-wrap break-words px-4 py-4 font-sans text-sm leading-relaxed text-slate-700 sm:px-5 lg:max-h-[28rem] lg:overflow-auto">
           {text.slice(0, PREVIEW_CHARS)}
           {text.length > PREVIEW_CHARS && '\n…'}
         </pre>

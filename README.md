@@ -1,4 +1,6 @@
-# SecureData AI
+# DataGuard
+
+> Nombre interno del código: `securedata` (paquetes `@securedata/*`, base `securedata`). La marca visible es **DataGuard**.
 
 Filtro de seguridad previo al uso de IA: detecta datos sensibles (DNI, CUIT/CUIL, CBU/CVU, emails, teléfonos, tarjetas, nombres, empresas, direcciones…) y permite eliminarlos, anonimizarlos o seudonimizarlos **sin que el archivo salga del navegador**.
 

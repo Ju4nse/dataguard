@@ -96,7 +96,7 @@ function LoginDialog({ onClose }: { onClose: () => void }) {
       <form
         onSubmit={submit}
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-sm space-y-5 rounded-2xl bg-white p-6 shadow-2xl"
+        className="relative w-full max-w-sm animate-dialog space-y-5 rounded-2xl bg-white p-6 shadow-2xl ring-1 ring-brand-600/20"
         role="dialog"
         aria-modal="true"
         aria-labelledby="login-title"

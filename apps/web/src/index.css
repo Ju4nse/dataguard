@@ -10,3 +10,28 @@ html {
 body {
   @apply bg-slate-50 text-slate-900;
 }
+
+/*
+ * Aparición al hacer scroll (componente <Reveal>): animación atada a la posición del elemento en pantalla.
+ * Solo si el navegador la soporta y el usuario no pidió menos movimiento; si no, el contenido se ve sin animación.
+ */
+@keyframes reveal-up {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal {
+      animation: reveal-up linear both;
+      animation-timeline: view();
+      animation-range: entry var(--reveal-start, 0%) entry calc(var(--reveal-start, 0%) + 60%);
+    }
+  }
+}

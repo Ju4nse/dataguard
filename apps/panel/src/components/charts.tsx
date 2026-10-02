@@ -16,7 +16,7 @@ export function ChartCard({ title, subtitle, table, children }: { title: string;
           <h2 className="text-sm font-semibold text-[var(--ink-primary)]">{title}</h2>
           {subtitle && <p className="text-xs text-[var(--ink-secondary)]">{subtitle}</p>}
         </div>
-        <button type="button" onClick={() => setAsTable((v) => !v)} className="shrink-0 rounded px-2 py-1 text-xs text-[var(--ink-secondary)] hover:bg-slate-100">
+        <button type="button" onClick={() => setAsTable((v) => !v)} className="-mr-2 -mt-2 inline-flex min-h-11 shrink-0 items-center rounded-md px-3 text-xs font-medium text-[var(--ink-secondary)] hover:bg-slate-100 hover:text-slate-900 sm:min-h-8">
           {asTable ? 'Ver gráfico' : 'Ver tabla'}
         </button>
       </div>
@@ -69,8 +69,8 @@ export function MonthlyColumns({ data }: { data: { label: string; value: number 
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }} barCategoryGap="35%">
           <CartesianGrid vertical={false} stroke="var(--grid)" />
-          <XAxis dataKey="label" tick={AXIS_TICK} tickLine={false} axisLine={{ stroke: 'var(--axis)' }} />
-          <YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} width={48} tickFormatter={fmt} />
+          <XAxis dataKey="label" tick={AXIS_TICK} tickLine={false} axisLine={{ stroke: 'var(--axis)' }} interval="preserveStartEnd" minTickGap={8} />
+          <YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} width={44} tickFormatter={fmt} />
           <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(42,120,214,0.06)' }} />
           <Bar dataKey="value" fill="var(--series-1)" radius={[4, 4, 0, 0]} maxBarSize={48} />
         </BarChart>
@@ -81,13 +81,16 @@ export function MonthlyColumns({ data }: { data: { label: string; value: number 
 
 /** Ranking horizontal (tipos de dato, áreas): nombres largos legibles, valor al final de cada barra. */
 export function RankingBars({ data }: { data: { label: string; value: number }[] }) {
-  const height = Math.max(120, data.length * 30 + 16);
+  // Filas de 36px: barras finas pero con área táctil cómoda para el tooltip.
+  const height = Math.max(120, data.length * 36 + 16);
+  // El eje de nombres ocupa lo que necesita la etiqueta más larga (en celular cada píxel cuenta).
+  const labelWidth = Math.min(170, Math.max(56, ...data.map((d) => d.label.length * 7 + 12)));
   return (
     <div style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} layout="vertical" margin={{ top: 0, right: 56, bottom: 0, left: 0 }} barCategoryGap={6}>
+        <BarChart data={data} layout="vertical" margin={{ top: 0, right: 48, bottom: 0, left: 0 }} barCategoryGap={8}>
           <XAxis type="number" hide />
-          <YAxis type="category" dataKey="label" tick={{ ...AXIS_TICK, fill: 'var(--ink-secondary)' }} tickLine={false} axisLine={{ stroke: 'var(--axis)' }} width={170} />
+          <YAxis type="category" dataKey="label" tick={{ ...AXIS_TICK, fill: 'var(--ink-secondary)' }} tickLine={false} axisLine={{ stroke: 'var(--axis)' }} width={labelWidth} />
           <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(42,120,214,0.06)' }} />
           <Bar dataKey="value" fill="var(--series-1)" radius={[0, 4, 4, 0]} maxBarSize={18}>
             <LabelList dataKey="value" position="right" formatter={(v) => fmt(Number(v))} style={{ fill: 'var(--ink-secondary)', fontSize: 12 }} />

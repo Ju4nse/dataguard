@@ -1,23 +1,25 @@
-import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode } from 'react';
+import { useEffect, useState, type AnchorHTMLAttributes, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from 'react';
 import type { Confidence } from '@securedata/shared';
 
 type Variant = 'primary' | 'secondary' | 'ghost';
 type Size = 'md' | 'sm';
 
 const VARIANTS: Record<Variant, string> = {
-  primary: 'bg-brand-700 text-white shadow-sm hover:bg-brand-800 disabled:bg-slate-300 disabled:shadow-none',
-  secondary: 'bg-white text-slate-900 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 hover:ring-slate-400',
+  primary: 'bg-brand-700 text-white shadow-sm hover:bg-brand-800 hover:shadow-md hover:shadow-brand-700/25 disabled:bg-slate-300 disabled:shadow-none',
+  // Borde azul de la marca: se intensifica al pasar el mouse.
+  secondary: 'bg-white text-brand-800 ring-1 ring-inset ring-brand-600/45 hover:bg-brand-50 hover:ring-2 hover:ring-brand-600',
   ghost: 'text-slate-700 hover:bg-slate-100 hover:text-slate-900',
 };
 
 // Altura mínima de 44px (40px en pantallas grandes): objetivo táctil cómodo.
 const SIZES: Record<Size, string> = {
   md: 'min-h-11 px-4 text-sm sm:min-h-10',
-  sm: 'min-h-9 px-3 text-sm',
+  sm: 'min-h-11 px-3 text-sm sm:min-h-9',
 };
 
+// active:scale = respuesta al toque (sin mover el diseño de alrededor).
 const buttonClass = (variant: Variant, size: Size, className: string) =>
-  `inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-colors duration-200 disabled:cursor-not-allowed ${SIZES[size]} ${VARIANTS[variant]} ${className}`;
+  `inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-[color,background-color,box-shadow,transform] duration-200 active:scale-[0.97] disabled:cursor-not-allowed disabled:active:scale-100 ${SIZES[size]} ${VARIANTS[variant]} ${className}`;
 
 export function Button({
   variant = 'primary',
@@ -38,11 +40,78 @@ export function ButtonLink({
   return <a className={buttonClass(variant, size, className)} {...props} />;
 }
 
+// 16px en celular (iOS no hace zoom al enfocar) y 44px de alto; más compactos desde 640px.
 export const selectClass =
-  'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600/20';
+  'min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-base text-slate-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600/20 sm:min-h-10 sm:text-sm';
 
 export const inputClass =
-  'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-500 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600/20';
+  'min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-base text-slate-900 placeholder:text-slate-500 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600/20 sm:min-h-10 sm:text-sm';
+
+/** El usuario pidió menos movimiento en su sistema (accesibilidad). */
+export function prefersReducedMotion(): boolean {
+  return typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+}
+
+/**
+ * Brillos azules que derivan muy lento detrás de las secciones oscuras.
+ * Decorativo (aria-hidden); con movimiento reducido quedan quietos.
+ */
+export function DarkGlow({ className = '' }: { className?: string }) {
+  return (
+    <div aria-hidden="true" className={`pointer-events-none absolute inset-0 overflow-hidden ${className}`}>
+      <div className="absolute -right-[10%] -top-[30%] h-[36rem] w-[36rem] animate-drift-a rounded-full bg-brand-600/30 blur-3xl will-change-transform" />
+      <div className="absolute -bottom-[35%] -left-[10%] h-[30rem] w-[30rem] animate-drift-b rounded-full bg-sky-400/15 blur-3xl will-change-transform" />
+      <div className="absolute left-[35%] top-[20%] h-[22rem] w-[22rem] animate-drift-c rounded-full bg-indigo-500/15 blur-3xl will-change-transform" />
+      {/* Grilla muy tenue: textura "técnica" sin distraer. */}
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.035)_1px,transparent_1px)] bg-[size:48px_48px] [mask-image:radial-gradient(ellipse_at_center,black,transparent_75%)]" />
+    </div>
+  );
+}
+
+/**
+ * Aparece con un deslizamiento suave al entrar en pantalla, con animación atada al scroll (CSS puro, ver index.css).
+ * Sin JavaScript: si el navegador no soporta scroll-driven animations o hay movimiento reducido,
+ * el contenido se ve directamente. Nunca puede quedar oculto.
+ * `delay` (en ms) escalona elementos de una misma grilla: se traduce a un pequeño corrimiento del inicio.
+ */
+export function Reveal({ children, delay = 0, className = '' }: { children: ReactNode; delay?: number; className?: string }) {
+  const style = { '--reveal-start': `${Math.round(delay / 10)}%` } as CSSProperties;
+  return (
+    <div style={style} className={`reveal ${className}`}>
+      {children}
+    </div>
+  );
+}
+
+/** Cuenta de 0 al valor (para cifras destacadas). Con movimiento reducido muestra el valor final directo. */
+export function useCountUp(target: number, durationMs = 900): number {
+  const [value, setValue] = useState(() => (prefersReducedMotion() ? target : 0));
+  useEffect(() => {
+    if (prefersReducedMotion() || target === 0) {
+      setValue(target);
+      return;
+    }
+    let frame = 0;
+    const start = performance.now();
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / durationMs);
+      setValue(Math.round(target * (1 - Math.pow(1 - t, 3))));
+      if (t < 1) frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [target, durationMs]);
+  return value;
+}
+
+export function Spinner({ className = 'h-5 w-5' }: { className?: string }) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className={`animate-spin ${className}`} fill="none">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity="0.25" strokeWidth="3" />
+      <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 /** Contenedor de ancho máximo con márgenes laterales consistentes. */
 export function Container({ children, className = '' }: { children: ReactNode; className?: string }) {
@@ -52,6 +121,20 @@ export function Container({ children, className = '' }: { children: ReactNode; c
 /** Tarjeta estática: sin hover (lo clickeable se distingue por sí mismo). */
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
   return <div className={`rounded-xl border border-slate-200 bg-white shadow-sm ${className}`}>{children}</div>;
+}
+
+/** Link de "volver" con área táctil de 44px aunque se vea como texto. */
+export function BackLink({ onClick, children }: { onClick: () => void; children: ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="-ml-2 inline-flex min-h-11 items-center gap-1.5 rounded-md px-2 text-sm font-medium text-slate-600 hover:text-slate-900 sm:min-h-9"
+    >
+      <Icon name="arrowLeft" className="h-4 w-4" />
+      {children}
+    </button>
+  );
 }
 
 /** Título de sección con antetítulo. `tone="dark"` para secciones sobre fondo navy. */
@@ -133,9 +216,9 @@ export function Icon({ name, className = 'h-5 w-5' }: { name: IconName; classNam
 export function Stat({ label, value, tone = 'neutral' }: { label: string; value: number | string; tone?: 'neutral' | 'ok' | 'risk' }) {
   const color = tone === 'ok' ? 'text-emerald-700' : tone === 'risk' ? 'text-red-700' : 'text-slate-900';
   return (
-    <Card className="px-4 py-3">
-      <div className={`text-2xl font-bold tabular-nums ${color}`}>{value}</div>
-      <div className="text-xs text-slate-600">{label}</div>
+    <Card className="px-3 py-3 sm:px-4">
+      <div className={`text-xl font-bold tabular-nums sm:text-2xl ${color}`}>{value}</div>
+      <div className="text-xs leading-snug text-slate-600">{label}</div>
     </Card>
   );
 }

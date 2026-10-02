@@ -1,5 +1,5 @@
 -- =====================================================================
--- SecureData AI — esquema
+-- DataGuard — esquema
 -- Principio: acá se guardan SOLO metadatos. Nunca contenido de archivos,
 -- nombres de archivo, nombres de columnas ni textos de prompts.
 -- =====================================================================

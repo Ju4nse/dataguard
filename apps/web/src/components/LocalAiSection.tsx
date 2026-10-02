@@ -1,4 +1,4 @@
-import { Container, Icon, SectionHeading, type IconName } from './ui';
+import { Container, DarkGlow, Icon, Reveal, SectionHeading, type IconName } from './ui';
 
 /** Paso del diagrama de flujo. */
 function FlowNode({ icon, title, text, highlight = false }: { icon: IconName; title: string; text: string; highlight?: boolean }) {
@@ -53,17 +53,19 @@ const LAYERS: { icon: IconName; title: string; status: 'activo' | 'integracion';
  */
 export function LocalAiSection() {
   return (
-    <section aria-labelledby="ia-local" className="bg-slate-950 py-16 text-white sm:py-20">
-      <Container className="space-y-12">
+    <section aria-labelledby="ia-local" className="relative overflow-hidden bg-slate-950 py-16 text-white sm:py-20">
+      <DarkGlow />
+      <Container className="relative space-y-12">
         <SectionHeading
           id="ia-local"
           tone="dark"
           eyebrow="IA local"
           title="La IA viene a tus datos, no tus datos a la IA"
-          text="Para encontrar datos sensibles, muchas herramientas los envían a un servicio de IA en la nube: justo lo que se quería evitar. En SecureData AI el análisis corre en tu propia computadora."
+          text="Para encontrar datos sensibles, muchas herramientas los envían a un servicio de IA en la nube: justo lo que se quería evitar. En DataGuard el análisis corre en tu propia computadora."
         />
 
         {/* Diagrama: todo ocurre dentro de "Tu computadora"; hacia afuera solo sale el archivo protegido. */}
+        <Reveal>
         <figure className="space-y-3">
           <div className="flex flex-col items-stretch gap-3 lg:flex-row lg:items-center">
             <div className="relative flex flex-[3] flex-col gap-3 rounded-2xl border-2 border-dashed border-emerald-400/40 p-4 pt-8 lg:flex-row lg:items-center">
@@ -84,15 +86,18 @@ export function LocalAiSection() {
           </div>
           <figcaption className="text-center text-sm text-slate-400">Los datos originales nunca cruzan el borde punteado.</figcaption>
         </figure>
+        </Reveal>
 
         <ul className="grid gap-6 md:grid-cols-3">
-          {POINTS.map((p) => (
-            <li key={p.title} className="flex gap-3">
+          {POINTS.map((p, i) => (
+            <li key={p.title}>
+              <Reveal delay={i * 80} className="flex gap-3">
               <Icon name={p.icon} className="mt-0.5 h-5 w-5 shrink-0 text-emerald-400" />
               <div className="space-y-1">
                 <p className="font-semibold text-white">{p.title}</p>
                 <p className="text-sm text-slate-300">{p.text}</p>
               </div>
+              </Reveal>
             </li>
           ))}
         </ul>
@@ -100,8 +105,8 @@ export function LocalAiSection() {
         <div className="space-y-4">
           <h3 className="text-center text-lg font-semibold text-white">Dos capas de detección</h3>
           <div className="grid gap-4 md:grid-cols-2">
-            {LAYERS.map((l) => (
-              <div key={l.title} className="space-y-4 rounded-xl bg-white/5 p-5 ring-1 ring-white/10">
+            {LAYERS.map((l, i) => (
+              <Reveal key={l.title} delay={i * 100} className="space-y-4 rounded-xl bg-white/5 p-5 ring-1 ring-white/10 backdrop-blur-sm transition-colors duration-300 hover:ring-brand-400/40">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <Icon name={l.icon} className="h-5 w-5 text-brand-300" />
@@ -127,7 +132,7 @@ export function LocalAiSection() {
                     </li>
                   ))}
                 </ul>
-              </div>
+              </Reveal>
             ))}
           </div>
         </div>

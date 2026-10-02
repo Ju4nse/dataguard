@@ -20,6 +20,84 @@
   --color-brand-800: #075985;
   --color-brand-900: #0c4a6e;
   --color-brand-950: #082f49;
+
+  /*
+   * Movimiento: entradas con desaceleración (llegan suave), fondos con deriva muy lenta.
+   * Todo se apaga con prefers-reduced-motion (ver @layer base).
+   */
+  --animate-fade-up: fade-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-pop: pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  --animate-dropdown: dropdown 0.18s ease-out both;
+  --animate-dialog: dialog 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-drift-a: drift-a 24s ease-in-out infinite alternate;
+  --animate-drift-b: drift-b 31s ease-in-out infinite alternate;
+  --animate-drift-c: drift-c 38s ease-in-out infinite alternate;
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes pop {
+    from {
+      opacity: 0;
+      transform: scale(0.6);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  @keyframes dropdown {
+    from {
+      opacity: 0;
+      transform: translateY(-6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes dialog {
+    from {
+      opacity: 0;
+      transform: translateY(10px) scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  /* Deriva de los brillos de fondo: solo transform (lo resuelve la GPU, no recalcula el diseño). */
+  @keyframes drift-a {
+    from {
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+    to {
+      transform: translate3d(-12%, 10%, 0) scale(1.2);
+    }
+  }
+  @keyframes drift-b {
+    from {
+      transform: translate3d(0, 0, 0) scale(1.1);
+    }
+    to {
+      transform: translate3d(14%, -10%, 0) scale(0.9);
+    }
+  }
+  @keyframes drift-c {
+    from {
+      transform: translate3d(0, 0, 0) rotate(0deg);
+    }
+    to {
+      transform: translate3d(-8%, -12%, 0) rotate(25deg);
+    }
+  }
 }
 
 @layer base {

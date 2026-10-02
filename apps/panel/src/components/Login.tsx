@@ -1,7 +1,7 @@
 import QRCode from 'qrcode';
 import { useEffect, useState, type FormEvent } from 'react';
 import { api, ApiError } from '../api';
-import { Button, ErrorText, Input, Logo, ShieldIcon } from './ui';
+import { Button, DarkGlow, ErrorText, Input, Logo, ShieldIcon } from './ui';
 
 const message = (e: unknown) => (e instanceof ApiError ? e.message : 'No se pudo conectar con el servidor');
 
@@ -17,11 +17,11 @@ export function Shell({ title, subtitle, children }: { title: string; subtitle: 
   return (
     <div className="grid min-h-dvh lg:grid-cols-2">
       <aside className="relative hidden overflow-hidden bg-slate-950 p-12 text-white lg:flex lg:flex-col lg:justify-between">
-        <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(40rem_25rem_at_0%_0%,rgba(3,105,161,0.35),transparent)]" />
+        <DarkGlow />
         <div className="relative">
           <Logo tone="dark" />
         </div>
-        <div className="relative max-w-md space-y-8">
+        <div className="relative max-w-md animate-fade-up space-y-8">
           <div className="space-y-3">
             <h2 className="text-3xl font-bold tracking-tight">Reporte de seguridad para responsables</h2>
             <p className="text-slate-300">Seguí cómo tu empresa protege los datos sensibles antes de usar IA, sin invadir la privacidad de nadie.</p>
@@ -44,7 +44,7 @@ export function Shell({ title, subtitle, children }: { title: string; subtitle: 
       </aside>
 
       <main className="flex items-center justify-center px-4 py-12 sm:px-6">
-        <div className="w-full max-w-sm space-y-8">
+        <div className="w-full max-w-sm animate-fade-up space-y-8 [animation-delay:100ms]">
           <div className="lg:hidden">
             <Logo />
           </div>

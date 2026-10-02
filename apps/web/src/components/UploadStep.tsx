@@ -3,7 +3,7 @@ import { PANEL_URL } from '../lib/config';
 import { ACCEPTED_EXTENSIONS, MAX_SIZE_MB } from '../lib/files';
 import { useStore } from '../store';
 import { LocalAiSection } from './LocalAiSection';
-import { Button, ButtonLink, Card, Container, Icon, SectionHeading, type IconName } from './ui';
+import { Button, ButtonLink, Card, Container, DarkGlow, Icon, Reveal, SectionHeading, Spinner, type IconName } from './ui';
 
 const DEMO_FILE = 'ejemplo_clientes.xlsx';
 
@@ -74,15 +74,20 @@ function UploadCard() {
         }}
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
-        className={`flex flex-col items-center justify-center gap-5 rounded-lg border-2 border-dashed px-6 py-10 text-center transition-colors duration-200 ${
-          dragging ? 'border-brand-500 bg-brand-50' : 'border-slate-300'
+        className={`group flex flex-col items-center justify-center gap-5 rounded-lg border-2 border-dashed px-6 py-10 text-center transition-colors duration-200 ${
+          dragging ? 'border-brand-500 bg-brand-50' : 'border-slate-300 hover:border-brand-400'
         }`}
       >
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand-700">
-          <Icon name="upload" className="h-6 w-6" />
+        {/* El ícono responde al arrastrar (sube y crece) y se vuelve un spinner mientras se protege. */}
+        <div
+          className={`flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand-700 transition-transform duration-300 ${
+            dragging ? '-translate-y-1 scale-110' : 'group-hover:-translate-y-0.5'
+          }`}
+        >
+          {loading ? <Spinner className="h-6 w-6" /> : <Icon name="upload" className="h-6 w-6" />}
         </div>
-        <div className="space-y-1">
-          <p className="font-semibold text-slate-900">{loading ? 'Protegiendo tu archivo…' : 'Arrastrá tu archivo acá'}</p>
+        <div className="space-y-1" aria-live="polite">
+          <p className="font-semibold text-slate-900">{loading ? 'Protegiendo tu archivo…' : dragging ? 'Soltalo para protegerlo' : 'Arrastrá tu archivo acá'}</p>
           <p className="text-sm text-slate-600">CSV, Excel, ODS, PDF, Word, TXT, Markdown o JSON · hasta {MAX_SIZE_MB} MB</p>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
@@ -126,21 +131,27 @@ export function UploadStep() {
     <>
       {/* Hero: propuesta + herramienta a la vista. */}
       <section className="relative overflow-hidden bg-slate-950 text-white">
-        <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(60rem_30rem_at_80%_-10%,rgba(3,105,161,0.35),transparent)]" />
+        <DarkGlow />
         <Container className="relative grid items-center gap-8 py-10 sm:gap-10 sm:py-20 lg:grid-cols-2 lg:gap-16">
+          {/* Entrada escalonada: etiqueta → título → texto → puntos (80ms entre cada uno). */}
           <div className="space-y-5 sm:space-y-7">
-            <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-sm text-slate-200">
-              <Icon name="lock" className="h-4 w-4 text-brand-300" />
+            <p className="inline-flex animate-fade-up items-center gap-2 rounded-full border border-brand-400/30 bg-white/5 px-3 py-1 text-sm text-slate-200">
+              <span className="relative flex h-2 w-2" aria-hidden="true">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+              </span>
               IA local · tus datos nunca salen de tu computadora
             </p>
             <div className="space-y-4">
-              <h1 className="text-balance text-3xl font-bold tracking-tight sm:text-5xl">Usá IA con los datos de tu empresa sin exponer información sensible</h1>
-              <p className="max-w-xl text-pretty text-slate-300 sm:text-lg">
-                SecureData AI detecta y protege los datos personales y confidenciales de tus archivos antes de que lleguen a ChatGPT, Claude o
+              <h1 className="animate-fade-up text-balance text-3xl font-bold tracking-tight [animation-delay:80ms] sm:text-5xl">
+                Usá IA con los datos de tu empresa sin exponer información sensible
+              </h1>
+              <p className="max-w-xl animate-fade-up text-pretty text-slate-300 [animation-delay:160ms] sm:text-lg">
+                DataGuard detecta y protege los datos personales y confidenciales de tus archivos antes de que lleguen a ChatGPT, Claude o
                 Copilot. Todo el análisis corre en tu computadora, así que la protección no crea nuevas fugas.
               </p>
             </div>
-            <ul className="hidden space-y-3 sm:block">
+            <ul className="hidden animate-fade-up space-y-3 [animation-delay:240ms] sm:block">
               {HERO_POINTS.map((p) => (
                 <li key={p} className="flex items-start gap-3 text-slate-200">
                   <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400">
@@ -151,7 +162,7 @@ export function UploadStep() {
               ))}
             </ul>
           </div>
-          <div className="text-slate-900">
+          <div className="animate-fade-up text-slate-900 [animation-delay:200ms]">
             <UploadCard />
           </div>
         </Container>
@@ -161,10 +172,12 @@ export function UploadStep() {
       <section aria-label="Garantías" className="border-b border-slate-200 bg-white">
         <Container>
           <ul className="grid grid-cols-2 divide-slate-200 py-8 lg:grid-cols-4 lg:divide-x">
-            {GUARANTEES.map((g) => (
+            {GUARANTEES.map((g, i) => (
               <li key={g.value} className="px-4 py-3 text-center lg:py-0">
-                <p className="text-2xl font-bold tracking-tight text-slate-900">{g.value}</p>
-                <p className="mt-1 text-sm text-slate-600">{g.label}</p>
+                <Reveal delay={i * 60}>
+                  <p className="text-2xl font-bold tracking-tight text-slate-900">{g.value}</p>
+                  <p className="mt-1 text-sm text-slate-600">{g.label}</p>
+                </Reveal>
               </li>
             ))}
           </ul>
@@ -178,16 +191,18 @@ export function UploadStep() {
           <ol className="grid gap-6 md:grid-cols-3">
             {STEPS.map((s, i) => (
               <li key={s.title}>
-                <Card className="h-full space-y-4 p-6">
-                  <div className="flex items-center justify-between">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-900 text-white">
-                      <Icon name={s.icon} />
-                    </span>
-                    <span className="text-sm font-semibold text-slate-500">Paso {i + 1}</span>
-                  </div>
-                  <h3 className="text-lg font-semibold text-slate-900">{s.title}</h3>
-                  <p className="text-slate-600">{s.text}</p>
-                </Card>
+                <Reveal delay={i * 80} className="h-full">
+                  <Card className="h-full space-y-4 p-6">
+                    <div className="flex items-center justify-between">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-900 text-white">
+                        <Icon name={s.icon} />
+                      </span>
+                      <span className="text-sm font-semibold text-slate-500">Paso {i + 1}</span>
+                    </div>
+                    <h3 className="text-lg font-semibold text-slate-900">{s.title}</h3>
+                    <p className="text-slate-600">{s.text}</p>
+                  </Card>
+                </Reveal>
               </li>
             ))}
           </ol>
@@ -206,16 +221,16 @@ export function UploadStep() {
             text="Está pensada para que tus datos estén más seguros que antes de usarla, no menos."
           />
           <div className="grid gap-x-10 gap-y-8 sm:grid-cols-2">
-            {PRINCIPLES.map((p) => (
-              <div key={p.title} className="flex gap-4">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-700">
+            {PRINCIPLES.map((p, i) => (
+              <Reveal key={p.title} delay={(i % 2) * 80} className="flex gap-4">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-600/20">
                   <Icon name={p.icon} />
                 </span>
                 <div className="space-y-1">
                   <h3 className="font-semibold text-slate-900">{p.title}</h3>
                   <p className="text-slate-600">{p.text}</p>
                 </div>
-              </div>
+              </Reveal>
             ))}
           </div>
         </Container>
@@ -231,20 +246,22 @@ export function UploadStep() {
             text="Valida los dígitos verificadores de CUIT, CBU y tarjetas, y reconoce formatos locales de teléfonos, documentos y direcciones."
           />
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {DETECTS.map((d) => (
-              <Card key={d.title} className="space-y-4 p-5">
-                <div className="flex items-center gap-2">
-                  <Icon name={d.icon} className="h-5 w-5 text-brand-700" />
-                  <h3 className="font-semibold text-slate-900">{d.title}</h3>
-                </div>
-                <ul className="flex flex-wrap gap-1.5">
-                  {d.items.map((item) => (
-                    <li key={item} className="rounded-md bg-slate-100 px-2 py-1 text-sm text-slate-700">
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </Card>
+            {DETECTS.map((d, i) => (
+              <Reveal key={d.title} delay={i * 70} className="h-full">
+                <Card className="h-full space-y-4 p-5">
+                  <div className="flex items-center gap-2">
+                    <Icon name={d.icon} className="h-5 w-5 text-brand-700" />
+                    <h3 className="font-semibold text-slate-900">{d.title}</h3>
+                  </div>
+                  <ul className="flex flex-wrap gap-1.5">
+                    {d.items.map((item) => (
+                      <li key={item} className="rounded-md bg-slate-100 px-2 py-1 text-sm text-slate-700">
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </Card>
+              </Reveal>
             ))}
           </div>
         </Container>
@@ -253,8 +270,9 @@ export function UploadStep() {
       {/* Para responsables de seguridad. */}
       <section aria-labelledby="empresas" className="pb-16 sm:pb-20">
         <Container>
-          <div className="flex flex-col gap-6 rounded-2xl bg-slate-900 p-8 text-white sm:p-10 lg:flex-row lg:items-center lg:justify-between">
-            <div className="max-w-2xl space-y-2">
+          <Reveal className="relative flex flex-col gap-6 overflow-hidden rounded-2xl bg-slate-900 p-8 text-white ring-1 ring-brand-500/30 sm:p-10 lg:flex-row lg:items-center lg:justify-between">
+            <DarkGlow />
+            <div className="relative max-w-2xl space-y-2">
               <h2 id="empresas" className="text-2xl font-bold tracking-tight">
                 ¿Sos responsable de seguridad?
               </h2>
@@ -263,11 +281,11 @@ export function UploadStep() {
                 con segundo factor y auditoría de cada consulta.
               </p>
             </div>
-            <ButtonLink href={PANEL_URL} variant="secondary" className="shrink-0">
+            <ButtonLink href={PANEL_URL} variant="secondary" className="relative shrink-0">
               <Icon name="chart" className="h-4 w-4" />
               Ir al panel para empresas
             </ButtonLink>
-          </div>
+          </Reveal>
 
           <aside className="mt-8 flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
             <Icon name="alert" className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" />

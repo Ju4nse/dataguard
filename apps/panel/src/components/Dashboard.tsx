@@ -2,7 +2,7 @@ import { DETECTION_LABELS, DETECTION_SHORT_LABELS } from '@securedata/shared';
 import { useEffect, useState } from 'react';
 import { api, ApiError, type Me, type Resumen } from '../api';
 import { ActionsBar, ChartCard, fmt, MonthlyColumns, RankingBars } from './charts';
-import { Button, Card, ErrorText, Logo, ShieldIcon } from './ui';
+import { Button, Card, DarkGlow, ErrorText, Logo, ShieldIcon, useCountUp } from './ui';
 
 const PERIODS = [
   { days: 30, label: '30 días' },
@@ -21,16 +21,22 @@ function monthLabel(ym: string, desde: string, hasta: string): string {
   const label = new Date(y!, m! - 1, 1).toLocaleDateString('es-AR', { month: 'short', year: '2-digit' });
   const lastDay = new Date(y!, m!, 0).getDate();
   const partial = (desde.startsWith(ym) && !desde.endsWith('-01')) || (hasta.startsWith(ym) && Number(hasta.slice(8)) < lastDay);
-  return partial ? `${label} (parcial)` : label;
+  // En el gráfico va un asterisco (cabe en celular); la tabla y la nota al pie lo explican.
+  return partial ? `${label}*` : label;
 }
 
 /** Indicador. Las métricas de riesgo muestran un estado con ícono + texto (nunca solo color). */
 function Kpi({ value, label, hint, risk = false }: { value: number; label: string; hint: string; risk?: boolean }) {
   const attention = risk && value > 0;
+  const shown = useCountUp(value);
   return (
     <Card className="flex flex-col p-5">
       <div className="flex items-start justify-between gap-2">
-        <div className="text-3xl font-bold tracking-tight text-[var(--ink-primary)]">{fmt(value)}</div>
+        <div className="text-3xl font-bold tracking-tight text-[var(--ink-primary)]">
+          {/* Cuenta hasta el valor; el lector de pantalla lee el valor final. */}
+          <span className="sr-only">{fmt(value)}</span>
+          <span aria-hidden="true">{fmt(shown)}</span>
+        </div>
         {attention && (
           <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800 ring-1 ring-inset ring-amber-200">
             <svg aria-hidden="true" viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -73,8 +79,9 @@ export function Dashboard({ me, onLogout }: { me: Me; onLogout: () => void }) {
 
   return (
     <div className="min-h-dvh">
-      <header className="bg-slate-950 text-white">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+      <header className="relative overflow-hidden bg-slate-950 text-white">
+        <DarkGlow subtle />
+        <div className="relative mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
           <Logo tone="dark" />
           <div className="flex items-center gap-4">
             <div className="hidden text-right leading-tight sm:block">
@@ -107,7 +114,7 @@ export function Dashboard({ me, onLogout }: { me: Me; onLogout: () => void }) {
                   type="button"
                   onClick={() => setDays(p.days)}
                   aria-pressed={days === p.days}
-                  className={`min-h-9 rounded-md px-3 text-sm font-medium transition-colors ${days === p.days ? 'bg-white text-slate-900 shadow-sm' : 'text-[var(--ink-secondary)] hover:text-slate-900'}`}
+                  className={`min-h-10 rounded-md px-3 text-sm font-medium transition-colors sm:min-h-9 ${days === p.days ? 'bg-white text-slate-900 shadow-sm' : 'text-[var(--ink-secondary)] hover:text-slate-900'}`}
                 >
                   {p.label}
                 </button>
@@ -124,7 +131,7 @@ export function Dashboard({ me, onLogout }: { me: Me; onLogout: () => void }) {
         {data && t && (
           // Al cambiar el período se mantiene lo anterior atenuado (sin saltos de diseño).
           <div className={`space-y-6 transition-opacity ${loading ? 'opacity-50' : ''}`}>
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
               <Kpi value={t.detecciones} label="Datos sensibles detectados" hint="Total en archivos y prompts" />
               <Kpi value={t.eventos_con_sensibles} label="Cargas con datos sensibles" hint={`De ${fmt(t.eventos)} archivos y prompts analizados`} />
               <Kpi value={t.enviados_a_externo} label="Enviados a IA externa" hint="Avisos de la extensión que se ignoraron" risk />
@@ -134,9 +141,12 @@ export function Dashboard({ me, onLogout }: { me: Me; onLogout: () => void }) {
             <div className="grid gap-4 lg:grid-cols-2">
               <ChartCard
                 title="Evolución de detecciones por mes"
-                table={{ headers: ['Mes', 'Detecciones'], rows: data.por_mes.map((m) => [monthLabel(m.mes, data.desde, data.hasta), m.detecciones]) }}
+                table={{ headers: ['Mes', 'Detecciones'], rows: data.por_mes.map((m) => [monthLabel(m.mes, data.desde, data.hasta).replace('*', ' (parcial)'), m.detecciones]) }}
               >
                 <MonthlyColumns data={data.por_mes.map((m) => ({ label: monthLabel(m.mes, data.desde, data.hasta), value: m.detecciones }))} />
+                {data.por_mes.some((m) => monthLabel(m.mes, data.desde, data.hasta).endsWith('*')) && (
+                  <p className="mt-2 text-xs text-[var(--ink-muted)]">* Mes parcial: el período elegido no lo cubre completo.</p>
+                )}
               </ChartCard>
 
               <ChartCard

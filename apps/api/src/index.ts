@@ -9,7 +9,7 @@ import { base32, createRateLimiter, csrfGuard } from './security';
 import { clearSession, getSession, setSession, type Session } from './session';
 
 /**
- * API de SecureData AI. Nunca recibe contenido de archivos: solo credenciales de login,
+ * API de DataGuard. Nunca recibe contenido de archivos: solo credenciales de login,
  * metadatos de eventos y consultas de agregados. Los permisos los aplica Postgres.
  */
 const app = new Hono().basePath('/api');
@@ -100,7 +100,7 @@ app.post('/auth/2fa/iniciar', async (c) => {
     );
     const secreto = base32(r[0].rows[0].secreto as Buffer);
     const email = r[1].rows[0].email as string;
-    const otpauth = `otpauth://totp/${encodeURIComponent(`SecureData AI:${email}`)}?secret=${secreto}&issuer=${encodeURIComponent('SecureData AI')}`;
+    const otpauth = `otpauth://totp/${encodeURIComponent(`DataGuard:${email}`)}?secret=${secreto}&issuer=${encodeURIComponent('DataGuard')}`;
     return c.json({ secreto, otpauth });
   } catch (e) {
     return fail(c, e);
@@ -231,7 +231,7 @@ app.get('/salud', async (c) => {
 app.notFound((c) => c.json({ error: 'No encontrado' }, 404));
 
 serve({ fetch: app.fetch, port: config.port }, (info) => {
-  console.log(`API de SecureData AI en http://localhost:${info.port}/api`);
+  console.log(`API de DataGuard en http://localhost:${info.port}/api`);
 });
 
 export default app;
