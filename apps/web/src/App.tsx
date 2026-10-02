@@ -7,7 +7,7 @@ import { ReviewStep } from './components/ReviewStep';
 import { UploadStep } from './components/UploadStep';
 import { Container, Icon } from './components/ui';
 import { BRAND } from './lib/brand';
-import { PANEL_URL } from './lib/config';
+import { PANEL_URL, STATIC_DEMO } from './lib/config';
 import { useStore, type Step } from './store';
 
 const NAV = [
@@ -77,10 +77,12 @@ function MobileMenu() {
                 {n.label}
               </a>
             ))}
-            <a href={PANEL_URL} className="flex min-h-11 items-center gap-2 rounded-lg px-3 text-base font-medium text-brand-700 hover:bg-brand-50 sm:col-span-2">
-              <Icon name="chart" className="h-5 w-5" />
-              Panel para empresas
-            </a>
+            {PANEL_URL && (
+              <a href={PANEL_URL} className="flex min-h-11 items-center gap-2 rounded-lg px-3 text-base font-medium text-brand-700 hover:bg-brand-50 sm:col-span-2">
+                <Icon name="chart" className="h-5 w-5" />
+                Panel para empresas
+              </a>
+            )}
           </Container>
         </nav>
       )}
@@ -140,7 +142,7 @@ export default function App() {
             </nav>
           )}
           <div className="flex items-center gap-1 sm:gap-2">
-            <Account />
+            {!STATIC_DEMO && <Account />}
             {home && <MobileMenu />}
           </div>
         </Container>
@@ -163,9 +165,11 @@ export default function App() {
             <span>Tu archivo se analiza en tu navegador. Ni el archivo ni su análisis se envían a ningún servidor ni a ninguna IA externa.</span>
           </div>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-            <a href={PANEL_URL} className="inline-flex min-h-11 items-center font-medium text-slate-700 hover:text-slate-900 lg:min-h-0">
-              Panel para empresas
-            </a>
+            {PANEL_URL && (
+              <a href={PANEL_URL} className="inline-flex min-h-11 items-center font-medium text-slate-700 hover:text-slate-900 lg:min-h-0">
+                Panel para empresas
+              </a>
+            )}
             <span className="text-slate-500">Prototipo académico · Emprendedorismo Tecnológico</span>
           </div>
         </Container>

@@ -61,7 +61,7 @@ function UploadCard() {
   };
 
   const loadDemo = async () => {
-    const res = await fetch(`/${DEMO_FILE}`);
+    const res = await fetch(`${import.meta.env.BASE_URL}${DEMO_FILE}`);
     void loadFile(new File([await res.blob()], DEMO_FILE));
   };
 
@@ -281,10 +281,15 @@ export function UploadStep() {
                 con segundo factor y auditoría de cada consulta.
               </p>
             </div>
-            <ButtonLink href={PANEL_URL} variant="secondary" className="relative shrink-0">
-              <Icon name="chart" className="h-4 w-4" />
-              Ir al panel para empresas
-            </ButtonLink>
+            {PANEL_URL ? (
+              <ButtonLink href={PANEL_URL} variant="secondary" className="relative shrink-0">
+                <Icon name="chart" className="h-4 w-4" />
+                Ir al panel para empresas
+              </ButtonLink>
+            ) : (
+              // Demo pública: el panel necesita el servidor de la empresa.
+              <p className="relative max-w-xs shrink-0 text-sm text-slate-300">El panel corre en el servidor de cada empresa; no está incluido en esta demo pública.</p>
+            )}
           </Reveal>
 
           <aside className="mt-8 flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">

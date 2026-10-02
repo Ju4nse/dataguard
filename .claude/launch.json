@@ -4,20 +4,54 @@
     {
       "name": "web",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--workspace", "@securedata/web", "--", "--port", "5173", "--strictPort"],
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--workspace",
+        "@securedata/web",
+        "--",
+        "--port",
+        "5173",
+        "--strictPort"
+      ],
       "port": 5173
     },
     {
       "name": "panel",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--workspace", "@securedata/panel"],
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--workspace",
+        "@securedata/panel"
+      ],
       "port": 5180
     },
     {
       "name": "api",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--workspace", "@securedata/api"],
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--workspace",
+        "@securedata/api"
+      ],
       "port": 8787
+    },
+    {
+      "name": "pages-preview",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "vite",
+        "preview",
+        "apps/web",
+        "--base",
+        "/dataguard/",
+        "--port",
+        "4173",
+        "--strictPort"
+      ],
+      "port": 4173
     }
   ]
 }
