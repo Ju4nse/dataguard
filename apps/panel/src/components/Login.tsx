@@ -1,26 +1,61 @@
 import QRCode from 'qrcode';
 import { useEffect, useState, type FormEvent } from 'react';
 import { api, ApiError } from '../api';
-import { Button, Card, ErrorText, Input, Logo } from './ui';
+import { Button, ErrorText, Input, Logo, ShieldIcon } from './ui';
 
 const message = (e: unknown) => (e instanceof ApiError ? e.message : 'No se pudo conectar con el servidor');
 
-function Shell({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
+const SECURITY_POINTS = [
+  { title: 'Segundo factor obligatorio', text: 'La contraseña sola no alcanza para ver el panel.' },
+  { title: 'Solo estadísticas agregadas', text: 'La detección corre en la computadora de cada empleado: al panel solo llegan cantidades.' },
+  { title: 'Grupos protegidos', text: 'Las áreas con muy poca gente no se muestran por separado.' },
+  { title: 'Cada consulta queda auditada', text: 'Se registra quién vio el panel y cuándo.' },
+];
+
+/** Pantalla de acceso: panel de confianza a la izquierda (escritorio) y formulario a la derecha. */
+export function Shell({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="flex justify-center">
-          <Logo />
+    <div className="grid min-h-dvh lg:grid-cols-2">
+      <aside className="relative hidden overflow-hidden bg-slate-950 p-12 text-white lg:flex lg:flex-col lg:justify-between">
+        <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(40rem_25rem_at_0%_0%,rgba(3,105,161,0.35),transparent)]" />
+        <div className="relative">
+          <Logo tone="dark" />
         </div>
-        <Card className="space-y-5 p-6">
-          <div>
-            <h1 className="text-lg font-semibold">{title}</h1>
-            <p className="text-sm text-slate-600">{subtitle}</p>
+        <div className="relative max-w-md space-y-8">
+          <div className="space-y-3">
+            <h2 className="text-3xl font-bold tracking-tight">Reporte de seguridad para responsables</h2>
+            <p className="text-slate-300">Seguí cómo tu empresa protege los datos sensibles antes de usar IA, sin invadir la privacidad de nadie.</p>
+          </div>
+          <ul className="space-y-4">
+            {SECURITY_POINTS.map((p) => (
+              <li key={p.title} className="flex gap-3">
+                <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400">
+                  <ShieldIcon className="h-4 w-4" />
+                </span>
+                <div>
+                  <p className="font-semibold">{p.title}</p>
+                  <p className="text-sm text-slate-400">{p.text}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <p className="relative text-sm text-slate-500">Prototipo académico · Emprendedorismo Tecnológico</p>
+      </aside>
+
+      <main className="flex items-center justify-center px-4 py-12 sm:px-6">
+        <div className="w-full max-w-sm space-y-8">
+          <div className="lg:hidden">
+            <Logo />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">{title}</h1>
+            <p className="text-slate-600">{subtitle}</p>
           </div>
           {children}
-        </Card>
-        <p className="text-center text-xs text-slate-500">Acceso exclusivo para responsables de seguridad.</p>
-      </div>
+          <p className="text-sm text-slate-600">Acceso exclusivo para responsables de seguridad. ¿Sos empleado? Usá la app para proteger tus archivos.</p>
+        </div>
+      </main>
     </div>
   );
 }

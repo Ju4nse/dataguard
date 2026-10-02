@@ -2,7 +2,7 @@ import { DETECTION_LABELS, DETECTION_SHORT_LABELS } from '@securedata/shared';
 import { useEffect, useState } from 'react';
 import { api, ApiError, type Me, type Resumen } from '../api';
 import { ActionsBar, ChartCard, fmt, MonthlyColumns, RankingBars } from './charts';
-import { Button, Card, ErrorText, Logo } from './ui';
+import { Button, Card, ErrorText, Logo, ShieldIcon } from './ui';
 
 const PERIODS = [
   { days: 30, label: '30 días' },
@@ -24,12 +24,25 @@ function monthLabel(ym: string, desde: string, hasta: string): string {
   return partial ? `${label} (parcial)` : label;
 }
 
-function Kpi({ value, label, hint }: { value: number; label: string; hint: string }) {
+/** Indicador. Las métricas de riesgo muestran un estado con ícono + texto (nunca solo color). */
+function Kpi({ value, label, hint, risk = false }: { value: number; label: string; hint: string; risk?: boolean }) {
+  const attention = risk && value > 0;
   return (
-    <Card className="p-5">
-      <div className="text-3xl font-semibold text-[var(--ink-primary)]">{fmt(value)}</div>
-      <div className="mt-1 text-sm font-medium text-[var(--ink-primary)]">{label}</div>
-      <div className="text-xs text-[var(--ink-muted)]">{hint}</div>
+    <Card className="flex flex-col p-5">
+      <div className="flex items-start justify-between gap-2">
+        <div className="text-3xl font-bold tracking-tight text-[var(--ink-primary)]">{fmt(value)}</div>
+        {attention && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800 ring-1 ring-inset ring-amber-200">
+            <svg aria-hidden="true" viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M12 9v4M12 17h.01" />
+              <path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
+            </svg>
+            Revisar
+          </span>
+        )}
+      </div>
+      <div className="mt-2 text-sm font-semibold text-[var(--ink-primary)]">{label}</div>
+      <div className="text-sm text-[var(--ink-muted)]">{hint}</div>
     </Card>
   );
 }
@@ -59,45 +72,52 @@ export function Dashboard({ me, onLogout }: { me: Me; onLogout: () => void }) {
   const t = data?.totales;
 
   return (
-    <div className="min-h-screen">
-      <header className="border-b border-black/10 bg-[var(--surface-1)]">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
-          <Logo />
-          <div className="flex items-center gap-3 text-sm">
-            <span className="hidden text-[var(--ink-secondary)] sm:inline">
-              {me.usuario.nombre} · {me.usuario.organizacion}
-            </span>
-            <Button variant="ghost" onClick={onLogout}>
+    <div className="min-h-dvh">
+      <header className="bg-slate-950 text-white">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+          <Logo tone="dark" />
+          <div className="flex items-center gap-4">
+            <div className="hidden text-right leading-tight sm:block">
+              <p className="text-sm font-semibold">{me.usuario.nombre}</p>
+              <p className="text-xs text-slate-400">{me.usuario.organizacion}</p>
+            </div>
+            <Button variant="onDark" onClick={onLogout}>
               Cerrar sesión
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl space-y-6 px-4 py-8">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold">Reporte de seguridad</h1>
-            <p className="text-sm text-[var(--ink-secondary)]">Estadísticas de detección y concientización. No registra información personal de los empleados.</p>
+      <div className="border-b border-slate-200 bg-white">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-end justify-between gap-4 px-4 py-6 sm:px-6">
+          <div className="space-y-1">
+            <h1 className="text-2xl font-bold tracking-tight">Reporte de seguridad</h1>
+            <p className="flex items-start gap-1.5 text-sm text-[var(--ink-secondary)]">
+              <ShieldIcon className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
+              Estadísticas de detección y concientización. No registra información personal de los empleados.
+            </p>
           </div>
           {/* Un solo filtro, arriba de todo lo que afecta. */}
           <div className="flex items-center gap-2" role="group" aria-label="Período">
             <span className="text-sm text-[var(--ink-secondary)]">Últimos</span>
-            <div className="flex rounded-lg border border-black/10 bg-[var(--surface-1)] p-0.5">
-            {PERIODS.map((p) => (
-              <button
-                key={p.days}
-                type="button"
-                onClick={() => setDays(p.days)}
-                aria-pressed={days === p.days}
-                className={`rounded-md px-3 py-1.5 text-sm ${days === p.days ? 'bg-slate-900 text-white' : 'text-[var(--ink-secondary)] hover:bg-slate-100'}`}
-              >
-                {p.label}
-              </button>
-            ))}
+            <div className="flex rounded-lg bg-slate-100 p-1">
+              {PERIODS.map((p) => (
+                <button
+                  key={p.days}
+                  type="button"
+                  onClick={() => setDays(p.days)}
+                  aria-pressed={days === p.days}
+                  className={`min-h-9 rounded-md px-3 text-sm font-medium transition-colors ${days === p.days ? 'bg-white text-slate-900 shadow-sm' : 'text-[var(--ink-secondary)] hover:text-slate-900'}`}
+                >
+                  {p.label}
+                </button>
+              ))}
             </div>
           </div>
         </div>
+      </div>
+
+      <main className="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6">
 
         {error && <ErrorText>{error}</ErrorText>}
 
@@ -107,8 +127,8 @@ export function Dashboard({ me, onLogout }: { me: Me; onLogout: () => void }) {
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               <Kpi value={t.detecciones} label="Datos sensibles detectados" hint="Total en archivos y prompts" />
               <Kpi value={t.eventos_con_sensibles} label="Cargas con datos sensibles" hint={`De ${fmt(t.eventos)} archivos y prompts analizados`} />
-              <Kpi value={t.enviados_a_externo} label="Enviados a IA externa" hint="Avisos de la extensión que se ignoraron" />
-              <Kpi value={t.incidentes_confirmados} label="Incidentes confirmados" hint="Requieren investigación" />
+              <Kpi value={t.enviados_a_externo} label="Enviados a IA externa" hint="Avisos de la extensión que se ignoraron" risk />
+              <Kpi value={t.incidentes_confirmados} label="Incidentes confirmados" hint="Requieren investigación" risk />
             </div>
 
             <div className="grid gap-4 lg:grid-cols-2">

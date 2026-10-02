@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api, type Me } from './api';
 import { Dashboard } from './components/Dashboard';
-import { Enroll2FA, Login } from './components/Login';
-import { Button, Card, Logo } from './components/ui';
+import { Enroll2FA, Login, Shell } from './components/Login';
+import { Button } from './components/ui';
 
 type View = { kind: 'cargando' } | { kind: 'login' } | { kind: 'configurar2fa' } | { kind: 'sinAcceso'; me: Me } | { kind: 'panel'; me: Me };
 
@@ -39,17 +39,11 @@ export default function App() {
       return <Enroll2FA onDone={refresh} onLogout={logout} />;
     case 'sinAcceso':
       return (
-        <div className="flex min-h-screen items-center justify-center px-4">
-          <Card className="max-w-sm space-y-4 p-6 text-center">
-            <div className="flex justify-center">
-              <Logo />
-            </div>
-            <p className="text-sm text-slate-600">Hola {view.me.usuario.nombre}. Este panel es solo para responsables de seguridad.</p>
-            <Button variant="ghost" onClick={logout}>
-              Cerrar sesión
-            </Button>
-          </Card>
-        </div>
+        <Shell title={`Hola, ${view.me.usuario.nombre}`} subtitle='Este panel es solo para responsables de seguridad. Tu cuenta es de empleado.'>
+          <Button variant='secondary' className='w-full' onClick={logout}>
+            Cerrar sesión
+          </Button>
+        </Shell>
       );
     case 'panel':
       return <Dashboard me={view.me} onLogout={logout} />;

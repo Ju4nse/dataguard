@@ -101,16 +101,20 @@ function AddTermForm() {
 }
 
 export function DocumentReviewStep() {
-  const { fileName, format, segments, analysis, typeDecisions, customTerms, removeTerm, setTypeDecision, applyDocument } = useStore();
+  const { fileName, format, segments, analysis, typeDecisions, customTerms, removeTerm, setTypeDecision, applyDocument, backToResult } = useStore();
   if (!analysis) return null;
   const total = analysis.summary.reduce((n, s) => n + s.count, 0);
   const chars = segments.reduce((n, s) => n + s.text.length, 0);
 
   return (
     <div className="space-y-6">
+      <button type="button" onClick={backToResult} className="inline-flex items-center gap-1.5 rounded-md text-sm font-medium text-slate-600 hover:text-slate-900">
+        <Icon name="arrowLeft" className="h-4 w-4" />
+        Volver al resultado
+      </button>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">Ajustá la protección</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Ajustá la protección</h1>
           <p className="text-sm text-slate-600">
             {fileName} · {FORMAT_LABELS[format] ?? format} · {chars.toLocaleString('es-AR')} caracteres
           </p>
@@ -122,7 +126,7 @@ export function DocumentReviewStep() {
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <Stat label="Datos sensibles encontrados" value={total} tone={total ? 'red' : 'teal'} />
+        <Stat label="Datos sensibles encontrados" value={total} />
         <Stat label="Tipos de dato distintos" value={analysis.summary.length} />
         <Stat label="Términos agregados a mano" value={customTerms.length} />
       </div>

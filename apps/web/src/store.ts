@@ -76,6 +76,8 @@ interface State {
   setTypeDecision: (type: DetectionType, patch: Partial<TypeDecision>) => void;
   applyDocument: () => void;
   backToReview: () => void;
+  /** Volver al último resultado aplicado. */
+  backToResult: () => void;
   reset: () => void;
 }
 
@@ -307,6 +309,9 @@ export const useStore = create<State>((set, get) => ({
   },
 
   backToReview: () => set({ step: 'revisar' }),
+
+  // El resultado mostrado es el último aplicado; lo cambiado en la revisión queda como borrador.
+  backToResult: () => set({ step: 'resultado' }),
 
   reset: () => set({ ...empty }),
 }));

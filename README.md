@@ -11,7 +11,9 @@ Filtro de seguridad previo al uso de IA: detecta datos sensibles (DNI, CUIT/CUIL
 | JSON anidado | cualquier otro `.json` | Por tipo de dato (la clave sirve de pista) | `.json` con la misma estructura |
 | Documentos | `.pdf` `.docx` `.txt` `.md` | Por tipo de dato + términos agregados a mano | Texto plano (o `.md`), con botón para copiar |
 
-Limitaciones actuales: PDF escaneados (sin texto seleccionable) y `.doc` viejos no se pueden leer; en textos libres los nombres de personas no se detectan solos (se agregan a mano; GLiNER lo resolvería). En PDF y Word se conserva el texto, no el formato.
+**Detección en dos capas, ambas locales:** reglas y validadores (activas) y un modelo de IA GLiNER que corre en el navegador (en integración) para nombres, direcciones e información implícita. El modelo se descarga una vez y analiza sin enviar nada a ningún servidor: la protección no crea nuevas fugas.
+
+Limitaciones actuales: PDF escaneados (sin texto seleccionable) y `.doc` viejos no se pueden leer; hasta integrar GLiNER, algunos nombres poco comunes en texto libre pueden escaparse (se agregan a mano en la revisión). En PDF y Word se conserva el texto, no el formato.
 
 > **Windows:** si PowerShell dice que "la ejecución de scripts está deshabilitada", usá `npm.cmd` en lugar de `npm`, o corré una vez `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned`.
 
@@ -98,6 +100,10 @@ npm run db:test
 - `db/init/05_autenticacion_y_politicas.sql`: contraseñas con bcrypt, segundo factor TOTP verificado dentro de la base (la API nunca ve el secreto) y políticas de la empresa por tipo de dato.
 
 El navegador **nunca** se conecta directo a Postgres: una API verifica el login y en cada transacción hace `SET LOCAL app.user_id` (y `app.aal = 'aal2'` si pasó el segundo factor). El panel exige rol de responsable + segundo factor, no muestra áreas con menos de 5 personas y registra cada consulta en la auditoría.
+
+## Diseño
+
+Sistema de diseño "Trust & Authority" (navy + azul de acción, Plus Jakarta Sans autoalojada): ver `design-system/securedata-ai/MASTER.md`. Los tokens compartidos están en `packages/shared/src/theme.css`.
 
 ## Estructura
 

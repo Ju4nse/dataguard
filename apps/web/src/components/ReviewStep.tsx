@@ -3,7 +3,7 @@ import { ACTION_LABELS, DETECTION_LABELS, DETECTION_TYPES } from '@securedata/sh
 import type { ColumnDecision, ColumnFinding } from '@securedata/detector';
 import { useMemo, useState } from 'react';
 import { useStore } from '../store';
-import { Button, Card, ConfidenceBadge, Icon, selectClass, Stat } from './ui';
+import { Button, Card, ConfidenceBadge, Icon, inputClass, selectClass, Stat } from './ui';
 
 const TEXT_ACTION_LABELS: Record<Action, string> = {
   eliminar: 'Eliminar columna',
@@ -92,7 +92,7 @@ function FindingRow({ finding, rowCount }: { finding: ColumnFinding; rowCount: n
           <label className="mt-2 flex items-center gap-2 text-xs text-slate-500">
             Prefijo
             <input
-              className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm text-slate-800 focus:border-teal-600 focus:outline-none"
+              className={inputClass}
               value={decision.prefix ?? ''}
               onChange={(e) => setDecision(finding.index, { prefix: e.target.value })}
               placeholder="Cliente"
@@ -105,7 +105,7 @@ function FindingRow({ finding, rowCount }: { finding: ColumnFinding; rowCount: n
 }
 
 export function ReviewStep() {
-  const { findings, sheets, sheetIndex, apply, fileName } = useStore();
+  const { findings, sheets, sheetIndex, apply, backToResult, fileName } = useStore();
   const [showAll, setShowAll] = useState(false);
   const sheet = sheets[sheetIndex]!;
 
@@ -115,9 +115,13 @@ export function ReviewStep() {
 
   return (
     <div className="space-y-6">
+      <button type="button" onClick={backToResult} className="inline-flex items-center gap-1.5 rounded-md text-sm font-medium text-slate-600 hover:text-slate-900">
+        <Icon name="arrowLeft" className="h-4 w-4" />
+        Volver al resultado
+      </button>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">Ajustá la protección</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Ajustá la protección</h1>
           <p className="text-sm text-slate-600">
             {fileName} · {sheet.rows.length} filas · {sheet.headers.length} columnas
           </p>
@@ -130,8 +134,8 @@ export function ReviewStep() {
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <Stat label="Columnas con datos sensibles" value={`${flagged.length} de ${findings.length}`} tone={flagged.length ? 'red' : 'teal'} />
-        <Stat label="Valores sensibles detectados" value={totalDetections} tone={totalDetections ? 'red' : 'teal'} />
+        <Stat label="Columnas con datos sensibles" value={`${flagged.length} de ${findings.length}`} />
+        <Stat label="Valores sensibles detectados" value={totalDetections} />
         <Stat label="Columnas sin detecciones" value={clean.length} />
       </div>
 

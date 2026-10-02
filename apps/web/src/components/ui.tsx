@@ -1,37 +1,77 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode } from 'react';
 import type { Confidence } from '@securedata/shared';
 
 type Variant = 'primary' | 'secondary' | 'ghost';
+type Size = 'md' | 'sm';
 
 const VARIANTS: Record<Variant, string> = {
-  primary: 'bg-teal-700 text-white hover:bg-teal-800 disabled:bg-slate-300',
-  secondary: 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50',
-  ghost: 'text-slate-600 hover:text-slate-900 hover:bg-slate-100',
+  primary: 'bg-brand-700 text-white shadow-sm hover:bg-brand-800 disabled:bg-slate-300 disabled:shadow-none',
+  secondary: 'bg-white text-slate-900 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 hover:ring-slate-400',
+  ghost: 'text-slate-700 hover:bg-slate-100 hover:text-slate-900',
 };
 
-export function Button({ variant = 'primary', className = '', ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant }) {
-  return (
-    <button
-      className={`inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600 disabled:cursor-not-allowed ${VARIANTS[variant]} ${className}`}
-      {...props}
-    />
-  );
+// Altura mínima de 44px (40px en pantallas grandes): objetivo táctil cómodo.
+const SIZES: Record<Size, string> = {
+  md: 'min-h-11 px-4 text-sm sm:min-h-10',
+  sm: 'min-h-9 px-3 text-sm',
+};
+
+const buttonClass = (variant: Variant, size: Size, className: string) =>
+  `inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-colors duration-200 disabled:cursor-not-allowed ${SIZES[size]} ${VARIANTS[variant]} ${className}`;
+
+export function Button({
+  variant = 'primary',
+  size = 'md',
+  className = '',
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: Size }) {
+  return <button type="button" className={buttonClass(variant, size, className)} {...props} />;
+}
+
+/** Link con aspecto de botón (para navegar, no para acciones). */
+export function ButtonLink({
+  variant = 'secondary',
+  size = 'md',
+  className = '',
+  ...props
+}: AnchorHTMLAttributes<HTMLAnchorElement> & { variant?: Variant; size?: Size }) {
+  return <a className={buttonClass(variant, size, className)} {...props} />;
 }
 
 export const selectClass =
-  'w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600';
+  'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600/20';
 
 export const inputClass =
-  'w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm text-slate-800 focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600';
+  'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-500 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600/20';
 
+/** Contenedor de ancho máximo con márgenes laterales consistentes. */
+export function Container({ children, className = '' }: { children: ReactNode; className?: string }) {
+  return <div className={`mx-auto w-full max-w-6xl px-4 sm:px-6 ${className}`}>{children}</div>;
+}
+
+/** Tarjeta estática: sin hover (lo clickeable se distingue por sí mismo). */
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
   return <div className={`rounded-xl border border-slate-200 bg-white shadow-sm ${className}`}>{children}</div>;
+}
+
+/** Título de sección con antetítulo. `tone="dark"` para secciones sobre fondo navy. */
+export function SectionHeading({ eyebrow, title, text, id, tone = 'light' }: { eyebrow: string; title: string; text?: string; id?: string; tone?: 'light' | 'dark' }) {
+  const dark = tone === 'dark';
+  return (
+    <div className="mx-auto max-w-2xl space-y-3 text-center">
+      <p className={`text-sm font-semibold ${dark ? 'text-brand-300' : 'text-brand-700'}`}>{eyebrow}</p>
+      <h2 id={id} className={`text-balance text-2xl font-bold tracking-tight sm:text-3xl ${dark ? 'text-white' : 'text-slate-900'}`}>
+        {title}
+      </h2>
+      {text && <p className={`text-pretty ${dark ? 'text-slate-300' : 'text-slate-600'}`}>{text}</p>}
+    </div>
+  );
 }
 
 const CONFIDENCE_STYLES: Record<Confidence, string> = {
   alta: 'bg-red-50 text-red-700 ring-red-200',
   media: 'bg-amber-50 text-amber-800 ring-amber-200',
-  baja: 'bg-slate-100 text-slate-600 ring-slate-200',
+  baja: 'bg-slate-100 text-slate-700 ring-slate-200',
 };
 
 const CONFIDENCE_LABELS: Record<Confidence, string> = {
@@ -63,6 +103,19 @@ const ICONS = {
   adjust: 'M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12|M16 4v4M10 10v4M18 16v4',
   alert: 'M12 9v4M12 17h.01|M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z',
   check: 'm5 12 5 5 9-10',
+  arrowLeft: 'M19 12H5|m11 6-6 6 6 6',
+  arrowRight: 'M5 12h14|m13 6 6 6-6 6',
+  user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z|M4 21a8 8 0 0 1 16 0',
+  card: 'M3 6h18v12H3z|M3 10h18|M7 15h3',
+  doc: 'M7 3h7l5 5v13H7z|M14 3v5h5|M10 13h6M10 17h6',
+  chart: 'M4 20V4|M4 20h16|M8 16v-5M12 16V8M16 16v-3',
+  eyeOff: 'M3 3l18 18|M10.6 10.6a2 2 0 0 0 2.8 2.8|M9.9 5.1A9.8 9.8 0 0 1 12 5c5 0 9 5 10 7a13 13 0 0 1-3 3.9M6.6 6.6C4.3 8 2.7 10.3 2 12c1 2 5 7 10 7 1.7 0 3.2-.5 4.6-1.2',
+  scale: 'M12 3v18|M5 7h14|M5 7l-3 7a4 4 0 0 0 6 0Z|M19 7l-3 7a4 4 0 0 0 6 0Z|M8 21h8',
+  x: 'M6 6l12 12M18 6 6 18',
+  cloud: 'M7 18a4 4 0 0 1-.6-8 5.5 5.5 0 0 1 10.7-1.5A4 4 0 0 1 17 18Z',
+  cpu: 'M7 7h10v10H7z|M10 10h4v4h-4z|M9 3v4M15 3v4M9 17v4M15 17v4M3 9h4M3 15h4M17 9h4M17 15h4',
+  rule: 'M9 6h11M9 12h11M9 18h11|m3 6 1 1 2-2M3 12l1 1 2-2M3 18l1 1 2-2',
+  wifiOff: 'M3 3l18 18|M8.5 16.5a5 5 0 0 1 7 0|M12 20h.01|M5 12.9a10 10 0 0 1 5.2-2.8M19 12.9a10 10 0 0 0-2.2-1.6|M2 8.8a15 15 0 0 1 4.2-2.6M22 8.8A15 15 0 0 0 11.5 5',
 } as const;
 
 export type IconName = keyof typeof ICONS;
@@ -77,12 +130,12 @@ export function Icon({ name, className = 'h-5 w-5' }: { name: IconName; classNam
   );
 }
 
-export function Stat({ label, value, tone = 'slate' }: { label: string; value: number | string; tone?: 'slate' | 'teal' | 'red' }) {
-  const color = tone === 'teal' ? 'text-teal-700' : tone === 'red' ? 'text-red-700' : 'text-slate-900';
+export function Stat({ label, value, tone = 'neutral' }: { label: string; value: number | string; tone?: 'neutral' | 'ok' | 'risk' }) {
+  const color = tone === 'ok' ? 'text-emerald-700' : tone === 'risk' ? 'text-red-700' : 'text-slate-900';
   return (
     <Card className="px-4 py-3">
-      <div className={`text-2xl font-semibold tabular-nums ${color}`}>{value}</div>
-      <div className="text-xs text-slate-500">{label}</div>
+      <div className={`text-2xl font-bold tabular-nums ${color}`}>{value}</div>
+      <div className="text-xs text-slate-600">{label}</div>
     </Card>
   );
 }

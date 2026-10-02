@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { ApiError, fetchSession, login, logout, verify2fa } from '../lib/api';
 import { useStore } from '../store';
-import { Button, inputClass } from './ui';
+import { Button, Icon, inputClass } from './ui';
 
 /** Sesión opcional del empleado: la app funciona igual sin ingresar. */
 export function Account() {
@@ -15,13 +15,14 @@ export function Account() {
 
   if (session) {
     return (
-      <div className="flex items-center gap-2 text-sm">
-        <span className="hidden text-slate-600 md:inline">
-          {session.nombre} · {session.organizacion}
-        </span>
+      <div className="flex items-center gap-3">
+        <div className="hidden text-right leading-tight sm:block">
+          <p className="text-sm font-semibold text-slate-900">{session.nombre}</p>
+          <p className="text-xs text-slate-600">{session.organizacion}</p>
+        </div>
         <Button
-          variant="ghost"
-          className="px-2 py-1"
+          variant="secondary"
+          size="sm"
           onClick={() => {
             void logout().finally(() => setSession(null));
           }}
@@ -34,11 +35,22 @@ export function Account() {
 
   return (
     <>
-      <Button variant="ghost" className="px-2 py-1 text-sm" onClick={() => setOpen(true)}>
-        Ingresar con mi empresa
+      <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>
+        <Icon name="building" className="h-4 w-4" />
+        <span className="hidden sm:inline">Ingresar con mi empresa</span>
+        <span className="sm:hidden">Ingresar</span>
       </Button>
       {open && <LoginDialog onClose={() => setOpen(false)} />}
     </>
+  );
+}
+
+function Field({ label, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string }) {
+  return (
+    <label className="block space-y-1.5">
+      <span className="text-sm font-medium text-slate-900">{label}</span>
+      <input className={`${inputClass} min-h-11 text-base sm:text-sm`} {...props} />
+    </label>
   );
 }
 
@@ -49,10 +61,18 @@ function LoginDialog({ onClose }: { onClose: () => void }) {
   const [password, setPassword] = useState('');
   const [codigo, setCodigo] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
+    setBusy(true);
     try {
       if (step === 'password') {
         const r = await login(email, password);
@@ -66,48 +86,47 @@ function LoginDialog({ onClose }: { onClose: () => void }) {
       onClose();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'No se pudo conectar con el servidor');
+    } finally {
+      setBusy(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4 backdrop-blur-sm" onClick={onClose}>
       <form
         onSubmit={submit}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-sm space-y-4 rounded-xl bg-white p-6 shadow-xl"
+        className="relative w-full max-w-sm space-y-5 rounded-2xl bg-white p-6 shadow-2xl"
         role="dialog"
         aria-modal="true"
         aria-labelledby="login-title"
       >
-        <div>
-          <h2 id="login-title" className="text-lg font-semibold text-slate-900">
+        <button type="button" onClick={onClose} className="absolute right-3 top-3 rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900" aria-label="Cerrar">
+          <Icon name="x" className="h-5 w-5" />
+        </button>
+        <div className="space-y-2 pr-8">
+          <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-900 text-white">
+            <Icon name={step === 'password' ? 'building' : 'lock'} />
+          </span>
+          <h2 id="login-title" className="text-lg font-bold text-slate-900">
             {step === 'password' ? 'Ingresar con mi empresa' : 'Segundo factor'}
           </h2>
           <p className="text-sm text-slate-600">
             {step === 'password'
-              ? 'Se aplica la política de seguridad de tu empresa. Tu empresa solo recibe estadísticas (cantidad y tipo de datos), nunca el contenido de tus archivos.'
+              ? 'Se aplica la política de seguridad de tu empresa. Tu empresa solo recibe estadísticas, nunca el contenido de tus archivos.'
               : 'Ingresá el código de 6 dígitos de tu app autenticadora.'}
           </p>
         </div>
         {step === 'password' ? (
-          <>
-            <input className={inputClass} type="email" placeholder="Email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} />
-            <input
-              className={inputClass}
-              type="password"
-              placeholder="Contraseña"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </>
+          <div className="space-y-4">
+            <Field label="Email" type="email" autoComplete="username" required autoFocus value={email} onChange={(e) => setEmail(e.target.value)} />
+            <Field label="Contraseña" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+          </div>
         ) : (
-          <input
-            className={inputClass}
+          <Field
+            label="Código"
             inputMode="numeric"
             autoComplete="one-time-code"
-            placeholder="123456"
             maxLength={6}
             required
             autoFocus
@@ -116,16 +135,14 @@ function LoginDialog({ onClose }: { onClose: () => void }) {
           />
         )}
         {error && (
-          <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p role="alert" className="flex gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+            <Icon name="alert" className="mt-0.5 h-4 w-4 shrink-0" />
             {error}
           </p>
         )}
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="ghost" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button type="submit">{step === 'password' ? 'Ingresar' : 'Verificar'}</Button>
-        </div>
+        <Button type="submit" disabled={busy} className="w-full">
+          {busy ? 'Verificando…' : step === 'password' ? 'Ingresar' : 'Verificar'}
+        </Button>
       </form>
     </div>
   );

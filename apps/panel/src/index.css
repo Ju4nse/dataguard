@@ -1,14 +1,15 @@
 @import 'tailwindcss';
+@import '@securedata/shared/theme.css';
 
-/* Tokens de gráficos (paleta de referencia validada para daltonismo; ver skill dataviz). */
+/* Tokens de gráficos: paleta de referencia validada para daltonismo (skill dataviz). */
 :root {
-  --surface-1: #fcfcfb;
-  --page: #f9f9f7;
-  --ink-primary: #0b0b0b;
-  --ink-secondary: #52514e;
-  --ink-muted: #898781;
-  --grid: #e1e0d9;
-  --axis: #c3c2b7;
+  --surface-1: #ffffff;
+  --page: #f8fafc;
+  --ink-primary: #0f172a;
+  --ink-secondary: #475569;
+  --ink-muted: #64748b;
+  --grid: #e2e8f0;
+  --axis: #cbd5e1;
   --series-1: #2a78d6;
   --series-2: #eb6834;
   --series-3: #1baf7a;
@@ -17,6 +18,4 @@
 body {
   background: var(--page);
   color: var(--ink-primary);
-  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
-  -webkit-font-smoothing: antialiased;
 }
