@@ -5,9 +5,9 @@ import { ActionsBar, ChartCard, fmt, MonthlyColumns, RankingBars } from './chart
 import { Button, Card, ErrorText, Logo } from './ui';
 
 const PERIODS = [
-  { days: 30, label: 'Últimos 30 días' },
-  { days: 90, label: 'Últimos 90 días' },
-  { days: 365, label: 'Últimos 12 meses' },
+  { days: 30, label: '30 días' },
+  { days: 90, label: '90 días' },
+  { days: 365, label: '12 meses' },
 ];
 
 const isoDate = (d: Date) => d.toISOString().slice(0, 10);
@@ -81,7 +81,9 @@ export function Dashboard({ me, onLogout }: { me: Me; onLogout: () => void }) {
             <p className="text-sm text-[var(--ink-secondary)]">Estadísticas de detección y concientización. No registra información personal de los empleados.</p>
           </div>
           {/* Un solo filtro, arriba de todo lo que afecta. */}
-          <div className="flex rounded-lg border border-black/10 bg-[var(--surface-1)] p-0.5" role="group" aria-label="Período">
+          <div className="flex items-center gap-2" role="group" aria-label="Período">
+            <span className="text-sm text-[var(--ink-secondary)]">Últimos</span>
+            <div className="flex rounded-lg border border-black/10 bg-[var(--surface-1)] p-0.5">
             {PERIODS.map((p) => (
               <button
                 key={p.days}
@@ -93,6 +95,7 @@ export function Dashboard({ me, onLogout }: { me: Me; onLogout: () => void }) {
                 {p.label}
               </button>
             ))}
+            </div>
           </div>
         </div>
 

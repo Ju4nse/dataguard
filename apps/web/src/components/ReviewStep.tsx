@@ -3,7 +3,7 @@ import { ACTION_LABELS, DETECTION_LABELS, DETECTION_TYPES } from '@securedata/sh
 import type { ColumnDecision, ColumnFinding } from '@securedata/detector';
 import { useMemo, useState } from 'react';
 import { useStore } from '../store';
-import { Button, Card, ConfidenceBadge, selectClass, Stat } from './ui';
+import { Button, Card, ConfidenceBadge, Icon, selectClass, Stat } from './ui';
 
 const TEXT_ACTION_LABELS: Record<Action, string> = {
   eliminar: 'Eliminar columna',
@@ -105,7 +105,7 @@ function FindingRow({ finding, rowCount }: { finding: ColumnFinding; rowCount: n
 }
 
 export function ReviewStep() {
-  const { findings, sheets, sheetIndex, selectSheet, apply, reset, fileName } = useStore();
+  const { findings, sheets, sheetIndex, apply, fileName } = useStore();
   const [showAll, setShowAll] = useState(false);
   const sheet = sheets[sheetIndex]!;
 
@@ -122,18 +122,11 @@ export function ReviewStep() {
             {fileName} · {sheet.rows.length} filas · {sheet.headers.length} columnas
           </p>
         </div>
-        {sheets.length > 1 && (
-          <label className="flex items-center gap-2 text-sm text-slate-600">
-            Hoja
-            <select className={`${selectClass} w-auto`} value={sheetIndex} onChange={(e) => selectSheet(Number(e.target.value))}>
-              {sheets.map((s, i) => (
-                <option key={s.name} value={i}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
+        {/* La hoja se elige en el resultado; acá se ajusta la que está procesada. */}
+        <Button onClick={apply}>
+          <Icon name="check" className="h-4 w-4" />
+          Aplicar cambios
+        </Button>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -168,10 +161,7 @@ export function ReviewStep() {
         )}
       </Card>
 
-      <div className="flex flex-wrap justify-between gap-3">
-        <Button variant="secondary" onClick={reset}>
-          Subir otro archivo
-        </Button>
+      <div className="flex justify-end">
         <Button onClick={apply}>Aplicar cambios</Button>
       </div>
     </div>

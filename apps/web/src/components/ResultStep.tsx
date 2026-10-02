@@ -1,13 +1,25 @@
-import { DETECTION_LABELS, type DetectionType } from '@securedata/shared';
 import { cellToString } from '@securedata/detector';
 import { downloadEquivalences, downloadTable } from '../lib/files';
 import { useStore } from '../store';
-import { Button, Card, Stat } from './ui';
+import { ResultSummary } from './ResultSummary';
+import { Button, Card, Icon } from './ui';
 
-const PREVIEW_ROWS = 15;
+const PREVIEW_ROWS = 12;
+
+/** "Eliminamos 2 columnas, anonimizamos 2 y seudonimizamos 4." */
+function describeActions(counts: { eliminar: number; anonimizar: number; seudonimizar: number }): string {
+  const parts = [
+    counts.eliminar && `eliminamos ${counts.eliminar} columna${counts.eliminar === 1 ? '' : 's'}`,
+    counts.anonimizar && `anonimizamos ${counts.anonimizar}`,
+    counts.seudonimizar && `seudonimizamos ${counts.seudonimizar}`,
+  ].filter(Boolean) as string[];
+  if (parts.length === 0) return '';
+  const text = parts.length === 1 ? parts[0]! : `${parts.slice(0, -1).join(', ')} y ${parts.at(-1)}`;
+  return `${text.charAt(0).toUpperCase()}${text.slice(1)}.`;
+}
 
 export function ResultStep() {
-  const { result, decisions, findings, fileName, format, delimiter, sheets, sheetIndex, selectSheet, backToReview, reset, recordUsage, session } = useStore();
+  const { result, decisions, findings, fileName, format, delimiter, sheets, sheetIndex, selectSheet, recordUsage } = useStore();
   if (!result) return null;
   const { table, equivalences, transformedCounts } = result;
 
@@ -15,77 +27,63 @@ export function ResultStep() {
   const count = (a: string) => actions.filter((d) => d.action === a).length;
   const protectedValues = Object.values(transformedCounts).reduce((n, v) => n + (v ?? 0), 0);
   const doubtful = findings.filter((f) => f.confidence === 'baja').length;
+  const formatLabel = format === 'csv' ? 'CSV' : format === 'json' ? 'JSON' : 'Excel';
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900">
-            {protectedValues > 0 ? `Protegimos ${protectedValues.toLocaleString('es-AR')} datos sensibles` : 'No encontramos datos sensibles'}
-          </h1>
-          <p className="text-sm text-slate-600">
-            {fileName} · Ya podés descargarlo y usarlo en cualquier herramienta de IA. No hace falta que revises nada.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {sheets.length > 1 && (
-            <select
-              aria-label="Hoja"
-              className="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm"
-              value={sheetIndex}
-              onChange={(e) => selectSheet(Number(e.target.value))}
+      <ResultSummary
+        protectedCount={protectedValues}
+        detail={describeActions({ eliminar: count('eliminar'), anonimizar: count('anonimizar'), seudonimizar: count('seudonimizar') })}
+        counts={transformedCounts}
+        doubtfulNote={
+          doubtful > 0
+            ? `Por las dudas seudonimizamos ${doubtful} columna${doubtful === 1 ? '' : 's'} que podría${doubtful === 1 ? '' : 'n'} tener datos sensibles; los valores reales están en la tabla de equivalencias.`
+            : undefined
+        }
+        equivalencesCount={equivalences.length}
+        onDownloadEquivalences={() => downloadEquivalences(equivalences, fileName)}
+        actions={
+          <>
+            <Button
+              onClick={() => {
+                recordUsage();
+                void downloadTable(table, { fileName, format, delimiter, sheetName: sheets[sheetIndex]?.name ?? 'Datos' });
+              }}
             >
-              {sheets.map((s, i) => (
-                <option key={s.name} value={i}>
-                  Hoja: {s.name}
-                </option>
-              ))}
-            </select>
-          )}
-          <Button variant="secondary" onClick={backToReview}>
-            Revisar y ajustar
-          </Button>
-        </div>
-      </div>
-
-      {session && Object.keys(session.politica).length > 0 && (
-        <p className="rounded-lg bg-teal-50 px-4 py-2 text-sm text-teal-900">Se aplicó la política de seguridad de {session.organizacion}.</p>
-      )}
-
-      {doubtful > 0 && (
-        <p className="rounded-lg bg-sky-50 px-4 py-2 text-sm text-sky-900">
-          Por las dudas seudonimizamos {doubtful} columna{doubtful === 1 ? '' : 's'} que podría{doubtful === 1 ? '' : 'n'} tener datos sensibles. Si
-          necesitás los valores reales, los recuperás con la tabla de equivalencias.
-        </p>
-      )}
-
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat label="Valores protegidos" value={protectedValues} tone="teal" />
-        <Stat label="Columnas eliminadas" value={count('eliminar')} />
-        <Stat label="Columnas anonimizadas" value={count('anonimizar')} />
-        <Stat label="Columnas seudonimizadas" value={count('seudonimizar')} />
-      </div>
-
-      {protectedValues > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {Object.entries(transformedCounts).map(([t, n]) => (
-            <span key={t} className="rounded-full bg-teal-50 px-3 py-1 text-xs font-medium text-teal-800 ring-1 ring-inset ring-teal-200">
-              {DETECTION_LABELS[t as DetectionType]}: {n}
-            </span>
-          ))}
-        </div>
-      )}
+              <Icon name="download" className="h-4 w-4" />
+              Descargar {formatLabel} protegido
+            </Button>
+            {sheets.length > 1 && (
+              <select
+                aria-label="Hoja"
+                className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                value={sheetIndex}
+                onChange={(e) => selectSheet(Number(e.target.value))}
+              >
+                {sheets.map((s, i) => (
+                  <option key={s.name} value={i}>
+                    Hoja: {s.name}
+                  </option>
+                ))}
+              </select>
+            )}
+          </>
+        }
+      />
 
       <Card className="overflow-hidden">
-        <div className="border-b border-slate-200 px-4 py-2 text-sm font-medium text-slate-700">
-          Vista previa ({Math.min(PREVIEW_ROWS, table.rows.length)} de {table.rows.length} filas)
+        <div className="flex items-baseline justify-between border-b border-slate-200 px-5 py-3">
+          <h2 className="text-sm font-medium text-slate-900">Así queda tu archivo</h2>
+          <span className="text-xs text-slate-500">
+            {Math.min(PREVIEW_ROWS, table.rows.length)} de {table.rows.length.toLocaleString('es-AR')} filas · {table.headers.length} columnas
+          </span>
         </div>
-        <div className="max-h-96 overflow-auto">
+        <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="sticky top-0 bg-slate-50 text-xs text-slate-500">
+            <thead className="bg-slate-50 text-xs text-slate-500">
               <tr>
                 {table.headers.map((h, i) => (
-                  <th key={i} className="whitespace-nowrap px-3 py-2 font-medium">
+                  <th key={i} className="whitespace-nowrap px-4 py-2 font-medium">
                     {h}
                   </th>
                 ))}
@@ -95,7 +93,7 @@ export function ResultStep() {
               {table.rows.slice(0, PREVIEW_ROWS).map((row, r) => (
                 <tr key={r}>
                   {row.map((cell, c) => (
-                    <td key={c} className="max-w-xs truncate whitespace-nowrap px-3 py-1.5 text-slate-700">
+                    <td key={c} className="max-w-xs truncate whitespace-nowrap px-4 py-2 text-slate-700">
                       {cellToString(cell)}
                     </td>
                   ))}
@@ -105,40 +103,6 @@ export function ResultStep() {
           </table>
         </div>
       </Card>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card className="space-y-3 p-5">
-          <h2 className="font-medium text-slate-900">Archivo depurado</h2>
-          <p className="text-sm text-slate-600">Este es el que podés subir a ChatGPT, Claude o Copilot.</p>
-          <Button
-            onClick={() => {
-              recordUsage();
-              void downloadTable(table, { fileName, format, delimiter, sheetName: sheets[sheetIndex]?.name ?? 'Datos' });
-            }}
-          >
-            Descargar {format === 'csv' ? 'CSV' : format === 'json' ? 'JSON' : 'Excel'} depurado
-          </Button>
-        </Card>
-
-        {equivalences.length > 0 && (
-          <Card className="space-y-3 border-amber-200 bg-amber-50/50 p-5">
-            <h2 className="font-medium text-slate-900">Tabla de equivalencias</h2>
-            <p className="text-sm text-slate-700">
-              Sirve para traducir las respuestas de la IA a los nombres reales ({equivalences.length} seudónimos).{' '}
-              <strong>Contiene los datos originales:</strong> guardala en un lugar seguro y nunca la subas a una IA.
-            </p>
-            <Button variant="secondary" onClick={() => downloadEquivalences(equivalences, fileName)}>
-              Descargar equivalencias (CSV)
-            </Button>
-          </Card>
-        )}
-      </div>
-
-      <div className="flex justify-end">
-        <Button variant="ghost" onClick={reset}>
-          Procesar otro archivo
-        </Button>
-      </div>
     </div>
   );
 }

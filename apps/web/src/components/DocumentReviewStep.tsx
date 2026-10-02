@@ -3,7 +3,7 @@ import { DETECTION_LABELS, DETECTION_TYPES } from '@securedata/shared';
 import { maskForDisplay, type Segment, type Span, type TypeDecision } from '@securedata/detector';
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { useStore } from '../store';
-import { Button, Card, inputClass, selectClass, Stat } from './ui';
+import { Button, Card, Icon, inputClass, selectClass, Stat } from './ui';
 
 const PREVIEW_CHARS = 6000;
 
@@ -101,18 +101,24 @@ function AddTermForm() {
 }
 
 export function DocumentReviewStep() {
-  const { fileName, format, segments, analysis, typeDecisions, customTerms, removeTerm, setTypeDecision, applyDocument, reset } = useStore();
+  const { fileName, format, segments, analysis, typeDecisions, customTerms, removeTerm, setTypeDecision, applyDocument } = useStore();
   if (!analysis) return null;
   const total = analysis.summary.reduce((n, s) => n + s.count, 0);
   const chars = segments.reduce((n, s) => n + s.text.length, 0);
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold text-slate-900">Ajustá la protección</h1>
-        <p className="text-sm text-slate-600">
-          {fileName} · {FORMAT_LABELS[format] ?? format} · {chars.toLocaleString('es-AR')} caracteres
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold text-slate-900">Ajustá la protección</h1>
+          <p className="text-sm text-slate-600">
+            {fileName} · {FORMAT_LABELS[format] ?? format} · {chars.toLocaleString('es-AR')} caracteres
+          </p>
+        </div>
+        <Button onClick={applyDocument}>
+          <Icon name="check" className="h-4 w-4" />
+          Aplicar cambios
+        </Button>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -230,10 +236,7 @@ export function DocumentReviewStep() {
         </Card>
       </div>
 
-      <div className="flex flex-wrap justify-between gap-3">
-        <Button variant="secondary" onClick={reset}>
-          Subir otro archivo
-        </Button>
+      <div className="flex justify-end">
         <Button onClick={applyDocument}>Aplicar cambios</Button>
       </div>
     </div>
