@@ -1,0 +1,25 @@
+# Base de datos local para desarrollo. Los scripts de db/init se ejecutan solo la primera vez
+# (con el volumen vacío). Para volver a aplicarlos: npm run db:reset
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: securedata-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-securedata}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-securedata_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-securedata}
+      TZ: America/Argentina/Buenos_Aires
+    ports:
+      # 5433 para no chocar con un Postgres instalado localmente.
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  db-data:

@@ -1,0 +1,38 @@
+{
+  "name": "securedata-ai",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace @securedata/web",
+    "build": "npm run build --workspace @securedata/web && npm run build --workspace @securedata/panel",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.json --noEmit && npm run typecheck --workspaces --if-present",
+    "fixtures": "tsx scripts/generate-fixtures.ts",
+    "eval": "tsx scripts/eval.ts",
+    "verify-clean": "tsx scripts/verify-clean.ts",
+    "e2e": "tsx scripts/e2e-check.ts && tsx scripts/verify-clean.ts fixtures/clientes_demo.xlsx salida_e2e.xlsx",
+    "db:up": "docker compose up -d --wait",
+    "db:down": "docker compose down",
+    "db:reset": "docker compose down -v && docker compose up -d --wait",
+    "db:psql": "docker compose exec db psql -U securedata -d securedata",
+    "db:test": "tsx scripts/db-test.ts",
+    "db:totp": "tsx scripts/db-totp.ts",
+    "dev:api": "npm run dev --workspace @securedata/api",
+    "dev:panel": "npm run dev --workspace @securedata/panel"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/pg": "^8.23.1",
+    "docx": "^9.8.1",
+    "pdf-lib": "^1.17.1",
+    "pg": "^8.23.1",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}

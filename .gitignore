@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env
+.env.local
+*.log
+.DS_Store
+.vercel/
+# Salidas de prueba: pueden contener tablas de equivalencias
+salida*
+equivalencias*.csv

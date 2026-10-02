@@ -1,0 +1,15 @@
+export * from './types';
+export { scanText, countByType, replaceSpans } from './scanText';
+export { analyzeTable, classifyColumn, summarizeFindings, DEFAULT_ACTIONS } from './classifyColumn';
+export { applyDecisions, anonymizeValue, PseudonymRegistry } from './transform';
+export { analyzeDocument, transformDocument, DEFAULT_DOCUMENT_ACTIONS } from './document';
+export type { Segment, TypeSummary, DocumentAnalysis, TypeDecision, DocumentTransformResult } from './document';
+export { findTerms, fold, mergeSpans, type CustomTerm } from './terms';
+export { jsonAsTable, jsonLeaves, rebuildJson, tableToJson, type JsonLeaf } from './json';
+export { isValidCuit, cuitCheckDigit } from './validators/cuit';
+export { isValidCbu, cbuCheckDigits } from './validators/cbu';
+export { isValidCard, luhnValid } from './validators/luhn';
+export { isValidDni } from './validators/dni';
+export { isPhone } from './patterns/values';
+export { headerHint } from './patterns/headers';
+export { cellToString, maskForDisplay } from './util';

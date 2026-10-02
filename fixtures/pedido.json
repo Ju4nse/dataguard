@@ -1,0 +1,30 @@
+{
+  "pedido": 4512,
+  "cliente": {
+    "razon_social": "Lácteos Norte SAS",
+    "cuit": "30-39877977-7",
+    "estado": "Activo",
+    "contacto": {
+      "nombre": "Martín Sosa",
+      "email": "martin.sosa@gmail.com",
+      "telefono": "+54 9 11 4567-8901"
+    }
+  },
+  "items": [
+    {
+      "producto": {
+        "nombre": "Yerba 1kg"
+      },
+      "cantidad": 40
+    },
+    {
+      "producto": {
+        "nombre": "Azúcar 1kg"
+      },
+      "cantidad": 25
+    }
+  ],
+  "notas": [
+    "Entregar a Martín Sosa, DNI 30.456.789"
+  ]
+}

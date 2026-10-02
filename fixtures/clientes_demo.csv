@@ -1,0 +1,81 @@
+﻿Fecha;Cliente;CUIT;Contacto;Email;Teléfono;DNI contacto;CBU;Provincia;Producto;Cantidad;Monto;Observaciones
+2025-09-18;Distribuidora del Sur SRL;33-37249907-4;Camila Fernández;camila.fernandez@empresa.com.ar;+54 9 11 7335-4676;29853876;0726510722976321888424;Mendoza;Azúcar 1kg;95;85118.89;Sin novedades
+2025-09-20;Panificadora Belgrano SA;33-46486104-7;Valentina Rodríguez;valentina.rodriguez@hotmail.com;+54 9 11 1101-7016;20920951;0176545022039627278204;Buenos Aires;Aceite 1,5L;36;89255.84;Mandar factura a valentina.rodriguez@hotmail.com
+2025-08-21;Textil Rosario SA;30-42421874-6;María Romero;maria.romero@empresa.com.ar;011 15-7357-9005;25966436;0724768231409375005490;Buenos Aires;Arroz 1kg;22;93751.04;Llamar al 011 15-7357-9005 antes de despachar
+2025-09-21;Textil Rosario SA;30-42421874-6;Pablo López;pablo.lopez@empresa.com.ar;+54 9 11 0969-2649;24736969;0724768231409375005490;Tucumán;Yerba 1kg;124;562332.76;Mandar factura a pablo.lopez@hotmail.com
+2025-11-18;Lácteos Norte SAS;30-39877977-7;Nicolás Gómez;nicolas.gomez@hotmail.com;+54 9 11 8320-3593;26276152;2858136302572505567884;Santa Fe;Arroz 1kg;78;138584;Entrega en horario de mañana
+2025-11-28;Textil Rosario SA;30-42421874-6;María Benítez;maria.benitez@hotmail.com;011 15-9366-3341;35740785;0724768231409375005490;Tucumán;Yerba 1kg;127;126114.75;Pidió descuento por volumen
+2025-02-26;Ferretería Central S.R.L.;33-26688981-5;Martín López;martin.lopez@empresa.com.ar;+54 9 11 0748-8780;30371104;2851820640192367586605;Mendoza;Fideos 500g;60;70582.25;Pidió descuento por volumen
+2025-09-18;Ferretería Central S.R.L.;33-26688981-5;Martín Acosta;martin.acosta@hotmail.com;+54 9 11 9963-2315;30791271;2851820640192367586605;Santa Fe;Arroz 1kg;190;422830.13;Pidió descuento por volumen
+2025-10-08;Lácteos Norte SAS;30-39877977-7;Diego Pérez;diego.perez@gmail.com;011 15-1802-9484;33263827;2858136302572505567884;CABA;Yerba 1kg;170;761190.3;Autorizado a retirar: DNI 33.263.827
+2025-10-27;Metalúrgica Oeste SRL;33-35021782-2;Lucía Sosa;lucia.sosa@empresa.com.ar;011 15-1097-3985;32028518;0117910921427201308086;Mendoza;Arroz 1kg;131;543725.82;Autorizado a retirar: DNI 32.028.518
+2025-11-03;Lácteos Norte SAS;30-39877977-7;Pablo López;pablo.lopez@gmail.com;(0351) 247-1421;35549296;2858136302572505567884;Mendoza;Fideos 500g;108;410765.64;Pidió descuento por volumen
+2025-07-26;Logística Andina SRL;33-16666601-0;Valentina Sosa;valentina.sosa@hotmail.com;011 15-7422-4040;26915760;0725764542035298509555;Santa Fe;Fideos 500g;66;209540.43;Autorizado a retirar: DNI 26.915.760
+2025-01-01;Textil Rosario SA;30-42421874-6;Valentina Fernández;valentina.fernandez@empresa.com.ar;(0351) 067-2828;27032647;0724768231409375005490;Buenos Aires;Yerba 1kg;192;640885.54;Autorizado a retirar: DNI 27.032.647
+2025-04-13;Distribuidora del Sur SRL;33-37249907-4;Juan Sosa;juan.sosa@gmail.com;(0351) 064-2835;42921872;0726510722976321888424;Mendoza;Harina 000;143;631215.89;Sin novedades
+2025-05-15;Panificadora Belgrano SA;33-46486104-7;Martín Romero;martin.romero@hotmail.com;(0351) 317-4671;42076871;0176545022039627278204;Mendoza;Aceite 1,5L;22;98085.92;Sin novedades
+2025-09-12;Distribuidora del Sur SRL;33-37249907-4;Lucía Pérez;lucia.perez@empresa.com.ar;+54 9 11 5360-4023;21972705;0726510722976321888424;Mendoza;Yerba 1kg;157;601364.7;Pidió descuento por volumen
+2025-01-13;Panificadora Belgrano SA;33-46486104-7;María Acosta;maria.acosta@empresa.com.ar;011 15-9964-5466;41504217;0176545022039627278204;Buenos Aires;Arroz 1kg;37;47262.44;Mandar factura a maria.acosta@empresa.com.ar
+2025-10-17;Lácteos Norte SAS;30-39877977-7;Pablo Martínez;pablo.martinez@empresa.com.ar;(0351) 969-9173;44187675;2858136302572505567884;Buenos Aires;Harina 000;4;5844.26;Entrega en horario de mañana
+2025-10-06;Agro Pampa S.R.L.;30-45102868-1;Julieta Acosta;julieta.acosta@gmail.com;+54 9 11 8855-1998;27015908;2852824500135943364071;CABA;Aceite 1,5L;37;68304.2;Mandar factura a julieta.acosta@empresa.com.ar
+2025-04-10;Agro Pampa S.R.L.;30-45102868-1;María Pérez;maria.perez@gmail.com;+54 9 11 2580-1115;35293581;2852824500135943364071;Santa Fe;Azúcar 1kg;50;84746.38;Entrega en horario de mañana
+2025-10-14;Ferretería Central S.R.L.;33-26688981-5;Julieta Sosa;julieta.sosa@gmail.com;+54 9 11 1406-0893;25523250;2851820640192367586605;Mendoza;Harina 000;20;93255.63;Entrega en horario de mañana
+2025-04-13;Lácteos Norte SAS;30-39877977-7;Nicolás Sosa;nicolas.sosa@hotmail.com;(0351) 500-4025;31174342;2858136302572505567884;Santa Fe;Aceite 1,5L;119;201465.09;Entrega en horario de mañana
+2025-08-17;Logística Andina SRL;33-16666601-0;Nicolás Romero;nicolas.romero@empresa.com.ar;011 15-5092-3697;23402760;0725764542035298509555;Mendoza;Azúcar 1kg;147;304535.33;Sin novedades
+2025-10-13;Agro Pampa S.R.L.;30-45102868-1;María Sosa;maria.sosa@gmail.com;011 15-4944-8968;33354137;2852824500135943364071;CABA;Harina 000;27;103344.67;Autorizado a retirar: DNI 33.354.137
+2025-11-10;Agro Pampa S.R.L.;30-45102868-1;Diego Sosa;diego.sosa@empresa.com.ar;011 15-6814-6602;37287549;2852824500135943364071;Mendoza;Azúcar 1kg;58;62318.84;Sin novedades
+2025-04-11;Agro Pampa S.R.L.;30-45102868-1;Pablo Gómez;pablo.gomez@empresa.com.ar;+54 9 11 2704-6271;25196482;2852824500135943364071;Mendoza;Yerba 1kg;72;279421.9;Sin novedades
+2025-11-05;Panificadora Belgrano SA;33-46486104-7;Nicolás Fernández;nicolas.fernandez@empresa.com.ar;011 15-4301-5306;27549846;0176545022039627278204;Buenos Aires;Aceite 1,5L;192;784805.02;Autorizado a retirar: DNI 27.549.846
+2025-10-24;Metalúrgica Oeste SRL;33-35021782-2;Camila Gómez;camila.gomez@gmail.com;011 15-6808-3169;39812074;0117910921427201308086;Santa Fe;Aceite 1,5L;160;168562.59;Sin novedades
+2025-08-20;Distribuidora del Sur SRL;33-37249907-4;Martín Martínez;martin.martinez@empresa.com.ar;+54 9 11 3124-9847;22802574;0726510722976321888424;Mendoza;Azúcar 1kg;3;4800.03;Sin novedades
+2025-02-20;Distribuidora del Sur SRL;33-37249907-4;María López;maria.lopez@gmail.com;(0351) 115-2663;31570048;0726510722976321888424;Córdoba;Yerba 1kg;56;57060.23;Pidió descuento por volumen
+2025-11-02;Lácteos Norte SAS;30-39877977-7;Julieta Medina;julieta.medina@gmail.com;+54 9 11 3231-4462;40461110;2858136302572505567884;CABA;Arroz 1kg;158;623530.29;Llamar al +54 9 11 3231-4462 antes de despachar
+2025-01-28;Lácteos Norte SAS;30-39877977-7;Pablo Martínez;pablo.martinez@gmail.com;(0351) 527-7686;41096932;2858136302572505567884;Santa Fe;Arroz 1kg;36;83907.85;Autorizado a retirar: DNI 41.096.932
+2025-04-12;Distribuidora del Sur SRL;33-37249907-4;Diego Pérez;diego.perez@hotmail.com;(0351) 023-3605;33382354;0726510722976321888424;Mendoza;Aceite 1,5L;151;417278.37;Llamar al (0351) 023-3605 antes de despachar
+2025-10-20;Textil Rosario SA;30-42421874-6;Nicolás Martínez;nicolas.martinez@gmail.com;+54 9 11 6337-7256;24177577;0724768231409375005490;Tucumán;Fideos 500g;138;169054.57;Sin novedades
+2025-05-23;Ferretería Central S.R.L.;33-26688981-5;Federico Benítez;federico.benitez@hotmail.com;+54 9 11 3256-7419;40827732;2851820640192367586605;Buenos Aires;Fideos 500g;200;366799.03;Autorizado a retirar: DNI 40.827.732
+2025-09-23;Lácteos Norte SAS;30-39877977-7;Federico Gómez;federico.gomez@empresa.com.ar;+54 9 11 4314-3267;34617908;2858136302572505567884;Tucumán;Yerba 1kg;63;66805.44;Pidió descuento por volumen
+2025-04-07;Textil Rosario SA;30-42421874-6;Sofía Rodríguez;sofia.rodriguez@empresa.com.ar;011 15-9357-5463;29929981;0724768231409375005490;Buenos Aires;Fideos 500g;195;355690.07;Entrega en horario de mañana
+2025-07-03;Ferretería Central S.R.L.;33-26688981-5;Diego Acosta;diego.acosta@gmail.com;(0351) 515-3665;41261706;2851820640192367586605;Buenos Aires;Arroz 1kg;127;345921.75;Llamar al (0351) 515-3665 antes de despachar
+2025-10-21;Distribuidora del Sur SRL;33-37249907-4;Sofía Pérez;sofia.perez@gmail.com;(0351) 134-6183;21560354;0726510722976321888424;CABA;Azúcar 1kg;163;725753.64;Entrega en horario de mañana
+2025-03-21;Textil Rosario SA;30-42421874-6;Julieta Álvarez;julieta.alvarez@gmail.com;+54 9 11 3956-2428;22147076;0724768231409375005490;Tucumán;Aceite 1,5L;86;70905.98;Sin novedades
+2025-01-05;Logística Andina SRL;33-16666601-0;Pablo Sosa;pablo.sosa@empresa.com.ar;011 15-7432-8319;23604570;0725764542035298509555;CABA;Arroz 1kg;77;358828.2;Entrega en horario de mañana
+2025-08-05;Textil Rosario SA;30-42421874-6;Sofía Acosta;sofia.acosta@gmail.com;011 15-2163-1927;34254614;0724768231409375005490;Santa Fe;Aceite 1,5L;108;301631.5;Entrega en horario de mañana
+2025-01-01;Textil Rosario SA;30-42421874-6;Juan Romero;juan.romero@hotmail.com;011 15-2918-3995;44132232;0724768231409375005490;Buenos Aires;Azúcar 1kg;8;35877.92;Llamar al 011 15-2918-3995 antes de despachar
+2025-06-07;Panificadora Belgrano SA;33-46486104-7;Lucía Sosa;lucia.sosa@gmail.com;011 15-2009-8196;24473397;0176545022039627278204;Córdoba;Fideos 500g;152;457709.61;Mandar factura a lucia.sosa@hotmail.com
+2025-05-03;Ferretería Central S.R.L.;33-26688981-5;María Acosta;maria.acosta@empresa.com.ar;+54 9 11 2047-6726;20637543;2851820640192367586605;Mendoza;Aceite 1,5L;106;372823.34;Sin novedades
+2025-12-23;Metalúrgica Oeste SRL;33-35021782-2;María Álvarez;maria.alvarez@gmail.com;+54 9 11 8046-0910;33336286;0117910921427201308086;Córdoba;Aceite 1,5L;169;617448.43;Pidió descuento por volumen
+2025-07-07;Logística Andina SRL;33-16666601-0;Martín Medina;martin.medina@gmail.com;011 15-0834-9451;39595593;0725764542035298509555;Buenos Aires;Aceite 1,5L;14;40944.42;Pidió descuento por volumen
+2025-02-12;Textil Rosario SA;30-42421874-6;María Rodríguez;maria.rodriguez@empresa.com.ar;011 15-5409-5433;37077279;0724768231409375005490;Santa Fe;Azúcar 1kg;121;377102.64;Llamar al 011 15-5409-5433 antes de despachar
+2025-06-14;Distribuidora del Sur SRL;33-37249907-4;Valentina Álvarez;valentina.alvarez@empresa.com.ar;+54 9 11 8977-2129;23003737;0726510722976321888424;Tucumán;Azúcar 1kg;145;579328.75;Mandar factura a valentina.alvarez@hotmail.com
+2025-08-19;Distribuidora del Sur SRL;33-37249907-4;Lucía Romero;lucia.romero@gmail.com;(0351) 532-2731;27158046;0726510722976321888424;Tucumán;Yerba 1kg;19;39809.35;Mandar factura a lucia.romero@empresa.com.ar
+2025-03-03;Distribuidora del Sur SRL;33-37249907-4;Julieta Medina;julieta.medina@gmail.com;011 15-6241-8554;23666934;0726510722976321888424;Mendoza;Fideos 500g;88;323876.73;Entrega en horario de mañana
+2025-06-18;Logística Andina SRL;33-16666601-0;María Romero;maria.romero@gmail.com;+54 9 11 2247-3191;35877461;0725764542035298509555;Tucumán;Arroz 1kg;175;718479.78;Autorizado a retirar: DNI 35.877.461
+2025-04-24;Textil Rosario SA;30-42421874-6;Camila Gómez;camila.gomez@empresa.com.ar;+54 9 11 0131-4518;26748533;0724768231409375005490;Santa Fe;Aceite 1,5L;48;111355.4;Sin novedades
+2025-05-13;Agro Pampa S.R.L.;30-45102868-1;María Rodríguez;maria.rodriguez@empresa.com.ar;011 15-8924-0645;29102201;2852824500135943364071;CABA;Yerba 1kg;67;288115.83;Sin novedades
+2025-10-18;Metalúrgica Oeste SRL;33-35021782-2;Lucía Medina;lucia.medina@empresa.com.ar;+54 9 11 4771-5688;21875869;0117910921427201308086;Tucumán;Yerba 1kg;111;177460.73;Autorizado a retirar: DNI 21.875.869
+2025-10-18;Panificadora Belgrano SA;33-46486104-7;Federico López;federico.lopez@gmail.com;011 15-9880-3356;27145673;0176545022039627278204;Buenos Aires;Yerba 1kg;99;290014.67;Entrega en horario de mañana
+2025-08-25;Metalúrgica Oeste SRL;33-35021782-2;Pablo Acosta;pablo.acosta@gmail.com;011 15-2092-6608;20152149;0117910921427201308086;Tucumán;Arroz 1kg;101;89282.42;Autorizado a retirar: DNI 20.152.149
+2025-04-19;Logística Andina SRL;33-16666601-0;María López;maria.lopez@gmail.com;011 15-1792-5555;27092249;0725764542035298509555;Tucumán;Yerba 1kg;58;183252.33;Sin novedades
+2025-06-16;Agro Pampa S.R.L.;30-45102868-1;Valentina Sosa;valentina.sosa@gmail.com;011 15-2590-6689;26229957;2852824500135943364071;Mendoza;Yerba 1kg;96;207255.65;Mandar factura a valentina.sosa@hotmail.com
+2025-09-19;Textil Rosario SA;30-42421874-6;Valentina Acosta;valentina.acosta@empresa.com.ar;+54 9 11 8507-8129;29148994;0724768231409375005490;Mendoza;Aceite 1,5L;161;267760.87;Sin novedades
+2025-03-19;Metalúrgica Oeste SRL;33-35021782-2;Julieta Gómez;julieta.gomez@gmail.com;(0351) 390-7416;42018712;0117910921427201308086;Buenos Aires;Aceite 1,5L;22;39791.48;Llamar al (0351) 390-7416 antes de despachar
+2025-08-06;Distribuidora del Sur SRL;33-37249907-4;Juan Benítez;juan.benitez@hotmail.com;(0351) 719-7829;29166115;0726510722976321888424;Santa Fe;Fideos 500g;63;129842.17;Autorizado a retirar: DNI 29.166.115
+2025-08-12;Panificadora Belgrano SA;33-46486104-7;Juan Sosa;juan.sosa@hotmail.com;(0351) 508-4418;30265716;0176545022039627278204;Buenos Aires;Arroz 1kg;104;295675.59;Autorizado a retirar: DNI 30.265.716
+2025-06-16;Metalúrgica Oeste SRL;33-35021782-2;Federico López;federico.lopez@hotmail.com;+54 9 11 4933-3704;29351848;0117910921427201308086;Tucumán;Azúcar 1kg;11;28045.63;Sin novedades
+2025-01-14;Lácteos Norte SAS;30-39877977-7;María Gómez;maria.gomez@empresa.com.ar;(0351) 366-7764;28387395;2858136302572505567884;Córdoba;Fideos 500g;130;341403.4;Sin novedades
+2025-01-08;Ferretería Central S.R.L.;33-26688981-5;Pablo Fernández;pablo.fernandez@hotmail.com;(0351) 366-1336;31141213;2851820640192367586605;Santa Fe;Arroz 1kg;22;56349.65;Entrega en horario de mañana
+2025-09-23;Lácteos Norte SAS;30-39877977-7;Federico Álvarez;federico.alvarez@empresa.com.ar;(0351) 811-0601;25868560;2858136302572505567884;Buenos Aires;Harina 000;142;433026.53;Sin novedades
+2025-07-23;Ferretería Central S.R.L.;33-26688981-5;María López;maria.lopez@hotmail.com;011 15-0200-3134;26490644;2851820640192367586605;Santa Fe;Aceite 1,5L;175;608604.12;Mandar factura a maria.lopez@gmail.com
+2025-12-09;Metalúrgica Oeste SRL;33-35021782-2;Camila Benítez;camila.benitez@gmail.com;+54 9 11 6381-2129;38188158;0117910921427201308086;Santa Fe;Azúcar 1kg;170;745676.41;Autorizado a retirar: DNI 38.188.158
+2025-09-01;Metalúrgica Oeste SRL;33-35021782-2;Juan Medina;juan.medina@hotmail.com;+54 9 11 0055-7012;32652979;0117910921427201308086;Mendoza;Yerba 1kg;102;104047.43;Pidió descuento por volumen
+2025-03-05;Agro Pampa S.R.L.;30-45102868-1;Lucía Martínez;lucia.martinez@hotmail.com;(0351) 564-4403;24172733;2852824500135943364071;Tucumán;Yerba 1kg;57;77339.45;Llamar al (0351) 564-4403 antes de despachar
+2025-10-03;Logística Andina SRL;33-16666601-0;María Rodríguez;maria.rodriguez@hotmail.com;011 15-9951-4709;23863239;0725764542035298509555;Santa Fe;Fideos 500g;148;667986.71;Sin novedades
+2025-08-26;Distribuidora del Sur SRL;33-37249907-4;Martín Acosta;martin.acosta@gmail.com;011 15-0205-7166;31988815;0726510722976321888424;Mendoza;Fideos 500g;34;161804.33;Entrega en horario de mañana
+2025-11-04;Textil Rosario SA;30-42421874-6;María Fernández;maria.fernandez@hotmail.com;(0351) 589-2314;23800842;0724768231409375005490;Buenos Aires;Harina 000;66;213115.9;Sin novedades
+2025-01-15;Metalúrgica Oeste SRL;33-35021782-2;Sofía Sosa;sofia.sosa@hotmail.com;+54 9 11 7230-1705;23878147;0117910921427201308086;Córdoba;Aceite 1,5L;52;189053.95;Entrega en horario de mañana
+2025-09-20;Ferretería Central S.R.L.;33-26688981-5;Diego Fernández;diego.fernandez@hotmail.com;011 15-7819-4073;21159864;2851820640192367586605;Santa Fe;Fideos 500g;101;173947.18;Autorizado a retirar: DNI 21.159.864
+2025-06-12;Ferretería Central S.R.L.;33-26688981-5;Pablo Romero;pablo.romero@hotmail.com;+54 9 11 1887-9845;43433939;2851820640192367586605;Mendoza;Fideos 500g;17;45292.9;Entrega en horario de mañana
+2025-05-19;Ferretería Central S.R.L.;33-26688981-5;Camila Rodríguez;camila.rodriguez@hotmail.com;011 15-1494-3889;20468054;2851820640192367586605;Buenos Aires;Harina 000;114;426185.95;Llamar al 011 15-1494-3889 antes de despachar
+2025-03-01;Distribuidora del Sur SRL;33-37249907-4;Lucía Pérez;lucia.perez@gmail.com;011 15-6401-9511;22084746;0726510722976321888424;Mendoza;Harina 000;28;38428.83;Pidió descuento por volumen
+2025-08-09;Lácteos Norte SAS;30-39877977-7;Camila Pérez;camila.perez@hotmail.com;011 15-2501-8588;40998960;2858136302572505567884;Buenos Aires;Aceite 1,5L;70;278073.99;Mandar factura a camila.perez@empresa.com.ar

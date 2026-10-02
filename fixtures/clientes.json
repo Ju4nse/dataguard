@@ -1,0 +1,82 @@
+[
+  {
+    "cliente": "Distribuidora del Sur SRL",
+    "cuit": "33-37249907-4",
+    "contacto": "Camila Fernández",
+    "email": "camila.fernandez@empresa.com.ar",
+    "provincia": "Mendoza",
+    "monto": 85118.89
+  },
+  {
+    "cliente": "Panificadora Belgrano SA",
+    "cuit": "33-46486104-7",
+    "contacto": "Valentina Rodríguez",
+    "email": "valentina.rodriguez@hotmail.com",
+    "provincia": "Buenos Aires",
+    "monto": 89255.84
+  },
+  {
+    "cliente": "Textil Rosario SA",
+    "cuit": "30-42421874-6",
+    "contacto": "María Romero",
+    "email": "maria.romero@empresa.com.ar",
+    "provincia": "Buenos Aires",
+    "monto": 93751.04
+  },
+  {
+    "cliente": "Textil Rosario SA",
+    "cuit": "30-42421874-6",
+    "contacto": "Pablo López",
+    "email": "pablo.lopez@empresa.com.ar",
+    "provincia": "Tucumán",
+    "monto": 562332.76
+  },
+  {
+    "cliente": "Lácteos Norte SAS",
+    "cuit": "30-39877977-7",
+    "contacto": "Nicolás Gómez",
+    "email": "nicolas.gomez@hotmail.com",
+    "provincia": "Santa Fe",
+    "monto": 138584
+  },
+  {
+    "cliente": "Textil Rosario SA",
+    "cuit": "30-42421874-6",
+    "contacto": "María Benítez",
+    "email": "maria.benitez@hotmail.com",
+    "provincia": "Tucumán",
+    "monto": 126114.75
+  },
+  {
+    "cliente": "Ferretería Central S.R.L.",
+    "cuit": "33-26688981-5",
+    "contacto": "Martín López",
+    "email": "martin.lopez@empresa.com.ar",
+    "provincia": "Mendoza",
+    "monto": 70582.25
+  },
+  {
+    "cliente": "Ferretería Central S.R.L.",
+    "cuit": "33-26688981-5",
+    "contacto": "Martín Acosta",
+    "email": "martin.acosta@hotmail.com",
+    "provincia": "Santa Fe",
+    "monto": 422830.13
+  },
+  {
+    "cliente": "Lácteos Norte SAS",
+    "cuit": "30-39877977-7",
+    "contacto": "Diego Pérez",
+    "email": "diego.perez@gmail.com",
+    "provincia": "CABA",
+    "monto": 761190.3
+  },
+  {
+    "cliente": "Metalúrgica Oeste SRL",
+    "cuit": "33-35021782-2",
+    "contacto": "Lucía Sosa",
+    "email": "lucia.sosa@empresa.com.ar",
+    "provincia": "Mendoza",
+    "monto": 543725.82
+  }
+]

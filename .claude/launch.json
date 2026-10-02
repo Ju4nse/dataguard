@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--workspace", "@securedata/web", "--", "--port", "5173", "--strictPort"],
+      "port": 5173
+    },
+    {
+      "name": "panel",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--workspace", "@securedata/panel"],
+      "port": 5180
+    },
+    {
+      "name": "api",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--workspace", "@securedata/api"],
+      "port": 8787
+    }
+  ]
+}
