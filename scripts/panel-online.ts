@@ -6,7 +6,7 @@
  *   4. `tailscale serve` la publica con HTTPS en https://<tu-pc>.<tu-red>.ts.net
  * Uso: npm run panel:online   (Ctrl+C para cortar; la base sigue en Docker)
  */
-import { execFileSync, spawn } from 'node:child_process';
+import { execFileSync, execSync, spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -14,7 +14,6 @@ import { join, resolve } from 'node:path';
 const ROOT = resolve(import.meta.dirname, '..');
 const ENV_FILE = join(ROOT, '.env.panel');
 const PORT = 8790;
-const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 
 function step(text: string) {
   console.log(`\n▶ ${text}`);
@@ -59,8 +58,9 @@ function sessionSecret(): string {
   return secret;
 }
 
-function run(cmd: string, args: string[]) {
-  execFileSync(cmd, args, { cwd: ROOT, stdio: 'inherit', shell: process.platform === 'win32' });
+/** Corre un script de npm (comando fijo, sin datos del usuario: no hay nada que escapar). */
+function npmRun(script: string) {
+  execSync(`npm run ${script}`, { cwd: ROOT, stdio: 'inherit' });
 }
 
 try {
@@ -73,10 +73,10 @@ try {
   const secret = sessionSecret();
 
   step('Base de datos (Docker)');
-  run(npm, ['run', 'db:up']);
+  npmRun('db:up');
 
   step('Compilando el panel');
-  run(npm, ['run', 'build', '-w', '@securedata/panel']);
+  npmRun('build -w @securedata/panel');
 
   step(`Publicando con HTTPS en ${origin}`);
   try {
