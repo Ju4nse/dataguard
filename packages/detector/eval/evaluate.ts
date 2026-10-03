@@ -1,5 +1,5 @@
-import { classifyColumn, scanText } from '../src';
-import { TABLE_CASES, TEXT_CASES, VALIDATION_CASES } from './corpus';
+import { classifyColumn, scanText, type Span } from '../src';
+import { HARD_CASES, HOLDOUT_CASES, TABLE_CASES, TEXT_CASES, VALIDATION_CASES } from './corpus';
 
 export interface GoldSpan {
   type: string;
@@ -59,8 +59,17 @@ function matches(pred: { type: string; start: number; end: number }, gold: GoldS
   return overlap >= (gold.end - gold.start) / 2 && overlap >= (pred.end - pred.start) / 2;
 }
 
-/** @param set 'desarrollo' (casos usados para ajustar las reglas) o 'validacion' (casos nuevos). */
-export function evaluate(set: 'desarrollo' | 'validacion' = 'desarrollo'): EvalReport {
+export type EvalSet = 'desarrollo' | 'validacion' | 'dificiles' | 'control';
+const SETS = { desarrollo: TEXT_CASES, validacion: VALIDATION_CASES, dificiles: HARD_CASES, control: HOLDOUT_CASES };
+
+/** Textos limpios de un set (para precalcular lo que encuentra la IA local). */
+export const caseTexts = (set: EvalSet) => SETS[set].map((c) => parseAnnotated(c.text).text);
+
+/**
+ * @param set 'desarrollo' (casos usados para ajustar las reglas), 'validacion' (casos nuevos) o 'dificiles' (para la IA local).
+ * @param detect detector a medir (por defecto, solo las reglas).
+ */
+export function evaluate(set: EvalSet = 'desarrollo', detect: (text: string) => Span[] = scanText): EvalReport {
   const counts: Record<string, { tp: number; fp: number; fn: number }> = {};
   const bump = (type: string, key: 'tp' | 'fp' | 'fn') => {
     counts[type] ??= { tp: 0, fp: 0, fn: 0 };
@@ -68,9 +77,9 @@ export function evaluate(set: 'desarrollo' | 'validacion' = 'desarrollo'): EvalR
   };
   const mistakes: Mistake[] = [];
 
-  for (const c of set === 'desarrollo' ? TEXT_CASES : VALIDATION_CASES) {
+  for (const c of SETS[set]) {
     const { text, gold } = parseAnnotated(c.text);
-    const preds = scanText(text);
+    const preds = detect(text);
     const used = new Set<number>();
     for (const g of gold) {
       const i = preds.findIndex((p, idx) => !used.has(idx) && matches(p, g));

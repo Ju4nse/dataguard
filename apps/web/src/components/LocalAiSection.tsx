@@ -1,3 +1,4 @@
+import { AiToggle } from './AiToggle';
 import { Container, DarkGlow, Icon, Reveal, SectionHeading, type IconName } from './ui';
 
 /** Paso del diagrama de flujo. */
@@ -30,7 +31,7 @@ const POINTS: { icon: IconName; title: string; text: string }[] = [
   { icon: 'shield', title: 'Sin nuevas fugas', text: 'Como el análisis no sale de tu computadora, la herramienta no crea un nuevo lugar donde se puedan filtrar tus datos.' },
 ];
 
-const LAYERS: { icon: IconName; title: string; status: 'activo' | 'integracion'; text: string; items: string[] }[] = [
+const LAYERS: { icon: IconName; title: string; status: 'activo' | 'beta'; text: string; items: string[] }[] = [
   {
     icon: 'rule',
     title: 'Reglas y validadores',
@@ -41,15 +42,15 @@ const LAYERS: { icon: IconName; title: string; status: 'activo' | 'integracion';
   {
     icon: 'cpu',
     title: 'Modelo de IA local (GLiNER)',
-    status: 'integracion',
-    text: 'Entiende el contexto para encontrar lo que no tiene un formato fijo. Corre en tu navegador, sin conexión a la nube.',
-    items: ['Nombres de personas', 'Empresas', 'Direcciones', 'Información implícita'],
+    status: 'beta',
+    text: 'Entiende el contexto para encontrar lo que no tiene un formato fijo. Corre en tu navegador, sin conexión a la nube. Es opcional: se activa con un clic.',
+    items: ['Nombres de personas', 'Empresas', 'Direcciones', 'Datos de salud'],
   },
 ];
 
 /**
  * Cómo se detecta y por qué es seguro: la IA corre en la computadora del usuario.
- * El modelo GLiNER está en integración: se indica su estado para no prometer algo que todavía no está activo.
+ * El modelo GLiNER es opcional y está en beta: se indica así para no prometer más de lo que hace.
  */
 export function LocalAiSection() {
   return (
@@ -120,7 +121,7 @@ export function LocalAiSection() {
                   ) : (
                     <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/15 px-2.5 py-0.5 text-xs font-semibold text-amber-200">
                       <Icon name="sparkles" className="h-3.5 w-3.5" />
-                      En integración
+                      Beta · opcional
                     </span>
                   )}
                 </div>
@@ -132,6 +133,11 @@ export function LocalAiSection() {
                     </li>
                   ))}
                 </ul>
+                {l.status === 'beta' && (
+                  <div className="border-t border-white/10 pt-4">
+                    <AiToggle tone="dark" />
+                  </div>
+                )}
               </Reveal>
             ))}
           </div>

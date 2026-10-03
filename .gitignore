@@ -8,3 +8,6 @@ dist/
 # Salidas de prueba: pueden contener tablas de equivalencias
 salida*
 equivalencias*.csv
+
+# Modelos de IA descargados para evaluar (pesan cientos de MB)
+.cache/

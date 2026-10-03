@@ -1,5 +1,6 @@
 import type { Action, DetectionType } from '@securedata/shared';
 import { PSEUDONYM_PREFIXES } from '@securedata/shared';
+import { combineModelSpans } from './combine';
 import { headerHint } from './patterns/headers';
 import { looksLikeCompany, looksLikePersonName, VALUE_MATCHERS } from './patterns/values';
 import { replaceSpans, scanText } from './scanText';
@@ -77,8 +78,14 @@ const PROPAGATED = new Set<DetectionType>(['NOMBRE_PERSONA', 'RAZON_SOCIAL', 'DI
 /**
  * @param customTerms términos que el usuario pidió ocultar.
  * @param ignoredValues valores que el usuario marcó como "no ocultar" (falsos positivos); se comparan sin mayúsculas ni tildes.
+ * @param modelSpans lo que encontró el modelo de IA local en cada segmento (opcional).
  */
-export function analyzeDocument(segments: Segment[], customTerms: CustomTerm[] = [], ignoredValues: string[] = []): DocumentAnalysis {
+export function analyzeDocument(
+  segments: Segment[],
+  customTerms: CustomTerm[] = [],
+  ignoredValues: string[] = [],
+  modelSpans: Span[][] = [],
+): DocumentAnalysis {
   const wholeTypes = segments.map(wholeValueType);
   const ignored = new Set(ignoredValues.map(fold));
 
@@ -98,7 +105,7 @@ export function analyzeDocument(segments: Segment[], customTerms: CustomTerm[] =
       const value = seg.text.trim();
       found = mergeSpans(findTerms(seg.text, customTerms), [{ type: whole, start, end: start + value.length, value, confidence: 'alta' }]);
     } else {
-      found = mergeSpans(findTerms(seg.text, terms), scanText(seg.text));
+      found = mergeSpans(findTerms(seg.text, terms), combineModelSpans(scanText(seg.text), modelSpans[i] ?? []));
     }
     return found.map((s) => (ignored.has(fold(s.value)) ? { ...s, ignored: true } : s));
   });

@@ -1,6 +1,7 @@
 name: Deploy a GitHub Pages
 
 # Publica la app web como demo estática: todo corre en el navegador, sin API ni panel.
+# Incluye el modelo de IA local, generado acá a partir del original (ver README, "IA local").
 on:
   push:
     branches: [main]
@@ -14,6 +15,11 @@ permissions:
 concurrency:
   group: pages
   cancel-in-progress: true
+
+env:
+  # Commit fijo del modelo original en Hugging Face (el mismo que MODEL.revision en packages/ml).
+  MODELO_REVISION: 2e0397a7e8a250d76c37122232b3cbde42c8d629
+  MODELO_DIR: .cache/modelos/gliner_multi_pii-v1
 
 jobs:
   build:
@@ -29,6 +35,30 @@ jobs:
         env:
           BASE_PATH: /${{ github.event.repository.name }}/
           VITE_STATIC_DEMO: '1'
+
+      # Modelo de IA: se cuantiza una vez y queda en caché mientras no cambie el script ni la revisión.
+      - name: Caché del modelo de IA
+        id: modelo
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.MODELO_DIR }}
+          key: modelo-${{ env.MODELO_REVISION }}-${{ hashFiles('scripts/quantize-model.py') }}
+      - uses: actions/setup-python@v7
+        if: steps.modelo.outputs.cache-hit != 'true'
+        with:
+          python-version: '3.12'
+      - name: Generar el modelo de IA (1,16 GB → 298 MB)
+        if: steps.modelo.outputs.cache-hit != 'true'
+        run: |
+          pip install onnx==1.23.1 onnxruntime==1.30.0 onnx-ir==1.0.0
+          mkdir -p "$MODELO_DIR/onnx"
+          base="https://huggingface.co/onnx-community/gliner_multi_pii-v1/resolve/$MODELO_REVISION"
+          for f in tokenizer.json tokenizer_config.json onnx/model.onnx; do curl -sSfL -o "$MODELO_DIR/$f" "$base/$f"; done
+          python scripts/quantize-model.py --plegado 2>&1 | grep -v INFO
+          rm "$MODELO_DIR/onnx/model.onnx"
+      - name: Publicar el modelo junto a la app (en partes de menos de 100 MB)
+        run: python3 scripts/preparar-modelo-pages.py apps/web/dist/modelos/gliner_multi_pii-v1
+
       - uses: actions/upload-pages-artifact@v5
         with:
           path: apps/web/dist

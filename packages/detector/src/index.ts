@@ -4,6 +4,7 @@ export { analyzeTable, classifyColumn, summarizeFindings, DEFAULT_ACTIONS } from
 export { applyDecisions, anonymizeValue, PseudonymRegistry } from './transform';
 export { analyzeDocument, transformDocument, DEFAULT_DOCUMENT_ACTIONS } from './document';
 export type { Segment, TypeSummary, DocumentAnalysis, TypeDecision, DocumentTransformResult } from './document';
+export { combineModelSpans } from './combine';
 export { findTerms, fold, mergeSpans, type CustomTerm } from './terms';
 export { jsonAsTable, jsonLeaves, rebuildJson, tableToJson, type JsonLeaf } from './json';
 export { isValidCuit, cuitCheckDigit } from './validators/cuit';

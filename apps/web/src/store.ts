@@ -16,10 +16,12 @@ import {
   type EquivalenceRow,
   type JsonLeaf,
   type Segment,
+  type Span,
   type TransformResult,
   type TypeDecision,
 } from '@securedata/detector';
 import { PSEUDONYM_PREFIXES, type Action, type DetectionType } from '@securedata/shared';
+import { detectWithAi, useAi } from './lib/ai';
 import { sendEvent, type Session } from './lib/api';
 import { ACCEPTED_EXTENSIONS, extensionOf, MAX_SIZE_MB, parseFile, type FileFormat, type ParsedSheet } from './lib/files';
 
@@ -56,6 +58,14 @@ interface State {
   /** Valores que el usuario marcó como "no ocultar" (falsos positivos). */
   ignoredValues: string[];
   analysis: DocumentAnalysis | null;
+  /** Lo que encontró la IA local en cada segmento (vacío si no se usó). */
+  modelSpans: Span[][];
+  /** La IA local revisó este archivo. */
+  aiUsed: boolean;
+  /** Avance del análisis con IA local (0 a 1), o null si no está corriendo. */
+  aiProgress: number | null;
+  /** La IA local falló en este archivo: se protegió solo con reglas. */
+  aiError: string | null;
   typeDecisions: Partial<Record<DetectionType, TypeDecision>>;
   docResult: DocumentResult | null;
 
@@ -136,6 +146,10 @@ const empty = {
   customTerms: [],
   ignoredValues: [],
   analysis: null,
+  modelSpans: [] as Span[][],
+  aiUsed: false,
+  aiProgress: null,
+  aiError: null,
   typeDecisions: {},
   docResult: null,
   usageSent: false,
@@ -219,8 +233,26 @@ export const useStore = create<State>((set, get) => ({
       }
       const segments: Segment[] = parsed.kind === 'json' ? jsonLeaves(parsed.root) : [{ text: parsed.text }];
       if (segments.every((s) => !s.text.trim())) throw new Error('El archivo no tiene texto.');
-      const analysis = analyzeDocument(segments);
+      // Con la IA local activa, primero la corre (en su worker) y suma lo que encuentra a las reglas.
+      let modelSpans: Span[][] = [];
+      let aiError: string | null = null;
+      if (useAi.getState().status === 'lista') {
+        set({ aiProgress: 0 });
+        try {
+          modelSpans = await detectWithAi(
+            segments.map((s) => s.text),
+            (v) => set({ aiProgress: v }),
+          );
+        } catch (err) {
+          aiError = err instanceof Error ? err.message : String(err);
+        }
+      }
+      const analysis = analyzeDocument(segments, [], [], modelSpans);
       set({
+        modelSpans,
+        aiUsed: modelSpans.length > 0,
+        aiProgress: null,
+        aiError,
         mode: 'documento',
         fileName: file.name,
         format: parsed.kind === 'json' ? 'json' : parsed.format,
@@ -275,14 +307,14 @@ export const useStore = create<State>((set, get) => ({
     const terms = [...customTerms, { value: v, type }];
     // Si el usuario lo agrega a mano, deja de estar ignorado.
     const ignored = ignoredValues.filter((x) => x.toLowerCase() !== v.toLowerCase());
-    const analysis = analyzeDocument(segments, terms, ignored);
+    const analysis = analyzeDocument(segments, terms, ignored, get().modelSpans);
     set({ customTerms: terms, ignoredValues: ignored, analysis, typeDecisions: mergeTypeDecisions(analysis, typeDecisions, get().session?.politica ?? {}) });
   },
 
   removeTerm: (index) => {
     const { customTerms, segments, typeDecisions, ignoredValues } = get();
     const terms = customTerms.filter((_, i) => i !== index);
-    const analysis = analyzeDocument(segments, terms, ignoredValues);
+    const analysis = analyzeDocument(segments, terms, ignoredValues, get().modelSpans);
     set({ customTerms: terms, analysis, typeDecisions: mergeTypeDecisions(analysis, typeDecisions, get().session?.politica ?? {}) });
   },
 
@@ -291,7 +323,7 @@ export const useStore = create<State>((set, get) => ({
     // Se compara sin mayúsculas ni tildes, igual que en el análisis.
     const key = fold(value);
     const ignored = ignoredValues.some((x) => fold(x) === key) ? ignoredValues.filter((x) => fold(x) !== key) : [...ignoredValues, value];
-    const analysis = analyzeDocument(segments, customTerms, ignored);
+    const analysis = analyzeDocument(segments, customTerms, ignored, get().modelSpans);
     set({ ignoredValues: ignored, analysis, typeDecisions: mergeTypeDecisions(analysis, typeDecisions, get().session?.politica ?? {}) });
   },
 

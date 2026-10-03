@@ -2,6 +2,7 @@ import { useRef, useState, type DragEvent } from 'react';
 import { PANEL_URL } from '../lib/config';
 import { ACCEPTED_EXTENSIONS, MAX_SIZE_MB } from '../lib/files';
 import { useStore } from '../store';
+import { AiToggle } from './AiToggle';
 import { LocalAiSection } from './LocalAiSection';
 import { Button, ButtonLink, Card, Container, DarkGlow, Icon, Reveal, SectionHeading, Spinner, type IconName } from './ui';
 
@@ -49,7 +50,7 @@ const DETECTS: { icon: IconName; title: string; items: string[] }[] = [
 ];
 
 function UploadCard() {
-  const { loadFile, loading, error } = useStore();
+  const { loadFile, loading, error, aiProgress } = useStore();
   const input = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
 
@@ -87,7 +88,15 @@ function UploadCard() {
           {loading ? <Spinner className="h-6 w-6" /> : <Icon name="upload" className="h-6 w-6" />}
         </div>
         <div className="space-y-1" aria-live="polite">
-          <p className="font-semibold text-slate-900">{loading ? 'Protegiendo tu archivo…' : dragging ? 'Soltalo para protegerlo' : 'Arrastrá tu archivo acá'}</p>
+          <p className="font-semibold text-slate-900">
+            {aiProgress !== null
+              ? `La IA local está revisando el texto… ${Math.round(aiProgress * 100)}%`
+              : loading
+                ? 'Protegiendo tu archivo…'
+                : dragging
+                  ? 'Soltalo para protegerlo'
+                  : 'Arrastrá tu archivo acá'}
+          </p>
           <p className="text-sm text-slate-600">CSV, Excel, ODS, PDF, Word, TXT, Markdown o JSON · hasta {MAX_SIZE_MB} MB</p>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
@@ -115,6 +124,9 @@ function UploadCard() {
           <Icon name="lock" className="h-3.5 w-3.5" />
           Se procesa en tu navegador: no se sube a ningún lado
         </p>
+      </div>
+      <div className="mx-2 mt-2 border-t border-slate-200 px-2 pb-2 pt-4">
+        <AiToggle />
       </div>
       {error && (
         <p role="alert" className="m-2 mt-3 flex gap-2 rounded-lg bg-red-50 px-3 py-2 text-left text-sm text-red-700">
@@ -297,9 +309,9 @@ export function UploadStep() {
             <div>
               <p className="font-semibold">Limitaciones del prototipo</p>
               <p>
-                Es un prototipo académico. Hoy la detección usa reglas, validadores y diccionarios; el modelo de IA local (GLiNER) está en
-                integración para mejorar nombres, direcciones e información implícita. Puede escaparse algún dato o marcarse de más: no lo uses
-                todavía con datos reales de tu empresa.
+                Es un prototipo académico. La detección usa reglas, validadores y diccionarios; el modelo de IA local (GLiNER) es opcional, está
+                en beta y por ahora revisa documentos y textos, no planillas. Puede escaparse algún dato o marcarse de más: no lo uses todavía con
+                datos reales de tu empresa.
               </p>
             </div>
           </aside>

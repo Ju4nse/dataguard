@@ -13,9 +13,9 @@ Filtro de seguridad previo al uso de IA: detecta datos sensibles (DNI, CUIT/CUIL
 | JSON anidado | cualquier otro `.json` | Por tipo de dato (la clave sirve de pista) | `.json` con la misma estructura |
 | Documentos | `.pdf` `.docx` `.txt` `.md` | Por tipo de dato + términos agregados a mano | Texto plano (o `.md`), con botón para copiar |
 
-**Detección en dos capas, ambas locales:** reglas y validadores (activas) y un modelo de IA GLiNER que corre en el navegador (en integración) para nombres, direcciones e información implícita. El modelo se descarga una vez y analiza sin enviar nada a ningún servidor: la protección no crea nuevas fugas.
+**Detección en dos capas, ambas locales:** reglas y validadores (siempre activas) y, opcional, un modelo de IA GLiNER que corre en el navegador para nombres, empresas, direcciones y datos de salud sin formato fijo. El modelo se descarga una vez y analiza sin enviar nada a ningún servidor: la protección no crea nuevas fugas. Ver [IA local](#ia-local-gliner).
 
-Limitaciones actuales: PDF escaneados (sin texto seleccionable) y `.doc` viejos no se pueden leer; hasta integrar GLiNER, algunos nombres poco comunes en texto libre pueden escaparse (se agregan a mano en la revisión). En PDF y Word se conserva el texto, no el formato.
+Limitaciones actuales: PDF escaneados (sin texto seleccionable) y `.doc` viejos no se pueden leer; la IA local por ahora revisa documentos y textos, no planillas, y algún dato puede escaparse (se agregan a mano en la revisión). En PDF y Word se conserva el texto, no el formato.
 
 > **Windows:** si PowerShell dice que "la ejecución de scripts está deshabilitada", usá `npm.cmd` en lugar de `npm`, o corré una vez `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned`.
 
@@ -59,6 +59,34 @@ La app del empleado funciona **sin** API ni base: el procesamiento es 100% en el
 
 **Protección automática:** al subir un archivo se protege solo con la política de la empresa (o las acciones recomendadas) y se va directo al resultado. Revisar es opcional. Ante la duda se seudonimiza: protege, conserva la utilidad para analizar y se revierte con la tabla de equivalencias.
 
+## IA local (GLiNER)
+
+`packages/ml` corre [`gliner_multi_pii-v1`](https://huggingface.co/onnx-community/gliner_multi_pii-v1) (multilingüe, entrenado para datos personales, Apache-2.0) con `onnxruntime-web` dentro de un Web Worker (`apps/web/src/lib/ai.worker.ts`). El pre y post-procesamiento de GLiNER está implementado en `packages/ml/src/gliner.ts` (no usamos el paquete `gliner` de npm: depende de versiones viejas y su separador de palabras corta las tildes).
+
+- **Modelo propio de 298 MB** (`scripts/quantize-model.py --plegado`): el `model_int8.onnx` publicado cuantiza también las activaciones y pierde casi toda la calidad (un nombre claro daba 0,4 en vez de ~0,9). El nuestro guarda solo los pesos en 8 bits y onnxruntime los pasa a float32 al cargar: misma calidad que el modelo completo de 1,16 GB, a velocidad completa.
+- **Opcional:** el usuario la activa con un clic; antes de bajar se avisa el tamaño. Queda guardada en el sistema de archivos privado del navegador (OPFS) y se carga sola en las visitas siguientes; las versiones viejas se borran.
+- **Privacidad:** el worker solo descarga los archivos del modelo; ningún texto del usuario sale del navegador.
+- **Varios hilos:** con aislamiento de origen (COOP/COEP) usa hasta 4 núcleos. En desarrollo lo da `vite.config.ts`; en GitHub Pages, que no permite configurar cabeceras, lo da `public/aislamiento-sw.js` (si no se puede, corre en un hilo).
+- **Cómo se combina** (`packages/detector/src/combine.ts`): lo validado por reglas (dígito verificador, formato, diccionario de datos sensibles) siempre gana; el modelo suma lo que las reglas no vieron y extiende nombres incompletos. Filtros genéricos descartan lo que no es un dato personal: cargos ("La empleada"), áreas ("Compras"), marcas y organismos públicos, lugares, calles sin número.
+- **Calibración:** umbral por etiqueta (`LABEL_THRESHOLDS`) tomado del centro de la meseta de `npm run calibrar:ia`, y ventanas de 24 palabras (`windowWords`).
+
+| Medición (`npm run eval:ia -- --control`) | Solo reglas | Reglas + IA |
+|---|---|---|
+| Casos difíciles para las reglas | 43 % de cobertura | 100 % (precisión 88 %) |
+| Set de control, nunca usado para calibrar | 40 % de cobertura | 100 % (precisión 91 %) |
+| Documento de ~780 palabras en el navegador | — | 9 s con 4 hilos (20 s con uno) |
+
+Para evaluar o regenerar el modelo hay que bajar el original una vez (queda en `.cache/`, ignorado por git) y cuantizarlo:
+
+```bash
+mkdir -p .cache/modelos/gliner_multi_pii-v1/onnx && cd .cache/modelos/gliner_multi_pii-v1
+for f in tokenizer.json tokenizer_config.json onnx/model.onnx; do curl -L -o $f https://huggingface.co/onnx-community/gliner_multi_pii-v1/resolve/main/$f; done
+cd - && pip install onnx onnxruntime onnx-ir && python scripts/quantize-model.py --plegado
+npm run eval:ia
+```
+
+En desarrollo (`npm run dev`) Vite sirve el modelo desde `.cache/` y la IA local funciona sin publicarlo. En GitHub Pages lo genera el workflow de deploy (`.github/workflows/pages.yml`): baja el original de un commit fijo, lo cuantiza (queda en caché entre deploys) y lo publica junto a la app en partes de menos de 100 MB con `scripts/preparar-modelo-pages.py`, que también agrega el aviso de licencia (Apache-2.0). Para servirlo desde otro lado, `VITE_MODEL_BASE` indica la carpeta.
+
 ## Comandos
 
 | Comando | Qué hace |
@@ -71,6 +99,8 @@ La app del empleado funciona **sin** API ni base: el procesamiento es 100% en el
 | `npm run verify-clean -- <original> <depurado>` | Compara un original con su versión depurada |
 | `npm run build` | Build de producción de la web |
 | `npm run eval` | Mide la calidad del detector (precisión y cobertura por tipo); `-- --errores` lista cada fallo |
+| `npm run eval:ia` | Compara reglas contra reglas + IA local, también como documento largo (necesita el modelo en `.cache/`); `-- --control` agrega el set de control |
+| `npm run calibrar:ia` | Barre los umbrales por etiqueta de la IA local sobre los sets de calibración |
 | `npm run db:up` / `db:down` | Levanta / apaga Postgres en Docker (puerto 5433) |
 | `npm run db:reset` | Borra la base y la recrea desde `db/init` (esquema + datos de demo) |
 | `npm run db:test` | Verifica estructura, permisos y autenticación de la base (26 pruebas) |

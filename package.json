@@ -14,6 +14,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit && npm run typecheck --workspaces --if-present",
     "fixtures": "tsx scripts/generate-fixtures.ts",
     "eval": "tsx scripts/eval.ts",
+    "eval:ia": "tsx scripts/eval-ia.ts",
     "verify-clean": "tsx scripts/verify-clean.ts",
     "e2e": "tsx scripts/e2e-check.ts && tsx scripts/verify-clean.ts fixtures/clientes_demo.xlsx salida_e2e.xlsx",
     "db:up": "docker compose up -d --wait",
@@ -23,7 +24,8 @@
     "db:test": "tsx scripts/db-test.ts",
     "db:totp": "tsx scripts/db-totp.ts",
     "dev:api": "npm run dev --workspace @securedata/api",
-    "dev:panel": "npm run dev --workspace @securedata/panel"
+    "dev:panel": "npm run dev --workspace @securedata/panel",
+    "calibrar:ia": "tsx scripts/calibrar-ia.ts"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

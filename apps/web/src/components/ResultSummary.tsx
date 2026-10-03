@@ -31,7 +31,7 @@ export function ResultSummary({
   equivalencesCount: number;
   onDownloadEquivalences: () => void;
 }) {
-  const { fileName, session, backToReview } = useStore();
+  const { fileName, session, backToReview, aiUsed, aiError } = useStore();
   const policyApplied = session && Object.keys(session.politica).length > 0;
   const isProtected = protectedCount > 0;
   const shownCount = useCountUp(protectedCount);
@@ -95,6 +95,18 @@ export function ResultSummary({
                 Analizado en tu computadora: <strong className="font-semibold">0 bytes</strong> de tu archivo se enviaron a servidores o a una IA.
               </span>
             </p>
+            {aiUsed && (
+              <p className="flex items-start gap-2 text-slate-700">
+                <Icon name="cpu" className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
+                <span>Revisado también por la IA local, que corrió en tu navegador.</span>
+              </p>
+            )}
+            {aiError && (
+              <p className="flex items-start gap-2 text-amber-800">
+                <Icon name="alert" className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>La IA local no pudo analizar este archivo; se protegió con las reglas.</span>
+              </p>
+            )}
           </div>
 
           {(policyApplied || doubtfulNote) && (

@@ -135,6 +135,22 @@ export const VALIDATION_CASES: TextCase[] = [
   { id: 'v-neg-politica', text: 'La política de seguridad prohíbe compartir contraseñas por chat.' },
 ];
 
+/**
+ * Casos difíciles para las reglas (nombres fuera del diccionario, extranjeros, empresas sin sufijo,
+ * minúsculas): miden cuánto suma la IA local (`npm run eval:ia`). Se escribieron ANTES de medir
+ * la IA y no se ajustó nada después; no entran en el test de las reglas.
+ */
+export const HARD_CASES: TextCase[] = [
+  { id: 'v3-nombre-raro', text: 'La reclamación la firmó [[NOMBRE_PERSONA|Yanina Etcheverry]] el martes pasado.' },
+  { id: 'v3-extranjero', text: 'El consultor externo, [[NOMBRE_PERSONA|Wojciech Kowalczyk]], pidió acceso al tablero de ventas.' },
+  { id: 'v3-minusculas', text: 'che pasale el reporte a [[NOMBRE_PERSONA|nahuel ibarra]] que lo necesita hoy' },
+  { id: 'v3-empresa-sin-sufijo', text: 'Renovamos el contrato con [[RAZON_SOCIAL|Distribuidora El Ombú]] por dos años más.' },
+  { id: 'v3-firma-mail', text: 'Saludos cordiales,\n[[NOMBRE_PERSONA|Florencia Iturralde]]\nJefa de Compras' },
+  { id: 'v3-salud-implicita', text: 'Necesita reposo porque le diagnosticaron [[DATO_SENSIBLE|hernia de disco]] la semana pasada.' },
+  { id: 'v3-direccion-texto', text: 'Mandale la muestra a [[DIRECCION|Pasaje Las Heras 1540, Villa Allende]].' },
+  { id: 'v3-neg-marca', text: 'Comparamos Mercado Libre contra Tienda Nube para el canal online.' },
+];
+
 export interface TableCase {
   id: string;
   header: string;
@@ -171,4 +187,24 @@ export const TABLE_CASES: TableCase[] = [
   { id: 'neg-codigo', header: 'Código', values: ['30123456', '30123457', '30123458'], expected: null },
   { id: 'neg-legajo', header: 'Legajo', values: [1001, 1002, 1003], expected: null },
   { id: 'neg-fechas', header: 'Fecha', values: [new Date(2025, 2, 1), new Date(2025, 3, 1)], expected: null },
+];
+
+/**
+ * Set de control para la IA local: escrito ANTES de calibrar filtros y umbrales del modelo y nunca
+ * usado para ajustarlos. Mide si la calibración generaliza o solo se acomodó a los otros casos.
+ * Mezcla positivos difíciles y negativos con mayúsculas que no son datos personales.
+ */
+export const HOLDOUT_CASES: TextCase[] = [
+  { id: 'c-mail-cliente', text: 'Buenas, les escribo de [[RAZON_SOCIAL|Ferretería Don Tito]] por la factura vencida que nos reclamó [[NOMBRE_PERSONA|Graciela Benítez]].' },
+  { id: 'c-rrhh', text: 'Desde Recursos Humanos confirmamos que [[NOMBRE_PERSONA|Matías Szwarc]] se reincorpora el lunes tras su licencia.' },
+  { id: 'c-medico', text: 'El parte indica que el operario sufrió [[DATO_SENSIBLE|una fractura de tibia]] y no puede manejar.' },
+  { id: 'c-proveedor', text: 'Cotizamos con [[RAZON_SOCIAL|Metalúrgica Santa Lucía]] y con [[RAZON_SOCIAL|Plásticos del Oeste]]; la segunda es más barata.' },
+  { id: 'c-envio', text: 'Entregar en [[DIRECCION|Calle 47 nro 820, La Plata]] a nombre de [[NOMBRE_PERSONA|Rocío Lanús]].' },
+  { id: 'c-minusculas', text: 'avisale a [[NOMBRE_PERSONA|agustina ferreyra]] que mañana no hay reunión' },
+  { id: 'c-apodo-firma', text: 'Gracias por todo!\n[[NOMBRE_PERSONA|Tomás Ezequiel Rinaldi]]\nAnalista de Cuentas a Pagar' },
+  { id: 'c-neg-herramientas', text: 'Subí el informe a Google Drive y avisá por Slack cuando esté listo.' },
+  { id: 'c-neg-areas', text: 'Logística, Compras y Administración revisan el presupuesto anual.' },
+  { id: 'c-neg-feriado', text: 'El Día de la Bandera no abre la planta de Pilar.' },
+  { id: 'c-neg-cargo', text: 'El gerente de sucursal y la encargada de turno aprobaron el cambio.' },
+  { id: 'c-neg-producto', text: 'El Plan Premium incluye soporte prioritario y la App Móvil.' },
 ];
