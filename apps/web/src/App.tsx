@@ -5,6 +5,7 @@ import { DocumentReviewStep } from './components/DocumentReviewStep';
 import { ResultStep } from './components/ResultStep';
 import { ReviewStep } from './components/ReviewStep';
 import { TranslateStep } from './components/TranslateStep';
+import { ChatStep } from './components/ChatStep';
 import { UploadStep } from './components/UploadStep';
 import { Container, Icon } from './components/ui';
 import { BRAND } from './lib/brand';
@@ -156,6 +157,7 @@ export default function App() {
             {step === 'revisar' && (mode === 'tabla' ? <ReviewStep /> : <DocumentReviewStep />)}
             {step === 'resultado' && (mode === 'tabla' ? <ResultStep /> : <DocumentResultStep />)}
             {step === 'traducir' && <TranslateStep />}
+            {step === 'chat' && <ChatStep />}
           </Container>
         )}
       </main>

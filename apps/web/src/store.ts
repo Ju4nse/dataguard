@@ -29,7 +29,7 @@ import { sendEvent, type Session } from './lib/api';
 import { ACCEPTED_EXTENSIONS, extensionOf, MAX_SIZE_MB, parseFile, type FileFormat, type ParsedSheet } from './lib/files';
 
 /** traducir: pasar la respuesta de la IA externa a los datos reales con la tabla de equivalencias. */
-export type Step = 'subir' | 'revisar' | 'resultado' | 'traducir';
+export type Step = 'subir' | 'revisar' | 'resultado' | 'traducir' | 'chat';
 /** tabla: CSV/Excel/JSON tabular, por columna. documento: PDF/Word/TXT/JSON, por tipo de dato. */
 export type Mode = 'tabla' | 'documento';
 
@@ -128,7 +128,7 @@ function documentAction(type: DetectionType, policy: Policy): TypeDecision['acti
 }
 
 /** Conserva lo que el usuario ya eligió y agrega la acción de la política (o la sugerida) para los tipos nuevos. */
-function mergeTypeDecisions(analysis: DocumentAnalysis, current: Partial<Record<DetectionType, TypeDecision>>, policy: Policy) {
+export function mergeTypeDecisions(analysis: DocumentAnalysis, current: Partial<Record<DetectionType, TypeDecision>>, policy: Policy) {
   const out = { ...current };
   for (const { type } of analysis.summary) {
     out[type] ??= { action: documentAction(type, policy), prefix: PSEUDONYM_PREFIXES[type] };
@@ -402,7 +402,7 @@ export const useStore = create<State>((set, get) => ({
   goToStep: (step) => {
     const { result, docResult } = get();
     if (step === 'subir') get().reset();
-    else if (step === 'traducir') set({ step });
+    else if (step === 'traducir' || step === 'chat') set({ step });
     else if (result || docResult) set({ step });
     else get().reset();
   },

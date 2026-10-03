@@ -163,6 +163,16 @@ const CONFIDENCE_LABELS: Record<Confidence, string> = {
   baja: 'Posible — revisar',
 };
 
+/** Marca lo que encontró (o confirmó) la IA local, para distinguirlo de las reglas. */
+export function AiBadge({ label = 'IA local' }: { label?: string }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-800 ring-1 ring-inset ring-brand-200">
+      <Icon name="cpu" className="h-3.5 w-3.5" />
+      {label}
+    </span>
+  );
+}
+
 export function ConfidenceBadge({ confidence }: { confidence: Confidence }) {
   return (
     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${CONFIDENCE_STYLES[confidence]}`}>

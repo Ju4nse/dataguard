@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { documentOutputExtension, downloadDocument, downloadEquivalences } from '../lib/files';
+import { documentOutputExtension, downloadDocument } from '../lib/files';
 import { useStore } from '../store';
 import { ResultSummary } from './ResultSummary';
 import { TranslateResponse } from './TranslateResponse';
@@ -42,8 +42,7 @@ export function DocumentResultStep() {
             ? `Por las dudas también ocultamos ${doubtful} dato${doubtful === 1 ? '' : 's'} que podría${doubtful === 1 ? '' : 'n'} ser sensible${doubtful === 1 ? '' : 's'}.`
             : undefined
         }
-        equivalencesCount={equivalences.length}
-        onDownloadEquivalences={() => downloadEquivalences(equivalences, fileName)}
+        equivalences={equivalences}
         actions={
           <>
             <Button onClick={() => void copy()}>

@@ -1,4 +1,5 @@
 import type { Confidence, DetectionType } from '@securedata/shared';
+import { promoteBusinessNames } from './patterns/business';
 import { isFirstName } from './patterns/names';
 import { fold } from './terms';
 import type { Span } from './types';
@@ -92,25 +93,32 @@ function implausible(s: Span): boolean {
 
 /**
  * Combina lo que encontraron las reglas con lo que encontró el modelo de IA local.
+ * `text` es el texto analizado (para reconocer nombres de negocios).
  * - Lo que el modelo encuentra donde no había nada, se suma.
  * - Las reglas con formato verificable (dígito verificador, email…) siempre ganan.
  * - Sobre nombres, empresas, direcciones y datos de salud, el modelo reemplaza a la regla cuando
  *   abarca lo mismo y algo más ("María Laura Gómez" en vez de "María Laura") o cuando está más seguro.
  */
-export function combineModelSpans(rules: Span[], model: Span[]): Span[] {
+export function combineModelSpans(rules: Span[], model: Span[], text?: string): Span[] {
   let accepted = [...rules];
-  for (const m of [...model].filter((x) => !implausible(x)).sort((a, b) => RANK[b.confidence] - RANK[a.confidence])) {
+  // "Ferretería Don Tito": el modelo también puede leer "Don Tito" como persona.
+  const candidates = text ? promoteBusinessNames(text, model) : model;
+  for (const m of [...candidates].filter((x) => !implausible(x)).sort((a, b) => RANK[b.confidence] - RANK[a.confidence])) {
     const overlapping = accepted.filter((a) => m.start < a.end && a.start < m.end);
+    const fromModel: Span = { ...m, source: 'ia' };
     if (overlapping.length === 0) {
-      accepted.push(m);
+      accepted.push(fromModel);
       continue;
     }
     if (overlapping.some((a) => STRUCTURED.has(a.type))) continue;
     const best = Math.max(...overlapping.map((a) => RANK[a.confidence]));
     const covers = overlapping.every((a) => m.start <= a.start && a.end <= m.end);
-    if (RANK[m.confidence] > best || (covers && RANK[m.confidence] >= best)) {
+    // Si el modelo abarca lo de la regla y algo más, su lectura es más completa aunque esté menos
+    // seguro: "Ferretería Don Tito" es una empresa, no la persona "Don Tito".
+    const extends_ = covers && overlapping.some((a) => a.end - a.start < m.end - m.start);
+    if (RANK[m.confidence] > best || (covers && RANK[m.confidence] >= best) || extends_) {
       accepted = accepted.filter((a) => !overlapping.includes(a));
-      accepted.push(m);
+      accepted.push(fromModel);
     }
   }
   return accepted.sort((a, b) => a.start - b.start);

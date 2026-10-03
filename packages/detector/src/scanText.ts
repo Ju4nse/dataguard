@@ -1,4 +1,5 @@
 import type { DetectionType } from '@securedata/shared';
+import { promoteBusinessNames } from './patterns/business';
 import { findNames } from './patterns/names';
 import { findSensitive } from './patterns/sensitive';
 import { NAME_PRIORITY, SENSITIVE_PRIORITY, TEXT_PATTERNS } from './patterns/text';
@@ -38,7 +39,7 @@ export function scanText(text: string): Span[] {
       });
     }
   }
-  for (const s of findNames(text)) candidates.push({ ...s, priority: NAME_PRIORITY });
+  for (const s of promoteBusinessNames(text, findNames(text))) candidates.push({ ...s, priority: NAME_PRIORITY });
   for (const s of findSensitive(text)) candidates.push({ ...s, priority: SENSITIVE_PRIORITY });
 
   // Ante superposición gana la prioridad más alta; a igual prioridad, el fragmento más largo.

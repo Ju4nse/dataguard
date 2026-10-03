@@ -23,6 +23,8 @@ export interface ModelRequest {
   texts: string[];
   /** Dónde empieza el valor de la celda dentro del texto (después del encabezado de contexto). */
   offsets: number[];
+  /** Celdas de texto libre que quedaron afuera por el límite (se protegen solo con reglas). */
+  skipped: number;
 }
 
 /** Lo que encontró el modelo en cada celda de texto libre: columna → fila → fragmentos. */
@@ -51,7 +53,7 @@ export function planTableModel(table: Table, findings: ColumnFinding[]): ModelRe
     if (f.kind !== 'columna' && avgWords >= 5 && (f.kind === 'texto' || isFreeText(sample))) {
       const rows: number[] = [];
       values.forEach((v, r) => v && rows.length < MAX_TEXT_CELLS && rows.push(r));
-      requests.push({ column: f.index, mode: 'texto', rows, texts: rows.map((r) => values[r]!), offsets: rows.map(() => 0) });
+      requests.push({ column: f.index, mode: 'texto', rows, texts: rows.map((r) => values[r]!), offsets: rows.map(() => 0), skipped: nonEmpty.length - rows.length });
       continue;
     }
 
@@ -69,7 +71,7 @@ export function planTableModel(table: Table, findings: ColumnFinding[]): ModelRe
       rows.push(r);
     });
     const prefix = f.header.trim() ? `${f.header.trim()}: ` : '';
-    requests.push({ column: f.index, mode: 'muestra', rows, texts: rows.map((r) => prefix + values[r]!), offsets: rows.map(() => prefix.length) });
+    requests.push({ column: f.index, mode: 'muestra', rows, texts: rows.map((r) => prefix + values[r]!), offsets: rows.map(() => prefix.length), skipped: 0 });
   }
   return requests;
 }
@@ -94,13 +96,14 @@ export function applyTableModel(
     if (!f) return;
 
     if (req.mode === 'texto') {
+      if (req.skipped > 0) f.aiSkipped = req.skipped;
       const byRow = new Map<number, Span[]>();
       const all: Span[] = [];
       req.rows.forEach((row, i) => {
         const cell = req.texts[i]!;
         const model = found[i] ?? [];
         if (model.length > 0) byRow.set(row, model);
-        all.push(...combineModelSpans(scanText(cell), model));
+        all.push(...combineModelSpans(scanText(cell), model, cell));
       });
       if (byRow.size === 0) return;
       cellSpans.set(req.column, byRow);
@@ -116,6 +119,7 @@ export function applyTableModel(
         // Seudonimizar: la respuesta de la IA se puede traducir después con la tabla de equivalencias.
         suggestedAction: 'seudonimizar',
         reason: `Texto libre con ${all.length} dato(s) sensible(s) adentro (reglas e IA local): ${kinds.join(', ')}`,
+        aiAssisted: true,
       } satisfies Partial<ColumnFinding>);
       return;
     }
@@ -145,6 +149,7 @@ export function applyTableModel(
         matchRatio: ratio,
         suggestedAction: DEFAULT_ACTIONS[best],
         reason: `${f.reason}. La IA local lo confirma: reconoce ${DETECTION_LABELS[best]} en el ${pct}% de los valores`,
+        aiAssisted: true,
       } satisfies Partial<ColumnFinding>);
       return;
     }
@@ -158,6 +163,7 @@ export function applyTableModel(
       examples: nonEmpty.slice(0, 3).map(maskForDisplay),
       suggestedAction: DEFAULT_ACTIONS[best],
       reason: `La IA local reconoce ${DETECTION_LABELS[best]} en el ${pct}% de los valores`,
+      aiAssisted: true,
     } satisfies Partial<ColumnFinding>);
   });
 

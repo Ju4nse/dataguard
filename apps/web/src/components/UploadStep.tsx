@@ -1,4 +1,5 @@
-import { useRef, useState, type DragEvent } from 'react';
+import { useRef, useState, type DragEvent, type FormEvent } from 'react';
+import { useChat } from '../chatStore';
 import { PANEL_URL } from '../lib/config';
 import { ACCEPTED_EXTENSIONS, MAX_SIZE_MB } from '../lib/files';
 import { useStore } from '../store';
@@ -49,8 +50,48 @@ const DETECTS: { icon: IconName; title: string; items: string[] }[] = [
   { icon: 'key', title: 'Técnicos y sensibles', items: ['Contraseñas', 'API keys y tokens', 'IPs', 'Salud', 'Religión', 'Afiliación sindical'] },
 ];
 
+/** Pestaña "Escribir un prompt": arranca el chat protegido con el primer mensaje. */
+function PromptStart() {
+  const sendPrompt = useChat((s) => s.sendPrompt);
+  const busy = useChat((s) => s.busy);
+  const goToStep = useStore((s) => s.goToStep);
+  const [text, setText] = useState('');
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!text.trim()) return;
+    goToStep('chat');
+    await sendPrompt(text);
+  };
+  return (
+    <form onSubmit={(e) => void submit(e)} className="space-y-3 px-4 py-5 text-left">
+      <label className="block space-y-1.5">
+        <span className="font-semibold text-slate-900">Escribí o pegá lo que le querés pedir a la IA</span>
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && (e.ctrlKey || e.metaKey) && void submit(e)}
+          rows={6}
+          placeholder="Ej.: Redactá un mail para Graciela Benítez (DNI 32.456.789) de Ferretería Don Tito por la factura vencida…"
+          className="w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-base font-normal text-slate-900 placeholder:text-slate-500 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600/20 sm:text-sm"
+        />
+      </label>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <p className="flex items-center gap-1.5 text-xs text-slate-600">
+          <Icon name="lock" className="h-3.5 w-3.5" />
+          Se protege en tu navegador. Después podés pegar la respuesta de la IA y leerla con los datos reales.
+        </p>
+        <Button type="submit" disabled={!text.trim() || busy} className="shrink-0">
+          <Icon name="shield" className="h-4 w-4" />
+          Proteger prompt
+        </Button>
+      </div>
+    </form>
+  );
+}
+
 function UploadCard() {
   const { loadFile, loading, error, aiProgress, openTranslator } = useStore();
+  const [tab, setTab] = useState<'archivo' | 'prompt'>('archivo');
   const input = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
 
@@ -68,6 +109,24 @@ function UploadCard() {
 
   return (
     <Card className="p-2 shadow-xl shadow-slate-950/20">
+      <div className="grid grid-cols-2 gap-1 rounded-lg bg-slate-100 p-1" role="tablist" aria-label="Qué querés proteger">
+        {(['archivo', 'prompt'] as const).map((t) => (
+          <button
+            key={t}
+            type="button"
+            role="tab"
+            aria-selected={tab === t}
+            onClick={() => setTab(t)}
+            className={`flex min-h-10 items-center justify-center gap-2 rounded-md text-sm font-medium transition-colors ${tab === t ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+          >
+            <Icon name={t === 'archivo' ? 'upload' : 'doc'} className="h-4 w-4" />
+            {t === 'archivo' ? 'Subir un archivo' : 'Escribir un prompt'}
+          </button>
+        ))}
+      </div>
+      {tab === 'prompt' ? (
+        <PromptStart />
+      ) : (
       <div
         onDragOver={(e) => {
           e.preventDefault();
@@ -75,7 +134,7 @@ function UploadCard() {
         }}
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
-        className={`group flex flex-col items-center justify-center gap-5 rounded-lg border-2 border-dashed px-6 py-10 text-center transition-colors duration-200 ${
+        className={`group mt-2 flex flex-col items-center justify-center gap-5 rounded-lg border-2 border-dashed px-6 py-10 text-center transition-colors duration-200 ${
           dragging ? 'border-brand-500 bg-brand-50' : 'border-slate-300 hover:border-brand-400'
         }`}
       >
@@ -125,6 +184,7 @@ function UploadCard() {
           Se procesa en tu navegador: no se sube a ningún lado
         </p>
       </div>
+      )}
       <div className="mx-2 mt-2 border-t border-slate-200 px-2 pb-2 pt-4">
         <AiToggle />
       </div>

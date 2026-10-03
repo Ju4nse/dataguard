@@ -1,5 +1,5 @@
 import { cellToString } from '@securedata/detector';
-import { downloadEquivalences, downloadTable } from '../lib/files';
+import { downloadTable } from '../lib/files';
 import { useStore } from '../store';
 import { ResultSummary } from './ResultSummary';
 import { TranslateResponse } from './TranslateResponse';
@@ -41,8 +41,7 @@ export function ResultStep() {
             ? `Por las dudas seudonimizamos ${doubtful} columna${doubtful === 1 ? '' : 's'} que podría${doubtful === 1 ? '' : 'n'} tener datos sensibles; los valores reales están en la tabla de equivalencias.`
             : undefined
         }
-        equivalencesCount={equivalences.length}
-        onDownloadEquivalences={() => downloadEquivalences(equivalences, fileName)}
+        equivalences={equivalences}
         actions={
           <>
             <Button
@@ -79,6 +78,15 @@ export function ResultStep() {
         </p>
       )}
 
+      {findings.some((f) => f.aiSkipped) && (
+        <p className="flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          <Icon name="alert" className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            La planilla es grande: la IA local revisó las primeras celdas de texto libre y el resto (
+            {findings.reduce((n, f) => n + (f.aiSkipped ?? 0), 0).toLocaleString('es-AR')} celdas) se protegió solo con reglas.
+          </span>
+        </p>
+      )}
       {equivalences.length > 0 && (
         <Card className="space-y-4 p-5 sm:p-6">
           <div className="space-y-1">

@@ -1,6 +1,7 @@
 import type { Span } from '@securedata/detector';
 import { create } from 'zustand';
 import type { AiRequest, AiResponse } from './ai.worker';
+import { friendlyAiError } from './device';
 
 export type AiStatus = 'apagada' | 'descargando' | 'lista' | 'error';
 
@@ -49,8 +50,18 @@ function getWorker(): Worker {
       if (m.id !== undefined) {
         pending.get(m.id)?.reject(new Error(m.mensaje));
         pending.delete(m.id);
-      } else useAi.setState({ status: 'error', error: m.mensaje });
+      } else useAi.setState({ status: 'error', error: friendlyAiError(m.mensaje) });
     }
+  };
+  // El worker se cayó (por ejemplo, sin memoria): se avisa y se libera lo pendiente.
+  worker.onerror = (e) => {
+    e.preventDefault();
+    const message = friendlyAiError(e.message || 'Aborted');
+    for (const p of pending.values()) p.reject(new Error(message));
+    pending.clear();
+    worker?.terminate();
+    worker = null;
+    useAi.setState({ status: 'error', error: message });
   };
   return worker;
 }

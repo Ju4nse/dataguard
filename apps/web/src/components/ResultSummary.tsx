@@ -1,3 +1,5 @@
+import type { EquivalenceRow } from '@securedata/detector';
+import { EquivalencesActions } from './EquivalencesActions';
 import { DETECTION_LABELS, type DetectionType } from '@securedata/shared';
 import type { ReactNode } from 'react';
 import { useStore } from '../store';
@@ -19,8 +21,7 @@ export function ResultSummary({
   counts,
   doubtfulNote,
   actions,
-  equivalencesCount,
-  onDownloadEquivalences,
+  equivalences,
 }: {
   protectedCount: number;
   /** Una línea con lo que se hizo, ej. "Eliminamos 2 columnas, anonimizamos 2 y seudonimizamos 4." */
@@ -28,8 +29,7 @@ export function ResultSummary({
   counts: Partial<Record<DetectionType, number>>;
   doubtfulNote?: string;
   actions: ReactNode;
-  equivalencesCount: number;
-  onDownloadEquivalences: () => void;
+  equivalences: EquivalenceRow[];
 }) {
   const { fileName, session, backToReview, aiUsed, aiError } = useStore();
   const policyApplied = session && Object.keys(session.politica).length > 0;
@@ -138,16 +138,14 @@ export function ResultSummary({
           </div>
         </div>
 
-        {equivalencesCount > 0 && (
+        {equivalences.length > 0 && (
           <div className="flex flex-col gap-3 border-t border-amber-200 bg-amber-50 px-5 py-4 sm:flex-row sm:items-center sm:px-7">
             <Icon name="key" className="hidden h-5 w-5 shrink-0 text-amber-700 sm:block" />
             <p className="flex-1 text-sm text-amber-900">
-              <strong className="font-semibold">Tabla de equivalencias ({equivalencesCount} seudónimos):</strong> sirve para traducir las respuestas
-              de la IA a los nombres reales. Tiene los datos originales: guardala en un lugar seguro y nunca la subas a una IA.
+              <strong className="font-semibold">Tabla de equivalencias ({equivalences.length} seudónimos):</strong> sirve para traducir las respuestas
+              de la IA más tarde. Tiene los datos originales: guardala cifrada o en un lugar seguro, y nunca la subas a una IA.
             </p>
-            <Button variant="secondary" onClick={onDownloadEquivalences} className="shrink-0">
-              Descargar equivalencias
-            </Button>
+            <EquivalencesActions rows={equivalences} fileName={fileName} />
           </div>
         )}
       </Card>

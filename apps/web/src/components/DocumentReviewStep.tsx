@@ -3,7 +3,7 @@ import { DETECTION_LABELS, DETECTION_TYPES } from '@securedata/shared';
 import { maskForDisplay, type Segment, type Span, type TypeDecision } from '@securedata/detector';
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { useStore } from '../store';
-import { BackLink, Button, Card, Icon, inputClass, selectClass, Stat } from './ui';
+import { AiBadge, BackLink, Button, Card, Icon, inputClass, selectClass, Stat } from './ui';
 
 const PREVIEW_CHARS = 6000;
 
@@ -53,11 +53,14 @@ function Highlighted({ segments, spans }: { segments: Segment[]; spans: Span[][]
           title={
             sp.ignored
               ? 'No se va a ocultar. Click para volver a ocultarlo.'
-              : `${DETECTION_LABELS[sp.type]}${sp.confidence === 'baja' ? ' (posible — revisar)' : ''}. Click si no es un dato sensible.`
+              : `${DETECTION_LABELS[sp.type]}${sp.confidence === 'baja' ? ' (posible — revisar)' : ''}${sp.source === 'ia' ? ' · lo encontró la IA local' : ''}. Click si no es un dato sensible.`
           }
         >
           {sp.ignored ? sp.value : maskForDisplay(sp.value)}
-          <span className="ml-1 text-xs font-semibold uppercase opacity-80">{sp.ignored ? 'no se oculta' : DETECTION_LABELS[sp.type]}</span>
+          <span className="ml-1 text-xs font-semibold uppercase opacity-80">
+            {sp.ignored ? 'no se oculta' : DETECTION_LABELS[sp.type]}
+            {!sp.ignored && sp.source === 'ia' && ' · IA'}
+          </span>
         </button>,
       );
       pos = sp.end;
@@ -157,6 +160,11 @@ export function DocumentReviewStep() {
                           {s.count} {s.count === 1 ? 'aparición' : 'apariciones'} · {s.distinct} {s.distinct === 1 ? 'valor' : 'valores distintos'}
                         </div>
                         {s.review > 0 && <div className="text-xs font-medium text-sky-800">{s.review} posible(s): revisalas en la vista previa</div>}
+                        {s.ai > 0 && (
+                          <div className="mt-1">
+                            <AiBadge label={s.ai === s.count ? 'Todas por la IA local' : `${s.ai} por la IA local`} />
+                          </div>
+                        )}
                       </div>
                       <div className="flex flex-wrap gap-1">
                         {s.examples.map((ex, i) => (
@@ -226,7 +234,7 @@ export function DocumentReviewStep() {
           <div className="border-b border-slate-200 px-4 py-2">
             <div className="text-sm font-medium text-slate-900">Vista previa</div>
             <div className="text-xs text-slate-600">
-              Tocá un dato resaltado si <strong>no</strong> es sensible. Los de borde punteado son posibles: revisalos.
+              Tocá un dato resaltado si <strong>no</strong> es sensible. Los de borde punteado son posibles: revisalos. «IA» = lo encontró la IA local.
             </div>
           </div>
           {/* Scroll propio solo en escritorio (al lado de la tabla); en celular fluye con la página. */}

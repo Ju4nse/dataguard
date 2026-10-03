@@ -17,6 +17,8 @@ export interface Span {
   confidence: Confidence;
   /** El usuario marcó este valor como "no ocultar". */
   ignored?: boolean;
+  /** Lo encontró la IA local (sin este campo: las reglas). */
+  source?: 'ia';
 }
 
 export interface ColumnFinding {
@@ -41,6 +43,10 @@ export interface ColumnFinding {
   suggestedAction: Action;
   /** Explicación breve para el usuario. */
   reason: string;
+  /** La IA local intervino: clasificó la columna o encontró datos en su texto libre. */
+  aiAssisted?: boolean;
+  /** Celdas de texto libre que la IA local no llegó a revisar (por el límite); quedan solo con reglas. */
+  aiSkipped?: number;
 }
 
 export interface ColumnDecision {

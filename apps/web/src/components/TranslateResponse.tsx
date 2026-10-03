@@ -1,5 +1,6 @@
 import { restorePseudonyms, type EquivalenceRow } from '@securedata/detector';
 import { useId, useMemo, useState } from 'react';
+import { RichResponse } from './RichResponse';
 import { Button, Icon } from './ui';
 
 /**
@@ -69,17 +70,7 @@ export function TranslateResponse({ equivalences }: { equivalences: EquivalenceR
           </div>
 
           <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-            <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-slate-800">
-              {result.parts.map((p, i) =>
-                p.seudonimo ? (
-                  <mark key={i} title={`En la respuesta decía ${p.seudonimo}`} className="rounded bg-emerald-50 px-0.5 font-medium text-emerald-900 ring-1 ring-inset ring-emerald-200">
-                    {p.text}
-                  </mark>
-                ) : (
-                  <span key={i}>{p.text}</span>
-                ),
-              )}
-            </p>
+            <RichResponse parts={result.parts} />
           </div>
 
           {result.unknown.length > 0 && (

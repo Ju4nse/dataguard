@@ -85,12 +85,27 @@ export class PseudonymRegistry {
       this.groups.set(prefix, group);
     }
     const key = equivalenceKey(type, raw);
-    let row = group.get(key);
+    let row = group.get(key) ?? (type === 'NOMBRE_PERSONA' ? this.partialName(group, raw) : undefined);
     if (!row) {
       row = { seudonimo: `${prefix}_${String(group.size + 1).padStart(2, '0')}`, original: raw, grupo: prefix };
       group.set(key, row);
     }
     return row.seudonimo;
+  }
+
+  /**
+   * "Benítez" solo, después de "Graciela Benítez": es la misma persona, mismo seudónimo. Solo si hay
+   * una única persona con ese nombre o apellido (con dos "Benítez" no se adivina).
+   */
+  private partialName(group: Map<string, EquivalenceRow>, raw: string): EquivalenceRow | undefined {
+    const words = (s: string) => fold(s).split(/[^\p{L}]+/u).filter(Boolean);
+    const single = words(raw);
+    if (single.length !== 1 || single[0]!.length < 4) return undefined;
+    const matches = [...group.values()].filter((r) => {
+      const w = words(r.original);
+      return w.length > 1 && w.includes(single[0]!);
+    });
+    return matches.length === 1 ? matches[0] : undefined;
   }
 
   entries(): EquivalenceRow[] {
@@ -178,7 +193,7 @@ export function applyDecisions(
         if (!s) return cell;
 
         if (d.kind === 'texto') {
-          const spans = mergeSpans(findTerms(s, learned), combineModelSpans(scanText(s), cellSpans?.get(i)?.get(r) ?? []));
+          const spans = mergeSpans(findTerms(s, learned), combineModelSpans(scanText(s), cellSpans?.get(i)?.get(r) ?? [], s));
           if (spans.length === 0) return cell;
           spans.forEach((sp) => bump(sp.type));
           return replaceSpans(s, spans, (sp) =>

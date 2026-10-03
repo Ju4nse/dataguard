@@ -144,3 +144,9 @@ export async function readEquivalences(file: File): Promise<EquivalenceRow[]> {
   if (rows.length === 0) throw new Error('El archivo no parece una tabla de equivalencias (faltan las columnas seudonimo y valor_original).');
   return rows;
 }
+
+/** Tabla de equivalencias cifrada con contraseña (ver lib/crypto.ts). */
+export async function downloadEncryptedEquivalences(rows: EquivalenceRow[], fileName: string, password: string) {
+  const { encryptEquivalences } = await import('./crypto');
+  download(await encryptEquivalences(rows, password), `${baseName(fileName)}_equivalencias.cifradas.json`);
+}

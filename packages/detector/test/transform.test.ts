@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { anonymizeValue, applyDecisions, type Table } from '../src';
+import { anonymizeValue, applyDecisions, PseudonymRegistry, scanText, type Table } from '../src';
 
 const table: Table = {
   headers: ['Cliente', 'CUIT', 'Email', 'Teléfono', 'Nacimiento', 'Notas', 'Monto'],
@@ -67,5 +67,22 @@ describe('anonymizeValue', () => {
   it('fecha de nacimiento desde Date y desde número de serie de Excel', () => {
     expect(anonymizeValue('FECHA_NACIMIENTO', new Date(1990, 6, 1))).toBe('1990');
     expect(anonymizeValue('FECHA_NACIMIENTO', 33055)).toBe('1990');
+  });
+});
+
+describe('seudónimos de nombres parciales y negocios', () => {
+  it('un apellido solo recibe el seudónimo de la única persona que lo tiene', () => {
+    const reg = new PseudonymRegistry();
+    expect(reg.get('Persona', 'NOMBRE_PERSONA', 'Graciela Benítez')).toBe('Persona_01');
+    expect(reg.get('Persona', 'NOMBRE_PERSONA', 'Benítez')).toBe('Persona_01');
+    expect(reg.get('Persona', 'NOMBRE_PERSONA', 'graciela')).toBe('Persona_01');
+    // Con dos personas con el mismo apellido no se adivina.
+    reg.get('Persona', 'NOMBRE_PERSONA', 'Martín Benítez');
+    expect(reg.get('Persona', 'NOMBRE_PERSONA', 'Benítez')).toBe('Persona_03');
+  });
+
+  it('un nombre después de un rubro comercial es una empresa', () => {
+    const spans = scanText('La factura de Ferretería Don Tito vence el viernes.');
+    expect(spans.map((s) => [s.type, s.value])).toEqual([['RAZON_SOCIAL', 'Ferretería Don Tito']]);
   });
 });

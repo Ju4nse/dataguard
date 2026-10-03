@@ -3,7 +3,7 @@ import { ACTION_LABELS, DETECTION_LABELS, DETECTION_TYPES } from '@securedata/sh
 import type { ColumnDecision, ColumnFinding } from '@securedata/detector';
 import { useMemo, useState } from 'react';
 import { useStore } from '../store';
-import { BackLink, Button, Card, ConfidenceBadge, Icon, inputClass, selectClass, Stat } from './ui';
+import { AiBadge, BackLink, Button, Card, ConfidenceBadge, Icon, inputClass, selectClass, Stat } from './ui';
 
 const TEXT_ACTION_LABELS: Record<Action, string> = {
   eliminar: 'Eliminar columna',
@@ -46,8 +46,15 @@ function FindingRow({ finding, rowCount }: { finding: ColumnFinding; rowCount: n
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm font-medium text-slate-800">{finding.kind === 'texto' ? 'Texto libre' : DETECTION_LABELS[finding.type!]}</span>
               {finding.confidence && <ConfidenceBadge confidence={finding.confidence} />}
+              {finding.aiAssisted && <AiBadge />}
             </div>
             <p className="text-xs text-slate-600">{finding.reason}</p>
+            {finding.aiSkipped ? (
+              <p className="flex items-start gap-1.5 text-xs text-amber-800">
+                <Icon name="alert" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                La IA local revisó las primeras celdas; {finding.aiSkipped.toLocaleString('es-AR')} se protegieron solo con reglas.
+              </p>
+            ) : null}
             {finding.examples.length > 0 && (
               <div className="flex flex-wrap gap-1 pt-1">
                 {finding.examples.map((ex, i) => (

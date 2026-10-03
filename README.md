@@ -59,6 +59,10 @@ La app del empleado funciona **sin** API ni base: el procesamiento es 100% en el
 
 **Protección automática:** al subir un archivo se protege solo con la política de la empresa (o las acciones recomendadas) y se va directo al resultado. Revisar es opcional. Ante la duda se seudonimiza: protege, conserva la utilidad para analizar y se revierte con la tabla de equivalencias.
 
+**Chat protegido:** además de subir archivos, el usuario puede escribir o pegar un prompt (pestaña "Escribir un prompt"). DataGuard lo devuelve protegido para copiarlo en la IA, y después traduce la respuesta. Los seudónimos se mantienen en toda la conversación: "Persona_01" es siempre la misma persona, y un apellido solo ("Benítez") reutiliza el seudónimo de la única persona que lo tiene. La conversación vive solo en memoria (`apps/web/src/chatStore.ts`); con sesión, se registran solo los metadatos (`tipoEntrada: prompt`).
+
+**Tabla de equivalencias cifrada:** además del CSV, se puede descargar cifrada con contraseña (AES-GCM 256 con PBKDF2-SHA256, WebCrypto, `apps/web/src/lib/crypto.ts`) y abrirla después en el traductor.
+
 **Traducir la respuesta de la IA:** el usuario pega lo que le respondió ChatGPT, Claude o Copilot y la app lo devuelve con los datos reales en lugar de `Persona_01`, `Empresa_03`… (resaltados), sin buscarlos a mano en la tabla. Está en la pantalla de resultado (con la tabla del archivo recién protegido) y desde el inicio, cargando un `_equivalencias.csv` descargado antes. Tolera cómo las IA reescriben los seudónimos (`Persona 1`, `persona_01`, `**Persona_01**`), avisa los que no están en la tabla (inventados) y los datos anonimizados que no se pueden recuperar (`[DNI]`, `***@gmail.com`). Todo en el navegador (`packages/detector/src/restore.ts`).
 
 ## IA local (GLiNER)

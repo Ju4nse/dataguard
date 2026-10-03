@@ -47,7 +47,7 @@ for (const text of [...caseTexts('desarrollo'), ...caseTexts('validacion'), ...c
 times.sort((a, b) => a - b);
 console.log(`${times.length} textos · mediana ${times[Math.floor(times.length / 2)]!.toFixed(0)} ms · máximo ${times.at(-1)!.toFixed(0)} ms por texto`);
 
-const withAi = (text: string) => combineModelSpans(scanText(text), model.get(text) ?? []);
+const withAi = (text: string) => combineModelSpans(scanText(text), model.get(text) ?? [], text);
 const onlyAi = (text: string) => model.get(text) ?? [];
 
 const pct = (n: number) => `${(n * 100).toFixed(0)}%`.padStart(5);
@@ -100,7 +100,7 @@ for (const text of texts) {
   inDoc.set(text, (docSpans ?? []).filter((x) => x.start >= offset && x.end <= end).map((x) => ({ ...x, start: x.start - offset, end: x.end - offset })));
   offset = end + 1;
 }
-const docAi = (text: string) => combineModelSpans(scanText(text), inDoc.get(text) ?? []);
+const docAi = (text: string) => combineModelSpans(scanText(text), inDoc.get(text) ?? [], text);
 const docAlone = (text: string) => inDoc.get(text) ?? [];
 compare('Casos nuevos como documento largo', evaluate('validacion'), evaluate('validacion', docAi), evaluate('validacion', docAlone));
 compare('Casos difíciles como documento largo', evaluate('dificiles'), evaluate('dificiles', docAi), evaluate('dificiles', docAlone));

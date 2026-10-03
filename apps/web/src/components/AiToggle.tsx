@@ -1,5 +1,7 @@
 import { MODEL } from '@securedata/ml';
+import { useEffect, useState } from 'react';
 import { useAi } from '../lib/ai';
+import { checkDevice, type DeviceCheck } from '../lib/device';
 import { Button, Icon } from './ui';
 
 /**
@@ -9,7 +11,19 @@ import { Button, Icon } from './ui';
  */
 export function AiToggle({ tone = 'light' }: { tone?: 'light' | 'dark' }) {
   const { status, progress, error, enable, disable } = useAi();
+  const [device, setDevice] = useState<DeviceCheck | null>(null);
   const dark = tone === 'dark';
+
+  // Antes de ofrecer la descarga se revisa si el equipo puede correr el modelo.
+  useEffect(() => {
+    if (status !== 'apagada' && status !== 'error') return;
+    let alive = true;
+    void checkDevice().then((d) => alive && setDevice(d));
+    return () => {
+      alive = false;
+    };
+  }, [status]);
+  const blocked = (device?.blockers.length ?? 0) > 0;
   const muted = dark ? 'text-slate-300' : 'text-slate-600';
   const strong = dark ? 'text-white' : 'text-slate-900';
 
@@ -67,15 +81,25 @@ export function AiToggle({ tone = 'light' }: { tone?: 'light' | 'dark' }) {
             computadora.
           </p>
         </div>
-        <Button variant="secondary" size="sm" onClick={enable} className="shrink-0">
+        <Button variant="secondary" size="sm" onClick={enable} className="shrink-0" disabled={blocked}>
           <Icon name="download" className="h-4 w-4" />
           {status === 'error' ? 'Reintentar' : 'Activar IA local'}
         </Button>
       </div>
       {status === 'error' && error && (
         <p role="alert" className={`text-sm ${dark ? 'text-red-300' : 'text-red-700'}`}>
-          No se pudo cargar la IA local: {error}
+          {error}
         </p>
+      )}
+      {device && [...device.blockers, ...device.warnings].length > 0 && (
+        <ul className="space-y-1">
+          {[...device.blockers, ...device.warnings].map((m) => (
+            <li key={m} className={`flex items-start gap-1.5 text-xs ${dark ? 'text-amber-200' : 'text-amber-800'}`}>
+              <Icon name="alert" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              {m}
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );

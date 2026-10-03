@@ -43,8 +43,8 @@ export const logout = () => api('/auth/logout', {});
 
 /** Envía SOLO metadatos: tipos y cantidades. Nunca contenido, nombre de archivo ni nombres de columnas. */
 export async function sendEvent(e: {
-  tipoEntrada: 'tabla' | 'documento';
-  tipoArchivo: string;
+  tipoEntrada: 'tabla' | 'documento' | 'prompt';
+  tipoArchivo?: string;
   filas?: number;
   detecciones: { tipo: DetectionType; accion: Action; cantidad: number }[];
 }) {

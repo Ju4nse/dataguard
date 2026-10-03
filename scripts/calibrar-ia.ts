@@ -41,6 +41,7 @@ function score(thresholds: Record<string, number>) {
     combineModelSpans(
       scanText(text),
       (raw.get(text) ?? []).filter((s) => s.score >= thresholds[labelOf[s.type]!]!),
+      text,
     );
   let tp = 0;
   let fp = 0;

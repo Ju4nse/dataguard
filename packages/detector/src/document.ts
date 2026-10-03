@@ -27,6 +27,8 @@ export interface TypeSummary {
   distinct: number;
   /** Apariciones con confianza baja: conviene revisarlas en la vista previa. */
   review: number;
+  /** Apariciones que encontró la IA local (el resto, las reglas). */
+  ai: number;
   examples: string[];
 }
 
@@ -105,38 +107,43 @@ export function analyzeDocument(
       const value = seg.text.trim();
       found = mergeSpans(findTerms(seg.text, customTerms), [{ type: whole, start, end: start + value.length, value, confidence: 'alta' }]);
     } else {
-      found = mergeSpans(findTerms(seg.text, terms), combineModelSpans(scanText(seg.text), modelSpans[i] ?? []));
+      found = mergeSpans(findTerms(seg.text, terms), combineModelSpans(scanText(seg.text), modelSpans[i] ?? [], seg.text));
     }
     return found.map((s) => (ignored.has(fold(s.value)) ? { ...s, ignored: true } : s));
   });
 
-  const byType = new Map<DetectionType, { count: number; review: number; values: Set<string>; examples: string[] }>();
+  const byType = new Map<DetectionType, { count: number; review: number; ai: number; values: Set<string>; examples: string[] }>();
   for (const s of spans.flat()) {
     if (s.ignored) continue;
     let entry = byType.get(s.type);
     if (!entry) {
-      entry = { count: 0, review: 0, values: new Set(), examples: [] };
+      entry = { count: 0, review: 0, ai: 0, values: new Set(), examples: [] };
       byType.set(s.type, entry);
     }
     entry.count++;
     if (s.confidence === 'baja') entry.review++;
+    if (s.source === 'ia') entry.ai++;
     if (!entry.values.has(s.value) && entry.examples.length < 3) entry.examples.push(maskForDisplay(s.value));
     entry.values.add(s.value);
   }
 
   const summary = [...byType.entries()]
-    .map(([type, e]) => ({ type, count: e.count, distinct: e.values.size, review: e.review, examples: e.examples }))
+    .map(([type, e]) => ({ type, count: e.count, distinct: e.values.size, review: e.review, ai: e.ai, examples: e.examples }))
     .sort((a, b) => b.count - a.count);
 
   return { spans, summary };
 }
 
+/**
+ * @param registry seudónimos ya asignados (en el chat, para que "Persona_01" sea la misma persona en
+ *   todos los mensajes de la conversación). Por defecto, uno nuevo por documento.
+ */
 export function transformDocument(
   segments: Segment[],
   spans: Span[][],
   decisions: Partial<Record<DetectionType, TypeDecision>>,
+  registry: PseudonymRegistry = new PseudonymRegistry(),
 ): DocumentTransformResult {
-  const registry = new PseudonymRegistry();
   const counts: Partial<Record<DetectionType, number>> = {};
 
   const texts = segments.map((seg, i) => {
