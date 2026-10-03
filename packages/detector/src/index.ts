@@ -1,10 +1,12 @@
 export * from './types';
 export { scanText, countByType, replaceSpans } from './scanText';
 export { analyzeTable, classifyColumn, summarizeFindings, DEFAULT_ACTIONS } from './classifyColumn';
-export { applyDecisions, anonymizeValue, PseudonymRegistry } from './transform';
+export { applyDecisions, anonymizeValue, ANONYMIZED_TOKENS, PseudonymRegistry } from './transform';
 export { analyzeDocument, transformDocument, DEFAULT_DOCUMENT_ACTIONS } from './document';
 export type { Segment, TypeSummary, DocumentAnalysis, TypeDecision, DocumentTransformResult } from './document';
 export { combineModelSpans } from './combine';
+export { applyTableModel, planTableModel, type CellSpans, type ModelRequest } from './tableModel';
+export { restorePseudonyms, type RestoreResult, type RestoredPart } from './restore';
 export { findTerms, fold, mergeSpans, type CustomTerm } from './terms';
 export { jsonAsTable, jsonLeaves, rebuildJson, tableToJson, type JsonLeaf } from './json';
 export { isValidCuit, cuitCheckDigit } from './validators/cuit';

@@ -5,13 +5,14 @@
  * de este worker: no hay ningún fetch con contenido del usuario.
  */
 import { Tokenizer } from '@huggingface/tokenizers';
-import { detectInSegments, glinerTokenizer, MODEL, modelFileUrl, ortRunner, type GlinerRunner, type GlinerTokenizer } from '@securedata/ml';
+import { DEFAULT_CONFIG, detectInSegments, glinerTokenizer, MODEL, modelFileUrl, ortRunner, type GlinerRunner, type GlinerTokenizer } from '@securedata/ml';
 import * as ort from 'onnxruntime-web/wasm';
 import wasmUrl from 'onnxruntime-web/ort-wasm-simd-threaded.wasm?url';
 // Con varios hilos, onnxruntime crea un worker por hilo cargando este .mjs: tiene que ser una URL real.
 import mjsUrl from 'onnxruntime-web/ort-wasm-simd-threaded.mjs?url';
 
-export type AiRequest = { type: 'cargar' } | { type: 'detectar'; id: number; segments: string[] };
+/** windowWords: palabras por ventana (0 = cada frase o celda por separado, para planillas). */
+export type AiRequest = { type: 'cargar' } | { type: 'detectar'; id: number; segments: string[]; windowWords?: number };
 export type AiResponse =
   | { type: 'descarga'; valor: number }
   | { type: 'lista' }
@@ -200,6 +201,7 @@ self.onmessage = async (e: MessageEvent<AiRequest>) => {
   try {
     const { tok, runner } = await load();
     const spans = await detectInSegments(msg.segments, tok, runner, {
+      config: { ...DEFAULT_CONFIG, windowWords: msg.windowWords ?? DEFAULT_CONFIG.windowWords },
       onProgress: (done, total) => post({ type: 'avance', id: msg.id, valor: total ? done / total : 1 }),
     });
     post({ type: 'resultado', id: msg.id, spans });

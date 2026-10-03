@@ -64,7 +64,7 @@ export function AiToggle({ tone = 'light' }: { tone?: 'light' | 'dark' }) {
           </p>
           <p className={`text-sm ${muted}`}>
             Encuentra nombres, empresas y direcciones sin formato fijo. Descarga única de {MODEL.sizeMb} MB; después analiza sin conexión y nada sale de tu
-            computadora. Por ahora, en documentos y textos.
+            computadora.
           </p>
         </div>
         <Button variant="secondary" size="sm" onClick={enable} className="shrink-0">

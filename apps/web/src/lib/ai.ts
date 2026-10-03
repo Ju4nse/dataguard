@@ -81,11 +81,14 @@ export function restoreAi() {
   if (readPref() && useAi.getState().status === 'apagada') useAi.getState().enable();
 }
 
-/** Corre la IA local sobre los segmentos de un documento. Solo llamar con status 'lista'. */
-export function detectWithAi(segments: string[], onProgress?: (v: number) => void): Promise<Span[][]> {
+/**
+ * Corre la IA local sobre los segmentos de un documento. Solo llamar con status 'lista'.
+ * `windowWords: 0` analiza cada segmento por separado (celdas de planillas: juntas pierden contexto).
+ */
+export function detectWithAi(segments: string[], onProgress?: (v: number) => void, options: { windowWords?: number } = {}): Promise<Span[][]> {
   const id = nextId++;
   return new Promise((resolve, reject) => {
     pending.set(id, { resolve, reject, onProgress });
-    send({ type: 'detectar', id, segments });
+    send({ type: 'detectar', id, segments, windowWords: options.windowWords });
   });
 }

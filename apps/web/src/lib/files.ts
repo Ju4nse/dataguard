@@ -130,3 +130,17 @@ export function downloadEquivalences(rows: EquivalenceRow[], fileName: string) {
     `${baseName(fileName)}_equivalencias.csv`,
   );
 }
+
+/**
+ * Lee un "_equivalencias.csv" descargado antes (columnas seudonimo, valor_original, grupo) para
+ * traducir respuestas de la IA más tarde. Se lee en el navegador; no se sube a ningún lado.
+ */
+export async function readEquivalences(file: File): Promise<EquivalenceRow[]> {
+  const text = (await file.text()).replace(/^﻿/, '');
+  const parsed = Papa.parse<Record<string, string>>(text, { header: true, skipEmptyLines: true, transformHeader: (h) => h.trim().toLowerCase() });
+  const rows = parsed.data
+    .map((r) => ({ seudonimo: (r.seudonimo ?? '').trim(), original: r.valor_original ?? r.original ?? '', grupo: (r.grupo ?? '').trim() }))
+    .filter((r) => r.seudonimo && r.original);
+  if (rows.length === 0) throw new Error('El archivo no parece una tabla de equivalencias (faltan las columnas seudonimo y valor_original).');
+  return rows;
+}

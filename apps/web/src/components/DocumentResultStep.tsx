@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { documentOutputExtension, downloadDocument, downloadEquivalences } from '../lib/files';
 import { useStore } from '../store';
 import { ResultSummary } from './ResultSummary';
+import { TranslateResponse } from './TranslateResponse';
 import { Button, Card, Icon } from './ui';
 
 const PREVIEW_CHARS = 20000;
@@ -62,6 +63,19 @@ export function DocumentResultStep() {
           </>
         }
       />
+
+      {equivalences.length > 0 && (
+        <Card className="space-y-4 p-5 sm:p-6">
+          <div className="space-y-1">
+            <h2 className="flex items-center gap-2 font-semibold text-slate-900">
+              <Icon name="swap" className="h-5 w-5 text-brand-700" />
+              ¿Ya te respondió la IA? Traducí la respuesta
+            </h2>
+            <p className="text-sm text-slate-600">Pegala acá y te la devolvemos con los datos reales en lugar de Persona_01, Empresa_03…</p>
+          </div>
+          <TranslateResponse equivalences={equivalences} />
+        </Card>
+      )}
 
       <Card className="overflow-hidden">
         <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-slate-200 px-5 py-3">

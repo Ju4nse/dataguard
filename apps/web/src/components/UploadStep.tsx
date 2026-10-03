@@ -50,7 +50,7 @@ const DETECTS: { icon: IconName; title: string; items: string[] }[] = [
 ];
 
 function UploadCard() {
-  const { loadFile, loading, error, aiProgress } = useStore();
+  const { loadFile, loading, error, aiProgress, openTranslator } = useStore();
   const input = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
 
@@ -127,6 +127,16 @@ function UploadCard() {
       </div>
       <div className="mx-2 mt-2 border-t border-slate-200 px-2 pb-2 pt-4">
         <AiToggle />
+      </div>
+      <div className="mx-2 border-t border-slate-200 px-2 py-3">
+        <button
+          type="button"
+          onClick={openTranslator}
+          className="inline-flex min-h-11 items-center gap-2 rounded-md text-sm font-medium text-brand-700 hover:text-brand-800 sm:min-h-0"
+        >
+          <Icon name="swap" className="h-4 w-4" />
+          ¿Ya te respondió la IA? Traducí su respuesta con tu tabla de equivalencias
+        </button>
       </div>
       {error && (
         <p role="alert" className="m-2 mt-3 flex gap-2 rounded-lg bg-red-50 px-3 py-2 text-left text-sm text-red-700">
@@ -310,7 +320,7 @@ export function UploadStep() {
               <p className="font-semibold">Limitaciones del prototipo</p>
               <p>
                 Es un prototipo académico. La detección usa reglas, validadores y diccionarios; el modelo de IA local (GLiNER) es opcional, está
-                en beta y por ahora revisa documentos y textos, no planillas. Puede escaparse algún dato o marcarse de más: no lo uses todavía con
+                en beta. Puede escaparse algún dato o marcarse de más: no lo uses todavía con
                 datos reales de tu empresa.
               </p>
             </div>

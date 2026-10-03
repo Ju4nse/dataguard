@@ -61,7 +61,7 @@ function isNumericLike(s: string): boolean {
   return /^[\d\s.,-]+$/.test(s);
 }
 
-function isFreeText(values: string[]): boolean {
+export function isFreeText(values: string[]): boolean {
   if (values.length === 0) return false;
   const avgLen = values.reduce((n, s) => n + s.length, 0) / values.length;
   return avgLen >= 20 && ratio(values, (s) => s.includes(' ')) >= 0.5;
@@ -187,7 +187,8 @@ export function classifyColumn(index: number, header: string, values: CellValue[
         detectionCount: spans.length,
         textCounts,
         examples: spans.slice(0, MAX_EXAMPLES).map((s) => maskForDisplay(s.value)),
-        suggestedAction: 'anonimizar',
+        // Seudonimizar: la respuesta de la IA se puede traducir después con la tabla de equivalencias.
+        suggestedAction: 'seudonimizar',
         reason: `Texto libre con ${spans.length} dato(s) sensible(s) adentro: ${kinds.join(', ')}`,
       };
     }

@@ -27,6 +27,8 @@ const PLACES = new Set(
 
 const words = (s: string) => s.split(/[\s,/]+/).filter(Boolean);
 const DETERMINERS = new Set(['el', 'la', 'los', 'las', 'un', 'una', 'del', 'al', 'este', 'esta', 'nuestro', 'nuestra', 'su', 'mi']);
+/** Pronombres que el modelo a veces toma por nombres al principio de una frase ("Le diagnosticaron…"). */
+const PRONOUNS = new Set(['le', 'les', 'lo', 'se', 'me', 'te', 'nos', 'yo', 'vos', 'tu', 'el', 'ella', 'ellos', 'ellas', 'usted', 'ustedes', 'nosotros', 'quien', 'que']);
 /** Roles y sustantivos comunes que el modelo a veces toma por personas ("La empleada", "admin"). */
 const ROLE_WORDS = new Set(
   (
@@ -71,6 +73,7 @@ function implausible(s: Span): boolean {
     // Solo cargos y áreas ("La empleada", "Jefa de Compras", "admin"): no es el nombre de nadie.
     const roleOrUnit = (w: string) => ROLE_WORDS.has(fold(w).replace(/\.$/, '')) || ORG_UNIT_WORDS.has(fold(w));
     if (rest.length === 0 || rest.every(roleOrUnit)) return true;
+    if (rest.every((w) => PRONOUNS.has(fold(w))) || (rest.length === 1 && rest[0]!.length <= 2)) return true;
     // Un nombre tiene al menos una palabra con mayúscula o un nombre de pila conocido ("nahuel ibarra").
     if (!rest.some((w) => /^\p{Lu}/u.test(w) || isFirstName(w))) return true;
   }

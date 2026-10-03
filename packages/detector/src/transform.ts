@@ -1,8 +1,9 @@
 import type { DetectionType } from '@securedata/shared';
 import { PSEUDONYM_PREFIXES } from '@securedata/shared';
+import { combineModelSpans } from './combine';
 import { replaceSpans, scanText } from './scanText';
 import { findTerms, fold, mergeSpans, type CustomTerm } from './terms';
-import type { CellValue, ColumnDecision, EquivalenceRow, Table, TransformResult } from './types';
+import type { CellValue, ColumnDecision, EquivalenceRow, Span, Table, TransformResult } from './types';
 import { cellToString, normalizeText, onlyDigits } from './util';
 
 const DIGIT_TYPES = new Set<DetectionType>(['DNI', 'CUIT_CUIL', 'CBU_CVU', 'TARJETA', 'TELEFONO']);
@@ -11,7 +12,8 @@ const DIGIT_TYPES = new Set<DetectionType>(['DNI', 'CUIT_CUIL', 'CBU_CVU', 'TARJ
 const PROPAGATED = new Set<DetectionType>(['NOMBRE_PERSONA', 'RAZON_SOCIAL', 'DIRECCION']);
 const MAX_LEARNED = 5000;
 
-const TOKENS: Record<DetectionType, string> = {
+/** Marcadores de la anonimización (irreversibles: no hay forma de volver al dato). */
+export const ANONYMIZED_TOKENS: Record<DetectionType, string> = {
   EMAIL: '[EMAIL]',
   TELEFONO: '[TEL]',
   DNI: '[DNI]',
@@ -53,7 +55,7 @@ function parseAmount(v: CellValue): number | null {
 /** 853.200 → "$ 800.000 – 900.000": conserva el orden de magnitud para analizar sin revelar el monto. */
 function salaryRange(v: CellValue): string {
   const n = parseAmount(v);
-  if (n === null || n <= 0) return TOKENS.SALARIO;
+  if (n === null || n <= 0) return ANONYMIZED_TOKENS.SALARIO;
   const magnitude = 10 ** (Math.floor(Math.log10(n)) - (n >= 1_000_000 ? 1 : 0));
   const low = Math.floor(n / magnitude) * magnitude;
   const fmt = (x: number) => x.toLocaleString('es-AR');
@@ -63,7 +65,7 @@ function salaryRange(v: CellValue): string {
 /** 45 → "40-49": la edad exacta identifica, la década alcanza para analizar. */
 function ageRange(v: CellValue): string {
   const n = Number(onlyDigits(cellToString(v)));
-  if (!n || n >= 120) return TOKENS.EDAD;
+  if (!n || n >= 120) return ANONYMIZED_TOKENS.EDAD;
   const low = Math.floor(n / 10) * 10;
   const suffix = /años/.test(cellToString(v)) ? ' años' : '';
   return `${low}-${low + 9}${suffix}`;
@@ -103,7 +105,7 @@ function birthYear(v: CellValue): string {
     return String(new Date(Date.UTC(1899, 11, 30) + v * 86_400_000).getUTCFullYear());
   }
   const m = cellToString(v).match(/\b(19|20)\d{2}\b/);
-  return m ? m[0] : TOKENS.FECHA_NACIMIENTO;
+  return m ? m[0] : ANONYMIZED_TOKENS.FECHA_NACIMIENTO;
 }
 
 /** Reemplazo irreversible que conserva lo mínimo útil para analizar. */
@@ -112,11 +114,11 @@ export function anonymizeValue(type: DetectionType, v: CellValue): string {
   switch (type) {
     case 'EMAIL': {
       const at = s.indexOf('@');
-      return at > 0 ? `***${s.slice(at)}` : TOKENS.EMAIL;
+      return at > 0 ? `***${s.slice(at)}` : ANONYMIZED_TOKENS.EMAIL;
     }
     case 'TARJETA': {
       const d = onlyDigits(s);
-      return d.length >= 4 ? `**** ${d.slice(-4)}` : TOKENS.TARJETA;
+      return d.length >= 4 ? `**** ${d.slice(-4)}` : ANONYMIZED_TOKENS.TARJETA;
     }
     case 'FECHA_NACIMIENTO':
       return birthYear(v);
@@ -125,11 +127,18 @@ export function anonymizeValue(type: DetectionType, v: CellValue): string {
     case 'SALARIO':
       return salaryRange(v);
     default:
-      return TOKENS[type];
+      return ANONYMIZED_TOKENS[type];
   }
 }
 
-export function applyDecisions(table: Table, decisions: Record<number, ColumnDecision>): TransformResult {
+/**
+ * @param cellSpans lo que encontró la IA local en las celdas de texto libre (columna → fila → fragmentos).
+ */
+export function applyDecisions(
+  table: Table,
+  decisions: Record<number, ColumnDecision>,
+  cellSpans?: Map<number, Map<number, Span[]>>,
+): TransformResult {
   const registry = new PseudonymRegistry();
   const counts: Partial<Record<DetectionType, number>> = {};
   const bump = (t: DetectionType) => (counts[t] = (counts[t] ?? 0) + 1);
@@ -160,7 +169,7 @@ export function applyDecisions(table: Table, decisions: Record<number, ColumnDec
     }
   });
 
-  const rows = table.rows.map((row) =>
+  const rows = table.rows.map((row, r) =>
     row
       .map((cell, i): CellValue => {
         const d = decisions[i];
@@ -169,7 +178,7 @@ export function applyDecisions(table: Table, decisions: Record<number, ColumnDec
         if (!s) return cell;
 
         if (d.kind === 'texto') {
-          const spans = mergeSpans(findTerms(s, learned), scanText(s));
+          const spans = mergeSpans(findTerms(s, learned), combineModelSpans(scanText(s), cellSpans?.get(i)?.get(r) ?? []));
           if (spans.length === 0) return cell;
           spans.forEach((sp) => bump(sp.type));
           return replaceSpans(s, spans, (sp) =>

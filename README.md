@@ -15,7 +15,7 @@ Filtro de seguridad previo al uso de IA: detecta datos sensibles (DNI, CUIT/CUIL
 
 **Detección en dos capas, ambas locales:** reglas y validadores (siempre activas) y, opcional, un modelo de IA GLiNER que corre en el navegador para nombres, empresas, direcciones y datos de salud sin formato fijo. El modelo se descarga una vez y analiza sin enviar nada a ningún servidor: la protección no crea nuevas fugas. Ver [IA local](#ia-local-gliner).
 
-Limitaciones actuales: PDF escaneados (sin texto seleccionable) y `.doc` viejos no se pueden leer; la IA local por ahora revisa documentos y textos, no planillas, y algún dato puede escaparse (se agregan a mano en la revisión). En PDF y Word se conserva el texto, no el formato.
+Limitaciones actuales: PDF escaneados (sin texto seleccionable) y `.doc` viejos no se pueden leer; con la IA local algún dato todavía puede escaparse (se agregan a mano en la revisión). En PDF y Word se conserva el texto, no el formato.
 
 > **Windows:** si PowerShell dice que "la ejecución de scripts está deshabilitada", usá `npm.cmd` en lugar de `npm`, o corré una vez `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned`.
 
@@ -59,6 +59,8 @@ La app del empleado funciona **sin** API ni base: el procesamiento es 100% en el
 
 **Protección automática:** al subir un archivo se protege solo con la política de la empresa (o las acciones recomendadas) y se va directo al resultado. Revisar es opcional. Ante la duda se seudonimiza: protege, conserva la utilidad para analizar y se revierte con la tabla de equivalencias.
 
+**Traducir la respuesta de la IA:** el usuario pega lo que le respondió ChatGPT, Claude o Copilot y la app lo devuelve con los datos reales en lugar de `Persona_01`, `Empresa_03`… (resaltados), sin buscarlos a mano en la tabla. Está en la pantalla de resultado (con la tabla del archivo recién protegido) y desde el inicio, cargando un `_equivalencias.csv` descargado antes. Tolera cómo las IA reescriben los seudónimos (`Persona 1`, `persona_01`, `**Persona_01**`), avisa los que no están en la tabla (inventados) y los datos anonimizados que no se pueden recuperar (`[DNI]`, `***@gmail.com`). Todo en el navegador (`packages/detector/src/restore.ts`).
+
 ## IA local (GLiNER)
 
 `packages/ml` corre [`gliner_multi_pii-v1`](https://huggingface.co/onnx-community/gliner_multi_pii-v1) (multilingüe, entrenado para datos personales, Apache-2.0) con `onnxruntime-web` dentro de un Web Worker (`apps/web/src/lib/ai.worker.ts`). El pre y post-procesamiento de GLiNER está implementado en `packages/ml/src/gliner.ts` (no usamos el paquete `gliner` de npm: depende de versiones viejas y su separador de palabras corta las tildes).
@@ -68,6 +70,7 @@ La app del empleado funciona **sin** API ni base: el procesamiento es 100% en el
 - **Privacidad:** el worker solo descarga los archivos del modelo; ningún texto del usuario sale del navegador.
 - **Varios hilos:** con aislamiento de origen (COOP/COEP) usa hasta 4 núcleos. En desarrollo lo da `vite.config.ts`; en GitHub Pages, que no permite configurar cabeceras, lo da `public/aislamiento-sw.js` (si no se puede, corre en un hilo).
 - **Cómo se combina** (`packages/detector/src/combine.ts`): lo validado por reglas (dígito verificador, formato, diccionario de datos sensibles) siempre gana; el modelo suma lo que las reglas no vieron y extiende nombres incompletos. Filtros genéricos descartan lo que no es un dato personal: cargos ("La empleada"), áreas ("Compras"), marcas y organismos públicos, lugares, calles sin número.
+- **Planillas** (`packages/detector/src/tableModel.ts`): las columnas que las reglas no clasifican, o clasifican con confianza baja, se le pasan al modelo como muestra (hasta 40 valores, con el encabezado de contexto: "Cliente: …"); si reconoce el mismo tipo en el 60 % o más, se clasifica la columna entera. Las columnas de texto libre se analizan celda por celda. En planillas cada celda va por separado: juntas, el modelo las ve como una lista y pierde confianza.
 - **Calibración:** umbral por etiqueta (`LABEL_THRESHOLDS`) tomado del centro de la meseta de `npm run calibrar:ia`, y ventanas de 24 palabras (`windowWords`).
 
 | Medición (`npm run eval:ia -- --control`) | Solo reglas | Reglas + IA |

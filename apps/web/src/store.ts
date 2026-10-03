@@ -3,6 +3,9 @@ import {
   analyzeDocument,
   analyzeTable,
   applyDecisions,
+  applyTableModel,
+  planTableModel,
+  type CellSpans,
   DEFAULT_ACTIONS,
   DEFAULT_DOCUMENT_ACTIONS,
   fold,
@@ -25,7 +28,8 @@ import { detectWithAi, useAi } from './lib/ai';
 import { sendEvent, type Session } from './lib/api';
 import { ACCEPTED_EXTENSIONS, extensionOf, MAX_SIZE_MB, parseFile, type FileFormat, type ParsedSheet } from './lib/files';
 
-export type Step = 'subir' | 'revisar' | 'resultado';
+/** traducir: pasar la respuesta de la IA externa a los datos reales con la tabla de equivalencias. */
+export type Step = 'subir' | 'revisar' | 'resultado' | 'traducir';
 /** tabla: CSV/Excel/JSON tabular, por columna. documento: PDF/Word/TXT/JSON, por tipo de dato. */
 export type Mode = 'tabla' | 'documento';
 
@@ -50,6 +54,8 @@ interface State {
   findings: ColumnFinding[];
   decisions: Record<number, ColumnDecision>;
   result: TransformResult | null;
+  /** Lo que encontró la IA local en las celdas de texto libre de la hoja actual. */
+  cellSpans: CellSpans;
 
   // Modo documento
   segments: Segment[];
@@ -77,7 +83,9 @@ interface State {
   loadFile: (file: File) => Promise<void>;
   setSession: (session: Session | null) => void;
   recordUsage: () => void;
-  selectSheet: (index: number) => void;
+  selectSheet: (index: number) => Promise<void>;
+  /** Abre el traductor de respuestas (paso "traducir"). */
+  openTranslator: () => void;
   setDecision: (column: number, patch: Partial<ColumnDecision>) => void;
   apply: () => void;
   addTerm: (value: string, type: DetectionType) => void;
@@ -141,6 +149,7 @@ const empty = {
   findings: [],
   decisions: {},
   result: null,
+  cellSpans: new Map() as CellSpans,
   segments: [],
   jsonRoot: null,
   customTerms: [],
@@ -164,8 +173,14 @@ export const useStore = create<State>((set, get) => ({
     // Si ya hay un archivo procesado, se vuelve a proteger con la política de la empresa.
     const { step, mode, sheetIndex, analysis } = get();
     if (step === 'subir') return;
-    if (mode === 'tabla') get().selectSheet(sheetIndex);
-    else if (analysis) {
+    if (mode === 'tabla') {
+      // Sin volver a analizar (ni a correr la IA): solo se recalculan las acciones con la política.
+      const { findings } = get();
+      if (findings.length > 0) {
+        set({ decisions: initialDecisions(findings, session?.politica ?? {}) });
+        get().apply();
+      } else void get().selectSheet(sheetIndex);
+    } else if (analysis) {
       set({ typeDecisions: mergeTypeDecisions(analysis, {}, session?.politica ?? {}) });
       get().applyDocument();
     }
@@ -227,8 +242,9 @@ export const useStore = create<State>((set, get) => ({
       const parsed = await parseFile(file);
       if (parsed.kind === 'tabla') {
         if (parsed.sheets.length === 0) throw new Error('El archivo está vacío.');
-        set({ mode: 'tabla', fileName: file.name, format: parsed.format, delimiter: parsed.delimiter, sheets: parsed.sheets, loading: false });
-        get().selectSheet(0);
+        set({ mode: 'tabla', fileName: file.name, format: parsed.format, delimiter: parsed.delimiter, sheets: parsed.sheets });
+        await get().selectSheet(0);
+        set({ loading: false });
         return;
       }
       const segments: Segment[] = parsed.kind === 'json' ? jsonLeaves(parsed.root) : [{ text: parsed.text }];
@@ -271,11 +287,45 @@ export const useStore = create<State>((set, get) => ({
     }
   },
 
-  selectSheet: (index) => {
+  selectSheet: async (index) => {
     const sheet = get().sheets[index];
     if (!sheet) return;
-    const findings = analyzeTable(sheet);
-    set({ sheetIndex: index, findings, decisions: initialDecisions(findings, get().session?.politica ?? {}), result: null });
+    let findings = analyzeTable(sheet);
+    let cellSpans: CellSpans = new Map();
+    let aiUsed = false;
+    let aiError: string | null = null;
+
+    // Con la IA local activa: revisa las columnas dudosas o sin clasificar y el texto libre.
+    const requests = useAi.getState().status === 'lista' ? planTableModel(sheet, findings) : [];
+    if (requests.length > 0) {
+      set({ aiProgress: 0 });
+      try {
+        const flat = await detectWithAi(
+          requests.flatMap((r) => r.texts),
+          (v) => set({ aiProgress: v }),
+          { windowWords: 0 },
+        );
+        // Se reparte lo encontrado entre los pedidos, en el mismo orden en que se mandó.
+        let k = 0;
+        const results = requests.map((r) => r.texts.map(() => flat[k++] ?? []));
+        ({ findings, cellSpans } = applyTableModel(sheet, findings, requests, results));
+        aiUsed = true;
+      } catch (err) {
+        aiError = err instanceof Error ? err.message : String(err);
+      }
+    }
+    // Si mientras corría la IA el usuario cargó otro archivo, este resultado ya no corresponde.
+    if (get().sheets[index] !== sheet) return;
+    set({
+      sheetIndex: index,
+      findings,
+      cellSpans,
+      aiUsed,
+      aiError,
+      aiProgress: null,
+      decisions: initialDecisions(findings, get().session?.politica ?? {}),
+      result: null,
+    });
     // Protección automática, igual que en documentos.
     get().apply();
   },
@@ -294,10 +344,10 @@ export const useStore = create<State>((set, get) => ({
     }),
 
   apply: () => {
-    const { sheets, sheetIndex, decisions } = get();
+    const { sheets, sheetIndex, decisions, cellSpans } = get();
     const sheet = sheets[sheetIndex];
     if (!sheet) return;
-    set({ result: applyDecisions(sheet, decisions), step: 'resultado' });
+    set({ result: applyDecisions(sheet, decisions, cellSpans), step: 'resultado' });
   },
 
   addTerm: (value, type) => {
@@ -347,9 +397,12 @@ export const useStore = create<State>((set, get) => ({
   // El resultado mostrado es el último aplicado; lo cambiado en la revisión queda como borrador.
   backToResult: () => set({ step: 'resultado' }),
 
+  openTranslator: () => set({ step: 'traducir' }),
+
   goToStep: (step) => {
     const { result, docResult } = get();
     if (step === 'subir') get().reset();
+    else if (step === 'traducir') set({ step });
     else if (result || docResult) set({ step });
     else get().reset();
   },
