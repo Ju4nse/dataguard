@@ -4,8 +4,12 @@ import { Container, DarkGlow, Icon, Reveal, SectionHeading, type IconName } from
 /** Paso del diagrama de flujo. */
 function FlowNode({ icon, title, text, highlight = false }: { icon: IconName; title: string; text: string; highlight?: boolean }) {
   return (
-    <div className={`flex flex-1 items-start gap-3 rounded-xl p-4 ${highlight ? 'bg-brand-700/30 ring-1 ring-brand-400/40' : 'bg-white/5 ring-1 ring-white/10'}`}>
-      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${highlight ? 'bg-brand-500/30 text-brand-200' : 'bg-white/10 text-slate-200'}`}>
+    <div
+      className={`flex flex-1 items-start gap-3 rounded-xl p-4 ${highlight ? 'bg-brand-700/30 ring-1 ring-brand-400/40' : 'bg-white/5 ring-1 ring-white/10'}`}
+    >
+      <span
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${highlight ? 'bg-brand-500/30 text-brand-200' : 'bg-white/10 text-slate-200'}`}
+      >
         <Icon name={icon} />
       </span>
       <div>
@@ -27,8 +31,16 @@ function FlowArrow({ label }: { label?: string }) {
 
 const POINTS: { icon: IconName; title: string; text: string }[] = [
   { icon: 'download', title: 'El modelo se descarga una sola vez', text: 'Queda guardado en tu navegador. Después analiza sin enviar nada a ningún lado.' },
-  { icon: 'wifiOff', title: 'Nada viaja a un servidor', text: 'Ni a nosotros, ni al proveedor del modelo, ni a ninguna IA externa. Lo que analizás no sale de tu computadora.' },
-  { icon: 'shield', title: 'Sin nuevas fugas', text: 'Como el análisis no sale de tu computadora, la herramienta no crea un nuevo lugar donde se puedan filtrar tus datos.' },
+  {
+    icon: 'wifiOff',
+    title: 'Nada viaja a un servidor',
+    text: 'Ni a nosotros, ni al proveedor del modelo, ni a ninguna IA externa. Lo que analizás no sale de tu computadora.',
+  },
+  {
+    icon: 'shield',
+    title: 'Sin nuevas fugas',
+    text: 'Como el análisis no sale de tu computadora, la herramienta no crea un nuevo lugar donde se puedan filtrar tus datos.',
+  },
 ];
 
 const LAYERS: { icon: IconName; title: string; status: 'activo' | 'beta'; text: string; items: string[] }[] = [
@@ -67,37 +79,37 @@ export function LocalAiSection() {
 
         {/* Diagrama: todo ocurre dentro de "Tu computadora"; hacia afuera solo sale el archivo protegido. */}
         <Reveal>
-        <figure className="space-y-3">
-          <div className="flex flex-col items-stretch gap-3 lg:flex-row lg:items-center">
-            <div className="relative flex flex-[3] flex-col gap-3 rounded-2xl border-2 border-dashed border-emerald-400/40 p-4 pt-8 lg:flex-row lg:items-center">
-              <span className="absolute -top-3 left-4 inline-flex items-center gap-1.5 rounded-full bg-slate-950 px-2 text-sm font-semibold text-emerald-400">
-                <Icon name="laptop" className="h-4 w-4" />
-                Tu computadora
-              </span>
-              <FlowNode icon="doc" title="Tu archivo" text="Planilla, documento o texto con datos reales." />
-              <FlowArrow />
-              <FlowNode icon="cpu" title="Análisis local" text="Reglas + modelo de IA, dentro de tu navegador." highlight />
-              <FlowArrow />
-              <FlowNode icon="shield" title="Archivo protegido" text="Con seudónimos en lugar de datos sensibles." />
+          <figure className="space-y-3">
+            <div className="flex flex-col items-stretch gap-3 lg:flex-row lg:items-center">
+              <div className="relative flex flex-[3] flex-col gap-3 rounded-2xl border-2 border-dashed border-emerald-400/40 p-4 pt-8 lg:flex-row lg:items-center">
+                <span className="absolute -top-3 left-4 inline-flex items-center gap-1.5 rounded-full bg-slate-950 px-2 text-sm font-semibold text-emerald-400">
+                  <Icon name="laptop" className="h-4 w-4" />
+                  Tu computadora
+                </span>
+                <FlowNode icon="doc" title="Tu archivo" text="Planilla, documento o texto con datos reales." />
+                <FlowArrow />
+                <FlowNode icon="cpu" title="Análisis local" text="Reglas + modelo de IA, dentro de tu navegador." highlight />
+                <FlowArrow />
+                <FlowNode icon="shield" title="Archivo protegido" text="Con seudónimos en lugar de datos sensibles." />
+              </div>
+              <FlowArrow label="solo esto" />
+              <div className="flex flex-1">
+                <FlowNode icon="cloud" title="IA externa" text="ChatGPT, Claude o Copilot reciben solo la versión protegida." />
+              </div>
             </div>
-            <FlowArrow label="solo esto" />
-            <div className="flex flex-1">
-              <FlowNode icon="cloud" title="IA externa" text="ChatGPT, Claude o Copilot reciben solo la versión protegida." />
-            </div>
-          </div>
-          <figcaption className="text-center text-sm text-slate-400">Los datos originales nunca cruzan el borde punteado.</figcaption>
-        </figure>
+            <figcaption className="text-center text-sm text-slate-400">Los datos originales nunca cruzan el borde punteado.</figcaption>
+          </figure>
         </Reveal>
 
         <ul className="grid gap-6 md:grid-cols-3">
           {POINTS.map((p, i) => (
             <li key={p.title}>
               <Reveal delay={i * 80} className="flex gap-3">
-              <Icon name={p.icon} className="mt-0.5 h-5 w-5 shrink-0 text-emerald-400" />
-              <div className="space-y-1">
-                <p className="font-semibold text-white">{p.title}</p>
-                <p className="text-sm text-slate-300">{p.text}</p>
-              </div>
+                <Icon name={p.icon} className="mt-0.5 h-5 w-5 shrink-0 text-emerald-400" />
+                <div className="space-y-1">
+                  <p className="font-semibold text-white">{p.title}</p>
+                  <p className="text-sm text-slate-300">{p.text}</p>
+                </div>
               </Reveal>
             </li>
           ))}
@@ -107,7 +119,11 @@ export function LocalAiSection() {
           <h3 className="text-center text-lg font-semibold text-white">Dos capas de detección</h3>
           <div className="grid gap-4 md:grid-cols-2">
             {LAYERS.map((l, i) => (
-              <Reveal key={l.title} delay={i * 100} className="space-y-4 rounded-xl bg-white/5 p-5 ring-1 ring-white/10 backdrop-blur-sm transition-colors duration-300 hover:ring-brand-400/40">
+              <Reveal
+                key={l.title}
+                delay={i * 100}
+                className="space-y-4 rounded-xl bg-white/5 p-5 ring-1 ring-white/10 backdrop-blur-sm transition-colors duration-300 hover:ring-brand-400/40"
+              >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <Icon name={l.icon} className="h-5 w-5 text-brand-300" />

@@ -28,12 +28,17 @@ const withControl = process.argv.includes('--control');
 const config = { ...DEFAULT_CONFIG, windowWords: Number(arg('--ventana') ?? DEFAULT_CONFIG.windowWords) };
 
 const t0 = performance.now();
-const tokenizer = new Tokenizer(JSON.parse(readFileSync(join(dir, MODEL.tokenizer), 'utf8')), JSON.parse(readFileSync(join(dir, MODEL.tokenizerConfig), 'utf8')));
+const tokenizer = new Tokenizer(
+  JSON.parse(readFileSync(join(dir, MODEL.tokenizer), 'utf8')),
+  JSON.parse(readFileSync(join(dir, MODEL.tokenizerConfig), 'utf8')),
+);
 const onnxFile = arg('--modelo') ?? MODEL.onnx;
 const session = await ort.InferenceSession.create(readFileSync(join(dir, onnxFile)));
 const tok = glinerTokenizer(tokenizer);
 const runner = ortRunner(session, ort.Tensor);
-console.log(`${onnxFile} cargado en ${((performance.now() - t0) / 1000).toFixed(1)} s · ventana ${config.windowWords} palabras · umbrales ${JSON.stringify(thresholds)}`);
+console.log(
+  `${onnxFile} cargado en ${((performance.now() - t0) / 1000).toFixed(1)} s · ventana ${config.windowWords} palabras · umbrales ${JSON.stringify(thresholds)}`,
+);
 
 // Cada caso por separado (como un prompt), para medir también el tiempo por texto.
 const model = new Map<string, Span[]>();
@@ -97,7 +102,10 @@ const inDoc = new Map<string, Span[]>();
 let offset = 0;
 for (const text of texts) {
   const end = offset + text.length;
-  inDoc.set(text, (docSpans ?? []).filter((x) => x.start >= offset && x.end <= end).map((x) => ({ ...x, start: x.start - offset, end: x.end - offset })));
+  inDoc.set(
+    text,
+    (docSpans ?? []).filter((x) => x.start >= offset && x.end <= end).map((x) => ({ ...x, start: x.start - offset, end: x.end - offset })),
+  );
   offset = end + 1;
 }
 const docAi = (text: string) => combineModelSpans(scanText(text), inDoc.get(text) ?? [], text);

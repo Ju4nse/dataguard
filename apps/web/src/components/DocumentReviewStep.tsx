@@ -37,7 +37,12 @@ function Highlighted({ segments, spans }: { segments: Segment[]; spans: Span[][]
     const segSpans = spans[i] ?? [];
     // En JSON solo se muestran los valores con hallazgos, con su clave.
     if (isJson && segSpans.length === 0) continue;
-    if (isJson) nodes.push(<span key={`k${i}`} className="text-slate-400">{[seg.context, seg.hint].filter(Boolean).join('.')}: </span>);
+    if (isJson)
+      nodes.push(
+        <span key={`k${i}`} className="text-slate-400">
+          {[seg.context, seg.hint].filter(Boolean).join('.')}:{' '}
+        </span>,
+      );
     const limit = budget;
     let pos = 0;
     for (const sp of segSpans) {
@@ -92,7 +97,12 @@ function AddTermForm() {
         placeholder="Ej.: Juan Pérez, Proyecto Atlas, Sucursal Rosario"
         aria-label="Texto a ocultar"
       />
-      <select className={`${selectClass} sm:w-auto`} value={type} onChange={(e) => setType(e.target.value as DetectionType)} aria-label="Tipo del texto a ocultar">
+      <select
+        className={`${selectClass} sm:w-auto`}
+        value={type}
+        onChange={(e) => setType(e.target.value as DetectionType)}
+        aria-label="Tipo del texto a ocultar"
+      >
         {DETECTION_TYPES.map((t) => (
           <option key={t} value={t}>
             {DETECTION_LABELS[t]}
@@ -139,7 +149,10 @@ export function DocumentReviewStep() {
         <div className="min-w-0 space-y-4 lg:col-span-3">
           <Card className="overflow-hidden">
             {/* Encabezado solo desde 768px; en celular cada tipo es una tarjeta. */}
-            <div aria-hidden="true" className={`hidden border-b border-slate-200 bg-slate-50 px-4 py-2 text-xs font-medium uppercase tracking-wide text-slate-600 ${TYPE_GRID}`}>
+            <div
+              aria-hidden="true"
+              className={`hidden border-b border-slate-200 bg-slate-50 px-4 py-2 text-xs font-medium uppercase tracking-wide text-slate-600 ${TYPE_GRID}`}
+            >
               <span>Tipo de dato</span>
               <span>Ejemplos</span>
               <span>Qué hacer</span>
@@ -205,8 +218,8 @@ export function DocumentReviewStep() {
             <div>
               <h2 className="font-medium text-slate-900">Agregar texto a ocultar</h2>
               <p className="text-sm text-slate-600">
-                Detectamos nombres frecuentes, pero se nos pueden escapar algunos (apellidos solos, nombres poco comunes). Agregá los que
-                veas en la vista previa y los reemplazamos en todo el documento.
+                Detectamos nombres frecuentes, pero se nos pueden escapar algunos (apellidos solos, nombres poco comunes). Agregá los que veas en la vista
+                previa y los reemplazamos en todo el documento.
               </p>
             </div>
             <AddTermForm />
@@ -240,7 +253,9 @@ export function DocumentReviewStep() {
           {/* Scroll propio solo en escritorio (al lado de la tabla); en celular fluye con la página. */}
           <pre className="flex-1 whitespace-pre-wrap break-words px-4 py-3 font-sans text-sm leading-relaxed text-slate-700 lg:max-h-[32rem] lg:overflow-auto">
             <Highlighted segments={segments} spans={analysis.spans} />
-            {chars > PREVIEW_CHARS && <span className="block pt-2 text-xs text-slate-400">… (se muestran los primeros {PREVIEW_CHARS.toLocaleString('es-AR')} caracteres)</span>}
+            {chars > PREVIEW_CHARS && (
+              <span className="block pt-2 text-xs text-slate-400">… (se muestran los primeros {PREVIEW_CHARS.toLocaleString('es-AR')} caracteres)</span>
+            )}
           </pre>
         </Card>
       </div>

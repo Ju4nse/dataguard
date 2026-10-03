@@ -104,7 +104,14 @@ export function TranslateStep() {
                 <Icon name="lock" className="h-4 w-4" />
                 {locked.name} está cifrada: escribí la contraseña
               </span>
-              <input type="password" autoComplete="current-password" autoFocus className={inputClass} value={password} onChange={(e) => setPassword(e.target.value)} />
+              <input
+                type="password"
+                autoComplete="current-password"
+                autoFocus
+                className={inputClass}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
             </label>
             <Button type="submit" disabled={!password || opening}>
               {opening ? 'Abriendo…' : 'Abrir'}

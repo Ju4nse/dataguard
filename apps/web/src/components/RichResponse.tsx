@@ -35,12 +35,26 @@ function inline(text: string, pseudonyms: string[], key: string): ReactNode[] {
   for (const m of text.matchAll(token)) {
     if (m.index > last) out.push(text.slice(last, m.index));
     const id = `${key}-${k++}`;
-    if (m[1]) out.push(<code key={id} className="rounded bg-slate-200/70 px-1 py-0.5 font-mono text-[0.85em]">{strip(m[1].slice(1, -1))}</code>);
-    else if (m[2] !== undefined || m[3] !== undefined) out.push(<strong key={id} className="font-semibold">{inline(m[2] ?? m[3]!, pseudonyms, id)}</strong>);
+    if (m[1])
+      out.push(
+        <code key={id} className="rounded bg-slate-200/70 px-1 py-0.5 font-mono text-[0.85em]">
+          {strip(m[1].slice(1, -1))}
+        </code>,
+      );
+    else if (m[2] !== undefined || m[3] !== undefined)
+      out.push(
+        <strong key={id} className="font-semibold">
+          {inline(m[2] ?? m[3]!, pseudonyms, id)}
+        </strong>,
+      );
     else if (m[4] !== undefined) out.push(<em key={id}>{inline(m[4], pseudonyms, id)}</em>);
     else
       out.push(
-        <mark key={id} title={`En la respuesta decía ${pseudonyms[Number(m[5])]}`} className="rounded bg-emerald-50 px-0.5 font-medium text-emerald-900 ring-1 ring-inset ring-emerald-200">
+        <mark
+          key={id}
+          title={`En la respuesta decía ${pseudonyms[Number(m[5])]}`}
+          className="rounded bg-emerald-50 px-0.5 font-medium text-emerald-900 ring-1 ring-inset ring-emerald-200"
+        >
           {m[6]}
         </mark>,
       );

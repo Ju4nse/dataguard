@@ -7,7 +7,17 @@ export const fmt = (n: number) => n.toLocaleString('es-AR');
 const AXIS_TICK = { fill: 'var(--ink-muted)', fontSize: 12 };
 
 /** Tarjeta de gráfico con su vista de tabla (los valores nunca dependen solo del color ni del tooltip). */
-export function ChartCard({ title, subtitle, table, children }: { title: string; subtitle?: string; table: { headers: string[]; rows: (string | number)[][] }; children: ReactNode }) {
+export function ChartCard({
+  title,
+  subtitle,
+  table,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  table: { headers: string[]; rows: (string | number)[][] };
+  children: ReactNode;
+}) {
   const [asTable, setAsTable] = useState(false);
   return (
     <Card className="flex flex-col p-5">
@@ -16,7 +26,11 @@ export function ChartCard({ title, subtitle, table, children }: { title: string;
           <h2 className="text-sm font-semibold text-[var(--ink-primary)]">{title}</h2>
           {subtitle && <p className="text-xs text-[var(--ink-secondary)]">{subtitle}</p>}
         </div>
-        <button type="button" onClick={() => setAsTable((v) => !v)} className="-mr-2 -mt-2 inline-flex min-h-11 shrink-0 items-center rounded-md px-3 text-xs font-medium text-[var(--ink-secondary)] hover:bg-slate-100 hover:text-slate-900 sm:min-h-8">
+        <button
+          type="button"
+          onClick={() => setAsTable((v) => !v)}
+          className="-mr-2 -mt-2 inline-flex min-h-11 shrink-0 items-center rounded-md px-3 text-xs font-medium text-[var(--ink-secondary)] hover:bg-slate-100 hover:text-slate-900 sm:min-h-8"
+        >
           {asTable ? 'Ver gráfico' : 'Ver tabla'}
         </button>
       </div>
@@ -90,7 +104,14 @@ export function RankingBars({ data }: { data: { label: string; value: number }[]
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} layout="vertical" margin={{ top: 0, right: 48, bottom: 0, left: 0 }} barCategoryGap={8}>
           <XAxis type="number" hide />
-          <YAxis type="category" dataKey="label" tick={{ ...AXIS_TICK, fill: 'var(--ink-secondary)' }} tickLine={false} axisLine={{ stroke: 'var(--axis)' }} width={labelWidth} />
+          <YAxis
+            type="category"
+            dataKey="label"
+            tick={{ ...AXIS_TICK, fill: 'var(--ink-secondary)' }}
+            tickLine={false}
+            axisLine={{ stroke: 'var(--axis)' }}
+            width={labelWidth}
+          />
           <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(42,120,214,0.06)' }} />
           <Bar dataKey="value" fill="var(--series-1)" radius={[0, 4, 4, 0]} maxBarSize={18}>
             <LabelList dataKey="value" position="right" formatter={(v) => fmt(Number(v))} style={{ fill: 'var(--ink-secondary)', fontSize: 12 }} />

@@ -21,7 +21,10 @@ const onnxFile = arg('--modelo') ?? MODEL.onnx;
 const config = { ...DEFAULT_CONFIG, windowWords: Number(arg('--ventana') ?? DEFAULT_CONFIG.windowWords) };
 const FLOOR = 0.25;
 
-const tokenizer = new Tokenizer(JSON.parse(readFileSync(join(dir, MODEL.tokenizer), 'utf8')), JSON.parse(readFileSync(join(dir, MODEL.tokenizerConfig), 'utf8')));
+const tokenizer = new Tokenizer(
+  JSON.parse(readFileSync(join(dir, MODEL.tokenizer), 'utf8')),
+  JSON.parse(readFileSync(join(dir, MODEL.tokenizerConfig), 'utf8')),
+);
 const session = await ort.InferenceSession.create(readFileSync(join(dir, onnxFile)));
 const tok = glinerTokenizer(tokenizer);
 const runner = ortRunner(session, ort.Tensor);

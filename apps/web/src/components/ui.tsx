@@ -85,12 +85,11 @@ export function Reveal({ children, delay = 0, className = '' }: { children: Reac
 
 /** Cuenta de 0 al valor (para cifras destacadas). Con movimiento reducido muestra el valor final directo. */
 export function useCountUp(target: number, durationMs = 900): number {
-  const [value, setValue] = useState(() => (prefersReducedMotion() ? target : 0));
+  const [value, setValue] = useState(0);
+  // Sin animación (movimiento reducido o valor 0) se devuelve el valor final directo, sin tocar el estado.
+  const instant = prefersReducedMotion() || target === 0;
   useEffect(() => {
-    if (prefersReducedMotion() || target === 0) {
-      setValue(target);
-      return;
-    }
+    if (instant) return;
     let frame = 0;
     const start = performance.now();
     const tick = (now: number) => {
@@ -100,8 +99,8 @@ export function useCountUp(target: number, durationMs = 900): number {
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [target, durationMs]);
-  return value;
+  }, [target, durationMs, instant]);
+  return instant ? target : value;
 }
 
 export function Spinner({ className = 'h-5 w-5' }: { className?: string }) {
@@ -138,7 +137,19 @@ export function BackLink({ onClick, children }: { onClick: () => void; children:
 }
 
 /** Título de sección con antetítulo. `tone="dark"` para secciones sobre fondo navy. */
-export function SectionHeading({ eyebrow, title, text, id, tone = 'light' }: { eyebrow: string; title: string; text?: string; id?: string; tone?: 'light' | 'dark' }) {
+export function SectionHeading({
+  eyebrow,
+  title,
+  text,
+  id,
+  tone = 'light',
+}: {
+  eyebrow: string;
+  title: string;
+  text?: string;
+  id?: string;
+  tone?: 'light' | 'dark';
+}) {
   const dark = tone === 'dark';
   return (
     <div className="mx-auto max-w-2xl space-y-3 text-center">
@@ -202,20 +213,31 @@ const ICONS = {
   card: 'M3 6h18v12H3z|M3 10h18|M7 15h3',
   doc: 'M7 3h7l5 5v13H7z|M14 3v5h5|M10 13h6M10 17h6',
   chart: 'M4 20V4|M4 20h16|M8 16v-5M12 16V8M16 16v-3',
-  eyeOff: 'M3 3l18 18|M10.6 10.6a2 2 0 0 0 2.8 2.8|M9.9 5.1A9.8 9.8 0 0 1 12 5c5 0 9 5 10 7a13 13 0 0 1-3 3.9M6.6 6.6C4.3 8 2.7 10.3 2 12c1 2 5 7 10 7 1.7 0 3.2-.5 4.6-1.2',
+  eyeOff:
+    'M3 3l18 18|M10.6 10.6a2 2 0 0 0 2.8 2.8|M9.9 5.1A9.8 9.8 0 0 1 12 5c5 0 9 5 10 7a13 13 0 0 1-3 3.9M6.6 6.6C4.3 8 2.7 10.3 2 12c1 2 5 7 10 7 1.7 0 3.2-.5 4.6-1.2',
   scale: 'M12 3v18|M5 7h14|M5 7l-3 7a4 4 0 0 0 6 0Z|M19 7l-3 7a4 4 0 0 0 6 0Z|M8 21h8',
   x: 'M6 6l12 12M18 6 6 18',
   cloud: 'M7 18a4 4 0 0 1-.6-8 5.5 5.5 0 0 1 10.7-1.5A4 4 0 0 1 17 18Z',
   cpu: 'M7 7h10v10H7z|M10 10h4v4h-4z|M9 3v4M15 3v4M9 17v4M15 17v4M3 9h4M3 15h4M17 9h4M17 15h4',
   rule: 'M9 6h11M9 12h11M9 18h11|m3 6 1 1 2-2M3 12l1 1 2-2M3 18l1 1 2-2',
-  wifiOff: 'M3 3l18 18|M8.5 16.5a5 5 0 0 1 7 0|M12 20h.01|M5 12.9a10 10 0 0 1 5.2-2.8M19 12.9a10 10 0 0 0-2.2-1.6|M2 8.8a15 15 0 0 1 4.2-2.6M22 8.8A15 15 0 0 0 11.5 5',
+  wifiOff:
+    'M3 3l18 18|M8.5 16.5a5 5 0 0 1 7 0|M12 20h.01|M5 12.9a10 10 0 0 1 5.2-2.8M19 12.9a10 10 0 0 0-2.2-1.6|M2 8.8a15 15 0 0 1 4.2-2.6M22 8.8A15 15 0 0 0 11.5 5',
 } as const;
 
 export type IconName = keyof typeof ICONS;
 
 export function Icon({ name, className = 'h-5 w-5' }: { name: IconName; className?: string }) {
   return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       {ICONS[name].split('|').map((d) => (
         <path key={d} d={d} />
       ))}

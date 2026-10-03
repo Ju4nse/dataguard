@@ -1,11 +1,22 @@
-import type { MiddlewareHandler } from 'hono';
+import type { Context, MiddlewareHandler } from 'hono';
 import { config } from './config';
 
-/** Limita intentos por clave (IP + email) en una ventana de tiempo. En memoria: alcanza para un solo servidor. */
-export function createRateLimiter(max: number, windowMs: number) {
+/**
+ * Limita intentos por clave en una ventana de tiempo. En memoria: alcanza para un solo servidor.
+ * Las entradas vencidas se limpian y hay un tope de claves, para que nadie llene la memoria
+ * mandando claves distintas.
+ */
+export function createRateLimiter(max: number, windowMs: number, maxKeys = 10_000) {
   const hits = new Map<string, { count: number; resetAt: number }>();
+  let lastSweep = Date.now();
   return (key: string): boolean => {
     const now = Date.now();
+    if (now - lastSweep > windowMs || hits.size >= maxKeys) {
+      for (const [k, v] of hits) if (v.resetAt < now) hits.delete(k);
+      lastSweep = now;
+      // Si aún así está lleno, se rechaza lo nuevo (ante un ataque, mejor frenar que olvidar intentos).
+      if (hits.size >= maxKeys && !hits.has(key)) return false;
+    }
     const entry = hits.get(key);
     if (!entry || entry.resetAt < now) {
       hits.set(key, { count: 1, resetAt: now + windowMs });
@@ -16,9 +27,16 @@ export function createRateLimiter(max: number, windowMs: number) {
   };
 }
 
+/** IP del cliente: X-Forwarded-For solo si hay un proxy propio adelante (ver config.trustProxy). */
+export function clientIp(c: Context): string {
+  if (!config.trustProxy) return 'directo';
+  return c.req.header('x-forwarded-for')?.split(',')[0]?.trim() || 'desconocida';
+}
+
 /**
  * Protección CSRF para requests que modifican datos: solo JSON y solo desde orígenes conocidos.
- * (La cookie de sesión además es SameSite=Strict.)
+ * (La cookie de sesión además es SameSite=Strict, y un JSON entre orígenes exige preflight de CORS,
+ * que esta API no habilita: por eso alcanza con validar el Origin cuando viene.)
  */
 export const csrfGuard: MiddlewareHandler = async (c, next) => {
   if (c.req.method !== 'GET' && c.req.method !== 'HEAD') {

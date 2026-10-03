@@ -53,6 +53,7 @@ export const VALUE_MATCHERS: { type: DetectionType; test: (s: string) => boolean
 ];
 
 /** Tipos cuya validación es fuerte (dígito verificador o formato inequívoco). */
+// prettier-ignore
 export const STRONG_TYPES = new Set<DetectionType>(['EMAIL', 'CUIT_CUIL', 'CBU_CVU', 'TARJETA', 'CREDENCIAL']);
 
 export function looksLikeCompany(s: string): boolean {

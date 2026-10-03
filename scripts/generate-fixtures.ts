@@ -8,7 +8,7 @@ import { cbuCheckDigits, cuitCheckDigit } from '../packages/detector/src';
 
 // PRNG con semilla para que los archivos sean siempre iguales.
 let seed = 42;
-const rand = () => ((seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31);
+const rand = () => (seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31;
 const pick = <T>(arr: T[]): T => arr[Math.floor(rand() * arr.length)]!;
 const digits = (n: number) => Array.from({ length: n }, () => Math.floor(rand() * 10)).join('');
 
@@ -29,7 +29,16 @@ function fakeCbu(): string {
 
 const NOMBRES = ['Juan', 'María', 'Lucía', 'Martín', 'Sofía', 'Diego', 'Valentina', 'Pablo', 'Camila', 'Federico', 'Julieta', 'Nicolás'];
 const APELLIDOS = ['Pérez', 'Gómez', 'Fernández', 'Rodríguez', 'López', 'Martínez', 'Sosa', 'Romero', 'Álvarez', 'Benítez', 'Acosta', 'Medina'];
-const EMPRESAS = ['Distribuidora del Sur', 'Lácteos Norte', 'Ferretería Central', 'Agro Pampa', 'Logística Andina', 'Textil Rosario', 'Panificadora Belgrano', 'Metalúrgica Oeste'];
+const EMPRESAS = [
+  'Distribuidora del Sur',
+  'Lácteos Norte',
+  'Ferretería Central',
+  'Agro Pampa',
+  'Logística Andina',
+  'Textil Rosario',
+  'Panificadora Belgrano',
+  'Metalúrgica Oeste',
+];
 const SOCIEDADES = ['SA', 'S.R.L.', 'SRL', 'S.A.', 'SAS'];
 const PROVINCIAS = ['Buenos Aires', 'CABA', 'Córdoba', 'Santa Fe', 'Mendoza', 'Tucumán'];
 const PRODUCTOS = ['Yerba 1kg', 'Aceite 1,5L', 'Harina 000', 'Azúcar 1kg', 'Fideos 500g', 'Arroz 1kg'];
@@ -37,16 +46,26 @@ const PRODUCTOS = ['Yerba 1kg', 'Aceite 1,5L', 'Harina 000', 'Azúcar 1kg', 'Fid
 const persona = () => `${pick(NOMBRES)} ${pick(APELLIDOS)}`;
 const telefono = () => pick([`+54 9 11 ${digits(4)}-${digits(4)}`, `011 15-${digits(4)}-${digits(4)}`, `(0351) ${digits(3)}-${digits(4)}`]);
 const emailDe = (nombre: string) =>
-  nombre
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .replace(' ', '.') + pick(['@gmail.com', '@hotmail.com', '@empresa.com.ar']);
+  nombre.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(' ', '.') + pick(['@gmail.com', '@hotmail.com', '@empresa.com.ar']);
 
 // Pocas empresas que se repiten, para que se note la seudonimización consistente.
 const clientes = EMPRESAS.map((e) => ({ nombre: `${e} ${pick(SOCIEDADES)}`, cuit: fakeCuit(pick(['30', '33'])), cbu: fakeCbu() }));
 
-const headers = ['Fecha', 'Cliente', 'CUIT', 'Contacto', 'Email', 'Teléfono', 'DNI contacto', 'CBU', 'Provincia', 'Producto', 'Cantidad', 'Monto', 'Observaciones'];
+const headers = [
+  'Fecha',
+  'Cliente',
+  'CUIT',
+  'Contacto',
+  'Email',
+  'Teléfono',
+  'DNI contacto',
+  'CBU',
+  'Provincia',
+  'Producto',
+  'Cantidad',
+  'Monto',
+  'Observaciones',
+];
 const rows: (string | number | Date)[][] = [];
 for (let i = 0; i < 80; i++) {
   const c = pick(clientes);
@@ -157,7 +176,12 @@ writeFileSync(
   JSON.stringify(
     {
       pedido: 4512,
-      cliente: { razon_social: c1.nombre, cuit: c1.cuit, estado: 'Activo', contacto: { nombre: firmante, email: emailDe(firmante), telefono: '+54 9 11 4567-8901' } },
+      cliente: {
+        razon_social: c1.nombre,
+        cuit: c1.cuit,
+        estado: 'Activo',
+        contacto: { nombre: firmante, email: emailDe(firmante), telefono: '+54 9 11 4567-8901' },
+      },
       items: [
         { producto: { nombre: 'Yerba 1kg' }, cantidad: 40 },
         { producto: { nombre: 'Azúcar 1kg' }, cantidad: 25 },

@@ -94,6 +94,16 @@ npm run eval:ia
 
 En desarrollo (`npm run dev`) Vite sirve el modelo desde `.cache/` y la IA local funciona sin publicarlo. En GitHub Pages lo genera el workflow de deploy (`.github/workflows/pages.yml`): baja el original de un commit fijo, lo cuantiza (queda en caché entre deploys) y lo publica junto a la app en partes de menos de 100 MB con `scripts/preparar-modelo-pages.py`, que también agrega el aviso de licencia (Apache-2.0). Para servirlo desde otro lado, `VITE_MODEL_BASE` indica la carpeta.
 
+## Panel online (Tailscale)
+
+El panel del responsable se puede abrir desde tus otros dispositivos (celular, notebook) a través de [Tailscale](https://tailscale.com): una red privada entre tus dispositivos. La base sigue en esta PC y nada queda expuesto a internet.
+
+1. Instalá Tailscale en esta PC y entrá con tu cuenta (gratis). Instalalo también en cada dispositivo desde el que quieras ver el panel, con la misma cuenta.
+2. En la consola de Tailscale ([DNS](https://login.tailscale.com/admin/dns)) dejá activado **MagicDNS** y activá **HTTPS Certificates**.
+3. Corré `npm run panel:online`. Genera un secreto de sesión propio (`.env.panel`, fuera de git), levanta la base, compila el panel y lo publica con HTTPS en `https://<tu-pc>.<tu-red>.ts.net` mediante `tailscale serve`.
+
+La API corre en modo producción (cookie segura, secreto propio), escucha solo en `127.0.0.1:8790` y sirve el panel en el mismo puerto; Tailscale hace de proxy. Si la PC se suspende, el panel no responde hasta que despierte (los datos no se pierden). Para que esté siempre disponible: que Windows no suspenda con el cargador enchufado y que Docker Desktop arranque al iniciar sesión (la base tiene `restart: unless-stopped`).
+
 ## Comandos
 
 | Comando | Qué hace |
@@ -114,6 +124,9 @@ En desarrollo (`npm run dev`) Vite sirve el modelo desde `.cache/` y la IA local
 | `npm run db:totp -- <email>` | Código 2FA actual de un usuario de demo (para probar sin celular) |
 | `npm run dev:api` / `dev:panel` | API y panel en modo desarrollo |
 | `npm run db:psql` | Consola SQL dentro del contenedor |
+| `npm run panel:online` | Publica el panel en tu red de Tailscale (ver arriba) |
+| `npm run lint` | ESLint en todo el monorepo |
+| `npm run format` / `format:check` | Prettier (escribe / solo verifica); el CI corre lint y format:check |
 
 ## Calidad de la detección
 

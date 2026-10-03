@@ -142,8 +142,8 @@ export function ResultSummary({
           <div className="flex flex-col gap-3 border-t border-amber-200 bg-amber-50 px-5 py-4 sm:flex-row sm:items-center sm:px-7">
             <Icon name="key" className="hidden h-5 w-5 shrink-0 text-amber-700 sm:block" />
             <p className="flex-1 text-sm text-amber-900">
-              <strong className="font-semibold">Tabla de equivalencias ({equivalences.length} seudónimos):</strong> sirve para traducir las respuestas
-              de la IA más tarde. Tiene los datos originales: guardala cifrada o en un lugar seguro, y nunca la subas a una IA.
+              <strong className="font-semibold">Tabla de equivalencias ({equivalences.length} seudónimos):</strong> sirve para traducir las respuestas de la IA
+              más tarde. Tiene los datos originales: guardala cifrada o en un lugar seguro, y nunca la subas a una IA.
             </p>
             <EquivalencesActions rows={equivalences} fileName={fileName} />
           </div>

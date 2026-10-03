@@ -46,7 +46,16 @@ export function ErrorText({ children }: { children: ReactNode }) {
 
 export function ShieldIcon({ className = 'h-5 w-5' }: { className?: string }) {
   return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.4 7.5 9.5 4.3-1.1 7.5-4.9 7.5-9.5V6L12 3Z" />
       <path d="m9 12 2 2 4-4" />
     </svg>
@@ -76,19 +85,20 @@ export function DarkGlow({ subtle = false }: { subtle?: boolean }) {
         className={`absolute -right-[10%] -top-[40%] h-[34rem] w-[34rem] animate-drift-a rounded-full blur-3xl will-change-transform ${subtle ? 'bg-brand-600/20' : 'bg-brand-600/30'}`}
       />
       <div className="absolute -bottom-[40%] -left-[10%] h-[28rem] w-[28rem] animate-drift-b rounded-full bg-sky-400/15 blur-3xl will-change-transform" />
-      {!subtle && <div className="absolute left-[30%] top-[30%] h-[20rem] w-[20rem] animate-drift-c rounded-full bg-indigo-500/15 blur-3xl will-change-transform" />}
+      {!subtle && (
+        <div className="absolute left-[30%] top-[30%] h-[20rem] w-[20rem] animate-drift-c rounded-full bg-indigo-500/15 blur-3xl will-change-transform" />
+      )}
     </div>
   );
 }
 
 /** Cuenta de 0 al valor; con movimiento reducido muestra el valor final directo. */
 export function useCountUp(target: number, durationMs = 900): number {
-  const [value, setValue] = useState(() => (reducedMotion() ? target : 0));
+  const [value, setValue] = useState(0);
+  // Sin animación (movimiento reducido o valor 0) se devuelve el valor final directo, sin tocar el estado.
+  const instant = reducedMotion() || target === 0;
   useEffect(() => {
-    if (reducedMotion() || target === 0) {
-      setValue(target);
-      return;
-    }
+    if (instant) return;
     let frame = 0;
     const start = performance.now();
     const tick = (now: number) => {
@@ -98,6 +108,6 @@ export function useCountUp(target: number, durationMs = 900): number {
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [target, durationMs]);
-  return value;
+  }, [target, durationMs, instant]);
+  return instant ? target : value;
 }

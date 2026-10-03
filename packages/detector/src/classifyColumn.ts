@@ -32,6 +32,7 @@ export const DEFAULT_ACTIONS: Record<DetectionType, Action> = {
 };
 
 /** Tipos que solo se reconocen por el encabezado (no tienen formato fijo). */
+// prettier-ignore
 const HEADER_ONLY_TYPES = new Set<DetectionType>([
   'NOMBRE_PERSONA', 'RAZON_SOCIAL', 'DIRECCION', 'FECHA_NACIMIENTO', 'EDAD', 'SALARIO', 'DATO_SENSIBLE',
 ]);
@@ -89,7 +90,12 @@ function decide(header: string, values: string[]): Verdict | null {
   if (hint && !HEADER_ONLY_TYPES.has(hint)) {
     const r = ratios.find((x) => x.type === hint)?.r ?? 0;
     if (r >= 0.5) {
-      return { type: hint, confidence: 'alta', matchRatio: r, reason: `Encabezado "${header}" y ${Math.round(r * 100)}% de valores con formato de ${label(hint)}` };
+      return {
+        type: hint,
+        confidence: 'alta',
+        matchRatio: r,
+        reason: `Encabezado "${header}" y ${Math.round(r * 100)}% de valores con formato de ${label(hint)}`,
+      };
     }
     // Con encabezado pero sin formato válido (ej. CUIT inventados con verificador incorrecto): igual se marca.
     return { type: hint, confidence: 'media', matchRatio: r, reason: `El encabezado "${header}" sugiere ${label(hint)}` };
@@ -102,7 +108,12 @@ function decide(header: string, values: string[]): Verdict | null {
       const people = ratio(values, looksLikePersonName);
       const companies = ratio(values, looksLikeCompany);
       if (numeric >= 0.8) {
-        return { type: hint, confidence: 'baja', matchRatio: 0, reason: `El encabezado sugiere ${label(hint)}, pero los valores son números (¿un código interno?)` };
+        return {
+          type: hint,
+          confidence: 'baja',
+          matchRatio: 0,
+          reason: `El encabezado sugiere ${label(hint)}, pero los valores son números (¿un código interno?)`,
+        };
       }
       if (companies >= 0.3 && companies >= people) {
         return { type: 'RAZON_SOCIAL', confidence: 'alta', matchRatio: companies, reason: `Encabezado "${header}" y valores con forma societaria (SA, SRL…)` };
@@ -124,8 +135,17 @@ function decide(header: string, values: string[]): Verdict | null {
   // 4. Sin pista en el encabezado. Si el encabezado habla de un número de negocio ("Código", "Nro Factura", "Monto"),
   //    que los valores se parezcan a un DNI o un teléfono no alcanza.
   const negative = isNegativeHeader(header);
-  if (!negative && best.r >= 0.9 && (best.type === 'TELEFONO' || best.type === 'DNI' || best.type === 'PATENTE' || best.type === 'IP' || best.type === 'PASAPORTE')) {
-    return { type: best.type, confidence: 'baja', matchRatio: best.r, reason: `Los valores tienen formato de ${label(best.type)}, pero el encabezado no lo confirma` };
+  if (
+    !negative &&
+    best.r >= 0.9 &&
+    (best.type === 'TELEFONO' || best.type === 'DNI' || best.type === 'PATENTE' || best.type === 'IP' || best.type === 'PASAPORTE')
+  ) {
+    return {
+      type: best.type,
+      confidence: 'baja',
+      matchRatio: best.r,
+      reason: `Los valores tienen formato de ${label(best.type)}, pero el encabezado no lo confirma`,
+    };
   }
   const companies = ratio(values, looksLikeCompany);
   if (companies >= 0.5) {
@@ -134,15 +154,30 @@ function decide(header: string, values: string[]): Verdict | null {
   // Con nombres de pila del diccionario ("JUAN PEREZ", "Gómez, María") la evidencia es buena aunque no haya encabezado.
   const dictionaryPeople = ratio(values, isPersonNameValue);
   if (dictionaryPeople >= 0.6) {
-    return { type: 'NOMBRE_PERSONA', confidence: 'media', matchRatio: dictionaryPeople, reason: `${Math.round(dictionaryPeople * 100)}% de los valores contienen nombres de pila frecuentes` };
+    return {
+      type: 'NOMBRE_PERSONA',
+      confidence: 'media',
+      matchRatio: dictionaryPeople,
+      reason: `${Math.round(dictionaryPeople * 100)}% de los valores contienen nombres de pila frecuentes`,
+    };
   }
   const people = ratio(values, looksLikePersonName);
   if (people >= 0.8) {
-    return { type: 'NOMBRE_PERSONA', confidence: 'baja', matchRatio: people, reason: 'Los valores parecen nombres propios (revisar: también podrían ser ciudades o productos)' };
+    return {
+      type: 'NOMBRE_PERSONA',
+      confidence: 'baja',
+      matchRatio: people,
+      reason: 'Los valores parecen nombres propios (revisar: también podrían ser ciudades o productos)',
+    };
   }
   const sensitive = ratio(values, mentionsSensitive);
   if (sensitive >= 0.5) {
-    return { type: 'DATO_SENSIBLE', confidence: 'media', matchRatio: sensitive, reason: 'Los valores mencionan datos de salud, religión u otros datos sensibles' };
+    return {
+      type: 'DATO_SENSIBLE',
+      confidence: 'media',
+      matchRatio: sensitive,
+      reason: 'Los valores mencionan datos de salud, religión u otros datos sensibles',
+    };
   }
   return null;
 }

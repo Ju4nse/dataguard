@@ -1,0 +1,5 @@
+# Finales de línea LF en el repo y en la copia de trabajo (sin las advertencias LF/CRLF en Windows).
+* text=auto eol=lf
+*.{cmd,bat,ps1} text eol=crlf
+# Binarios
+*.{png,jpg,jpeg,gif,ico,webp,woff,woff2,ttf,otf,pdf,xlsx,xls,ods,docx,onnx,wasm,zip} binary

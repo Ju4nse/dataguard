@@ -6,9 +6,11 @@ import { findTerms, fold, mergeSpans, type CustomTerm } from './terms';
 import type { CellValue, ColumnDecision, EquivalenceRow, Span, Table, TransformResult } from './types';
 import { cellToString, normalizeText, onlyDigits } from './util';
 
+// prettier-ignore
 const DIGIT_TYPES = new Set<DetectionType>(['DNI', 'CUIT_CUIL', 'CBU_CVU', 'TARJETA', 'TELEFONO']);
 
 /** Tipos sin formato fijo: lo encontrado en su columna se busca también en el texto libre. */
+// prettier-ignore
 const PROPAGATED = new Set<DetectionType>(['NOMBRE_PERSONA', 'RAZON_SOCIAL', 'DIRECCION']);
 const MAX_LEARNED = 5000;
 
@@ -32,6 +34,12 @@ export const ANONYMIZED_TOKENS: Record<DetectionType, string> = {
   CREDENCIAL: '[CREDENCIAL]',
   IP: '[IP]',
 };
+
+/** Palabras de un nombre, sin mayúsculas ni tildes. */
+const nameWords = (s: string) =>
+  fold(s)
+    .split(/[^\p{L}]+/u)
+    .filter(Boolean);
 
 /** Clave para reconocer el mismo valor escrito distinto: "PEREZ S.A." = "Pérez SA", "20-1234…" = "201234…". */
 function equivalenceKey(type: DetectionType | null, raw: string): string {
@@ -77,6 +85,11 @@ function ageRange(v: CellValue): string {
  */
 export class PseudonymRegistry {
   private groups = new Map<string, Map<string, EquivalenceRow>>();
+  /**
+   * Por grupo: palabra de un nombre completo → la persona que la tiene (null si hay más de una).
+   * Índice para que "Benítez" encuentre a "Graciela Benítez" sin recorrer todo el grupo.
+   */
+  private nameWords = new Map<string, Map<string, EquivalenceRow | null>>();
 
   get(prefix: string, type: DetectionType | null, raw: string): string {
     let group = this.groups.get(prefix);
@@ -85,27 +98,35 @@ export class PseudonymRegistry {
       this.groups.set(prefix, group);
     }
     const key = equivalenceKey(type, raw);
-    let row = group.get(key) ?? (type === 'NOMBRE_PERSONA' ? this.partialName(group, raw) : undefined);
+    let row = group.get(key) ?? (type === 'NOMBRE_PERSONA' ? this.partialName(prefix, raw) : undefined);
     if (!row) {
       row = { seudonimo: `${prefix}_${String(group.size + 1).padStart(2, '0')}`, original: raw, grupo: prefix };
       group.set(key, row);
+      if (type === 'NOMBRE_PERSONA') this.indexName(prefix, row);
     }
     return row.seudonimo;
+  }
+
+  private indexName(prefix: string, row: EquivalenceRow) {
+    const words = nameWords(row.original);
+    if (words.length < 2) return;
+    let index = this.nameWords.get(prefix);
+    if (!index) this.nameWords.set(prefix, (index = new Map()));
+    for (const w of new Set(words)) {
+      if (w.length < 4) continue;
+      const current = index.get(w);
+      index.set(w, current === undefined || current === row ? row : null);
+    }
   }
 
   /**
    * "Benítez" solo, después de "Graciela Benítez": es la misma persona, mismo seudónimo. Solo si hay
    * una única persona con ese nombre o apellido (con dos "Benítez" no se adivina).
    */
-  private partialName(group: Map<string, EquivalenceRow>, raw: string): EquivalenceRow | undefined {
-    const words = (s: string) => fold(s).split(/[^\p{L}]+/u).filter(Boolean);
-    const single = words(raw);
+  private partialName(prefix: string, raw: string): EquivalenceRow | undefined {
+    const single = nameWords(raw);
     if (single.length !== 1 || single[0]!.length < 4) return undefined;
-    const matches = [...group.values()].filter((r) => {
-      const w = words(r.original);
-      return w.length > 1 && w.includes(single[0]!);
-    });
-    return matches.length === 1 ? matches[0] : undefined;
+    return this.nameWords.get(prefix)?.get(single[0]!) ?? undefined;
   }
 
   entries(): EquivalenceRow[] {
@@ -149,11 +170,7 @@ export function anonymizeValue(type: DetectionType, v: CellValue): string {
 /**
  * @param cellSpans lo que encontró la IA local en las celdas de texto libre (columna → fila → fragmentos).
  */
-export function applyDecisions(
-  table: Table,
-  decisions: Record<number, ColumnDecision>,
-  cellSpans?: Map<number, Map<number, Span[]>>,
-): TransformResult {
+export function applyDecisions(table: Table, decisions: Record<number, ColumnDecision>, cellSpans?: Map<number, Map<number, Span[]>>): TransformResult {
   const registry = new PseudonymRegistry();
   const counts: Partial<Record<DetectionType, number>> = {};
   const bump = (t: DetectionType) => (counts[t] = (counts[t] ?? 0) + 1);

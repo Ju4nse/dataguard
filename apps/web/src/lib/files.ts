@@ -93,7 +93,14 @@ function csvBlob(fields: string[], data: string[][], delimiter: string): Blob {
 export async function downloadTable(table: Table, opts: { fileName: string; format: FileFormat; delimiter: string; sheetName: string }) {
   const base = baseName(opts.fileName);
   if (opts.format === 'csv') {
-    download(csvBlob(table.headers, table.rows.map((r) => r.map(csvCell)), opts.delimiter), `${base}_depurado.csv`);
+    download(
+      csvBlob(
+        table.headers,
+        table.rows.map((r) => r.map(csvCell)),
+        opts.delimiter,
+      ),
+      `${base}_depurado.csv`,
+    );
     return;
   }
   if (opts.format === 'json') {
@@ -136,7 +143,9 @@ export function downloadEquivalences(rows: EquivalenceRow[], fileName: string) {
  * traducir respuestas de la IA más tarde. Se lee en el navegador; no se sube a ningún lado.
  */
 export async function readEquivalences(file: File): Promise<EquivalenceRow[]> {
-  const text = (await file.text()).replace(/^﻿/, '');
+  // Excel agrega una marca de orden de bytes (BOM) al principio de los CSV.
+  const raw = await file.text();
+  const text = raw.startsWith(String.fromCharCode(0xfeff)) ? raw.slice(1) : raw;
   const parsed = Papa.parse<Record<string, string>>(text, { header: true, skipEmptyLines: true, transformHeader: (h) => h.trim().toLowerCase() });
   const rows = parsed.data
     .map((r) => ({ seudonimo: (r.seudonimo ?? '').trim(), original: r.valor_original ?? r.original ?? '', grupo: (r.grupo ?? '').trim() }))

@@ -2,6 +2,7 @@ import type { DetectionType } from '@securedata/shared';
 import { normalizeText } from '../util';
 
 /** Palabras en el encabezado que sugieren el tipo de la columna (ya normalizadas). */
+// prettier-ignore
 const HEADER_HINTS: { type: DetectionType; words: string[] }[] = [
   { type: 'CREDENCIAL', words: ['password', 'contrasena', 'clave', 'pass', 'pwd', 'token', 'api key', 'apikey', 'secret', 'secreto', 'access key'] },
   { type: 'CUIT_CUIL', words: ['cuit', 'cuil'] },
@@ -36,6 +37,7 @@ const HEADER_HINTS: { type: DetectionType; words: string[] }[] = [
 ];
 
 /** Si el encabezado habla de una cosa no personal ("nombre del producto"), no es un nombre de persona. */
+// prettier-ignore
 const NOT_PERSONAL = [
   'producto', 'articulo', 'item', 'sucursal', 'categoria', 'archivo', 'campana', 'plan', 'servicio', 'rubro', 'marca', 'modelo', 'banco', 'ciudad', 'provincia', 'pais', 'localidad',
   'product', 'category', 'file', 'service', 'brand', 'model', 'bank', 'city', 'country', 'state', 'branch',
@@ -48,6 +50,7 @@ const ID_WORDS = ['id', 'codigo', 'cod', 'nro cliente', 'numero de cliente', 'co
  * Encabezados de identificadores internos o números de negocio: si la columna no tiene otra pista,
  * sus valores no se marcan por "parecerse" a un DNI o un teléfono.
  */
+// prettier-ignore
 const NEGATIVE_HEADER_WORDS = [
   'codigo', 'cod', 'factura', 'pedido', 'orden', 'remito', 'ticket', 'comprobante', 'monto', 'importe', 'precio', 'total',
   'cantidad', 'id', 'sku', 'legajo', 'nro', 'numero', 'serie', 'lote', 'stock', 'unidades', 'subtotal', 'iva', 'cp',

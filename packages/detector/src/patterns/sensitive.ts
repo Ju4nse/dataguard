@@ -8,6 +8,7 @@ import { foldWithMap } from '../terms';
  * ("diagnóstico:", "religión:"), para que la acción reemplace el dato y no el rótulo.
  * Frases sin tildes y en minúsculas: se comparan contra el texto normalizado.
  */
+// prettier-ignore
 const PHRASES = {
   salud: [
     'licencia medica', 'licencia por enfermedad', 'licencia psiquiatrica', 'certificado medico', 'certificado de discapacidad',

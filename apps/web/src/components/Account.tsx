@@ -101,7 +101,12 @@ function LoginDialog({ onClose }: { onClose: () => void }) {
         aria-modal="true"
         aria-labelledby="login-title"
       >
-        <button type="button" onClick={onClose} className="absolute right-3 top-3 rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900" aria-label="Cerrar">
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-3 top-3 rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+          aria-label="Cerrar"
+        >
           <Icon name="x" className="h-5 w-5" />
         </button>
         <div className="space-y-2 pr-8">

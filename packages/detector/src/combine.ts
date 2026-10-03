@@ -8,6 +8,7 @@ import type { Span } from './types';
  * Tipos que las reglas resuelven con certeza (formato verificable, o diccionario de datos sensibles
  * de la Ley 25.326): si una regla los encontró, el modelo no los pisa.
  */
+// prettier-ignore
 const STRUCTURED = new Set<DetectionType>([
   'EMAIL', 'TELEFONO', 'DNI', 'CUIT_CUIL', 'CBU_CVU', 'TARJETA', 'PATENTE', 'PASAPORTE', 'IP', 'CREDENCIAL',
   'FECHA_NACIMIENTO', 'EDAD', 'SALARIO', 'DATO_SENSIBLE',
@@ -27,8 +28,10 @@ const PLACES = new Set(
 );
 
 const words = (s: string) => s.split(/[\s,/]+/).filter(Boolean);
+// prettier-ignore
 const DETERMINERS = new Set(['el', 'la', 'los', 'las', 'un', 'una', 'del', 'al', 'este', 'esta', 'nuestro', 'nuestra', 'su', 'mi']);
 /** Pronombres que el modelo a veces toma por nombres al principio de una frase ("Le diagnosticaron…"). */
+// prettier-ignore
 const PRONOUNS = new Set(['le', 'les', 'lo', 'se', 'me', 'te', 'nos', 'yo', 'vos', 'tu', 'el', 'ella', 'ellos', 'ellas', 'usted', 'ustedes', 'nosotros', 'quien', 'que']);
 /** Roles y sustantivos comunes que el modelo a veces toma por personas ("La empleada", "admin"). */
 const ROLE_WORDS = new Set(
@@ -49,14 +52,53 @@ const ORG_UNIT_WORDS = new Set(
   ).split(' '),
 );
 /** Marcas, plataformas y organismos públicos muy conocidos: no son datos confidenciales de nadie. */
-const PUBLIC_ORGS = new Set(
-  [
-    'google', 'google drive', 'gmail', 'microsoft', 'excel', 'word', 'outlook', 'teams', 'slack', 'whatsapp', 'zoom', 'notion', 'jira',
-    'chatgpt', 'openai', 'claude', 'anthropic', 'copilot', 'gemini', 'stripe', 'paypal', 'visa', 'mastercard', 'american express', 'amex',
-    'mercado libre', 'mercado pago', 'tienda nube', 'amazon', 'apple', 'meta', 'facebook', 'instagram', 'linkedin', 'afip', 'arca', 'anses',
-    'osde', 'swiss medical', 'galeno', 'pami', 'banco nación', 'banco nacion', 'banco central', 'bcra',
-  ],
-);
+const PUBLIC_ORGS = new Set([
+  'google',
+  'google drive',
+  'gmail',
+  'microsoft',
+  'excel',
+  'word',
+  'outlook',
+  'teams',
+  'slack',
+  'whatsapp',
+  'zoom',
+  'notion',
+  'jira',
+  'chatgpt',
+  'openai',
+  'claude',
+  'anthropic',
+  'copilot',
+  'gemini',
+  'stripe',
+  'paypal',
+  'visa',
+  'mastercard',
+  'american express',
+  'amex',
+  'mercado libre',
+  'mercado pago',
+  'tienda nube',
+  'amazon',
+  'apple',
+  'meta',
+  'facebook',
+  'instagram',
+  'linkedin',
+  'afip',
+  'arca',
+  'anses',
+  'osde',
+  'swiss medical',
+  'galeno',
+  'pami',
+  'banco nación',
+  'banco nacion',
+  'banco central',
+  'bcra',
+]);
 /** Calle + número ("Las Heras 1540", "Calle 47 nro 820"); sin número, un nombre de calle suelto no es una dirección. */
 const STREET_NUMBER = /\p{L}{2,}\.?\s+(?:n(?:ro|°|º)\.?\s*)?\d{1,5}\b/u;
 const NOT_ADDRESS_START = /^(?:legajo|cp|c\.p\.|c[oó]digo|sala|piso|oficina|of\.|lote|expediente|art[ií]culo|ruta)\b/i;

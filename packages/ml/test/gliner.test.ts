@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { buildFeeds, chunkWords, DEFAULT_CONFIG, detectInSegments, greedyFlat, predict, sentenceRanges, splitWords, type GlinerRunner, type GlinerTokenizer } from '../src';
+import {
+  buildFeeds,
+  chunkWords,
+  DEFAULT_CONFIG,
+  detectInSegments,
+  greedyFlat,
+  predict,
+  sentenceRanges,
+  splitWords,
+  type GlinerRunner,
+  type GlinerTokenizer,
+} from '../src';
 
 // Tokenizador de prueba: un token por palabra (dos si la palabra es larga), ids estables.
 const vocab = new Map<string, number>();
@@ -71,7 +82,9 @@ describe('sentenceRanges / chunkWords', () => {
   });
 
   it('no corta en abreviaturas como S.A. o Av.', () => {
-    expect(cut('Trabaja en Logística Sur S.A. Desde 2020 vive en Av. Belgrano 120.')).toEqual(['Trabaja en Logística Sur S.A. Desde 2020 vive en Av. Belgrano 120.']);
+    expect(cut('Trabaja en Logística Sur S.A. Desde 2020 vive en Av. Belgrano 120.')).toEqual([
+      'Trabaja en Logística Sur S.A. Desde 2020 vive en Av. Belgrano 120.',
+    ]);
   });
 
   const long = Array.from({ length: 500 }, (_, i) => `p${i}`).join(' ');

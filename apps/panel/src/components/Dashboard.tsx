@@ -56,13 +56,14 @@ function Kpi({ value, label, hint, risk = false }: { value: number; label: strin
 export function Dashboard({ me, onLogout }: { me: Me; onLogout: () => void }) {
   const [days, setDays] = useState(90);
   const [data, setData] = useState<Resumen | null>(null);
-  const [loading, setLoading] = useState(true);
+  /** Período (en días) que ya respondió la API: mientras no coincida con el elegido, está cargando. */
+  const [loadedDays, setLoadedDays] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const loading = loadedDays !== days;
 
   useEffect(() => {
     const hasta = new Date();
     const desde = new Date(hasta.getTime() - days * 86_400_000);
-    setLoading(true);
     api<Resumen>(`/panel/resumen?desde=${isoDate(desde)}&hasta=${isoDate(hasta)}`)
       .then((r) => {
         setData(r);
@@ -72,7 +73,7 @@ export function Dashboard({ me, onLogout }: { me: Me; onLogout: () => void }) {
         if (e instanceof ApiError && e.status === 401) onLogout();
         else setError(e instanceof ApiError ? e.message : 'No se pudo cargar el panel');
       })
-      .finally(() => setLoading(false));
+      .finally(() => setLoadedDays(days));
   }, [days, onLogout]);
 
   const t = data?.totales;
@@ -125,7 +126,6 @@ export function Dashboard({ me, onLogout }: { me: Me; onLogout: () => void }) {
       </div>
 
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6">
-
         {error && <ErrorText>{error}</ErrorText>}
 
         {data && t && (
@@ -141,7 +141,10 @@ export function Dashboard({ me, onLogout }: { me: Me; onLogout: () => void }) {
             <div className="grid gap-4 lg:grid-cols-2">
               <ChartCard
                 title="Evolución de detecciones por mes"
-                table={{ headers: ['Mes', 'Detecciones'], rows: data.por_mes.map((m) => [monthLabel(m.mes, data.desde, data.hasta).replace('*', ' (parcial)'), m.detecciones]) }}
+                table={{
+                  headers: ['Mes', 'Detecciones'],
+                  rows: data.por_mes.map((m) => [monthLabel(m.mes, data.desde, data.hasta).replace('*', ' (parcial)'), m.detecciones]),
+                }}
               >
                 <MonthlyColumns data={data.por_mes.map((m) => ({ label: monthLabel(m.mes, data.desde, data.hasta), value: m.detecciones }))} />
                 {data.por_mes.some((m) => monthLabel(m.mes, data.desde, data.hasta).endsWith('*')) && (

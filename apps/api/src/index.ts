@@ -1,11 +1,13 @@
+import { relative } from 'node:path';
 import { serve } from '@hono/node-server';
+import { serveStatic } from '@hono/node-server/serve-static';
 import { DETECTION_TYPES } from '@securedata/shared';
 import { Hono, type Context } from 'hono';
 import { secureHeaders } from 'hono/secure-headers';
 import { z } from 'zod';
 import { config } from './config';
 import { pool, withSession, type DbSession } from './db';
-import { base32, createRateLimiter, csrfGuard } from './security';
+import { base32, clientIp, createRateLimiter, csrfGuard } from './security';
 import { clearSession, getSession, setSession, type Session } from './session';
 
 /**
@@ -33,7 +35,8 @@ function fail(c: Context, e: unknown) {
   if (err.code?.startsWith('22') || err.code?.startsWith('23') || err.code === 'P0001') {
     return c.json({ error: 'Datos inválidos' }, 400);
   }
-  console.error('Error inesperado:', err.message);
+  // Solo el código: el mensaje de Postgres puede incluir valores enviados por el usuario.
+  console.error('Error inesperado en la base:', err.code ?? err.name);
   return c.json({ error: 'Error interno' }, 500);
 }
 
@@ -49,9 +52,10 @@ async function requireSession(c: Context, opts: { allowConfigurar?: boolean } = 
 const dbSession = (s: Session): DbSession => ({ userId: s.userId, aal: s.aal });
 
 // ---------- Autenticación ----------
-const loginLimiter = createRateLimiter(5, 60_000);
+// Por email (frena la fuerza bruta contra una cuenta aunque cambie la IP) y por IP (frena barridos de emails).
+const loginByEmail = createRateLimiter(5, 60_000);
+const loginByIp = createRateLimiter(20, 60_000);
 const codeLimiter = createRateLimiter(5, 60_000);
-const clientIp = (c: Context) => c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'local';
 
 const LoginBody = z.object({ email: z.string().email().max(200), password: z.string().min(1).max(200) });
 const CodeBody = z.object({ codigo: z.string().regex(/^\d{6}$/) });
@@ -59,7 +63,7 @@ const CodeBody = z.object({ codigo: z.string().regex(/^\d{6}$/) });
 app.post('/auth/login', async (c) => {
   const body = LoginBody.safeParse(await c.req.json().catch(() => null));
   if (!body.success) return c.json({ error: 'Email o contraseña inválidos' }, 400);
-  if (!loginLimiter(`${clientIp(c)}:${body.data.email.toLowerCase()}`)) {
+  if (!loginByEmail(body.data.email.toLowerCase()) || !loginByIp(clientIp(c))) {
     return c.json({ error: 'Demasiados intentos. Esperá un minuto.' }, 429);
   }
   try {
@@ -123,8 +127,8 @@ app.post('/auth/2fa/confirmar', async (c) => {
   }
 });
 
-app.post('/auth/logout', (c) => {
-  clearSession(c);
+app.post('/auth/logout', async (c) => {
+  await clearSession(c);
   return c.json({ estado: 'ok' });
 });
 
@@ -155,9 +159,15 @@ app.get('/me', async (c) => {
 const EventBody = z.strictObject({
   origen: z.enum(['web', 'extension']),
   tipoEntrada: z.enum(['tabla', 'documento', 'prompt']),
-  tipoArchivo: z.string().regex(/^[a-z0-9]{1,8}$/i).optional(),
+  tipoArchivo: z
+    .string()
+    .regex(/^[a-z0-9]{1,8}$/i)
+    .optional(),
   filas: z.number().int().min(0).max(100_000_000).optional(),
-  sitio: z.string().regex(/^[a-z0-9.-]{3,100}$/i).optional(),
+  sitio: z
+    .string()
+    .regex(/^[a-z0-9.-]{3,100}$/i)
+    .optional(),
   decision: z.enum(['enmascarado', 'ignorado', 'cancelado']).optional(),
   detecciones: z
     .array(
@@ -224,14 +234,29 @@ app.get('/panel/usuarios', async (c) => {
 });
 
 app.get('/salud', async (c) => {
-  await pool.query('SELECT 1');
-  return c.json({ estado: 'ok' });
+  try {
+    await pool.query('SELECT 1');
+    return c.json({ estado: 'ok' });
+  } catch {
+    return c.json({ estado: 'sin base de datos' }, 503);
+  }
 });
 
 app.notFound((c) => c.json({ error: 'No encontrado' }, 404));
 
-serve({ fetch: app.fetch, port: config.port }, (info) => {
-  console.log(`API de DataGuard en http://localhost:${info.port}/api`);
+// Servidor: la API en /api y, si se compiló, el panel en el resto (un solo puerto para publicar con tailscale serve).
+const server = new Hono();
+server.route('/', app);
+if (config.panelDir) {
+  const root = relative(process.cwd(), config.panelDir) || '.';
+  server.use('*', secureHeaders());
+  server.use('/*', serveStatic({ root }));
+  // Rutas del panel que no son archivos: la aplicación de una sola página.
+  server.get('*', serveStatic({ root, path: 'index.html' }));
+}
+
+serve({ fetch: server.fetch, port: config.port, hostname: config.host }, (info) => {
+  console.log(`API de DataGuard en http://${config.host}:${info.port}/api${config.panelDir ? ' (y el panel en /)' : ''}`);
 });
 
-export default app;
+export default server;

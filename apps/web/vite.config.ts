@@ -58,5 +58,5 @@ export default defineConfig({
   // Dependencias que solo usan los workers: si Vite las descubre tarde, las re-optimiza y recarga la página.
   optimizeDeps: { include: ['mammoth', 'papaparse', 'xlsx', 'onnxruntime-web/wasm', '@huggingface/tokenizers'] },
   // La API corre aparte (npm run dev -w @securedata/api); el proxy mantiene la cookie en el mismo origen.
-  server: { proxy: { '/api': 'http://localhost:8787' } },
+  server: { proxy: { '/api': 'http://127.0.0.1:8787' } },
 });

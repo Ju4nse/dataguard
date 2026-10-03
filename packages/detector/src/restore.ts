@@ -27,10 +27,7 @@ const groupKey = (g: string) => fold(g.replace(/[ _]+/g, ' ').trim());
 
 const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-const IRREVERSIBLE = new RegExp(
-  [...new Set(Object.values(ANONYMIZED_TOKENS))].map(escapeRegex).join('|') + String.raw`|\*\*\*@[\w.-]+\.\w+|\*{4} \d{4}`,
-  'g',
-);
+const IRREVERSIBLE = new RegExp([...new Set(Object.values(ANONYMIZED_TOKENS))].map(escapeRegex).join('|') + String.raw`|\*\*\*@[\w.-]+\.\w+|\*{4} \d{4}`, 'g');
 
 /**
  * Traduce la respuesta de una IA externa: reemplaza cada seudónimo (Persona_03, Empresa_07…) por el

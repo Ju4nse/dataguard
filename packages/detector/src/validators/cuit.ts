@@ -1,6 +1,7 @@
 import { onlyDigits } from '../util';
 
 /** Prefijos válidos: 20/23/24/27 personas humanas, 30/33/34 personas jurídicas. */
+// prettier-ignore
 const CUIT_PREFIXES = new Set(['20', '23', '24', '27', '30', '33', '34']);
 const WEIGHTS = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2];
 

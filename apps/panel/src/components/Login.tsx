@@ -147,7 +147,10 @@ export function Enroll2FA({ onDone, onLogout }: { onDone: () => void; onLogout: 
   };
 
   return (
-    <Shell title="Activá el segundo factor" subtitle="Para ver el panel es obligatorio. Escaneá el código con Google Authenticator, Microsoft Authenticator o similar.">
+    <Shell
+      title="Activá el segundo factor"
+      subtitle="Para ver el panel es obligatorio. Escaneá el código con Google Authenticator, Microsoft Authenticator o similar."
+    >
       {setup && (
         <div className="space-y-2 text-center">
           <img src={setup.qr} alt="Código QR para la app autenticadora" className="mx-auto h-48 w-48" />

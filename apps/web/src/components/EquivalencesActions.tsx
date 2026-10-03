@@ -43,7 +43,12 @@ function PasswordDialog({ rows, fileName, onClose }: { rows: EquivalenceRow[]; f
         aria-modal="true"
         aria-labelledby="cifrar-titulo"
       >
-        <button type="button" onClick={onClose} className="absolute right-3 top-3 rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900" aria-label="Cerrar">
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-3 top-3 rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+          aria-label="Cerrar"
+        >
           <Icon name="x" className="h-5 w-5" />
         </button>
         <div className="space-y-2 pr-8">
@@ -53,17 +58,28 @@ function PasswordDialog({ rows, fileName, onClose }: { rows: EquivalenceRow[]; f
           <h2 id="cifrar-titulo" className="text-lg font-bold text-slate-900">
             Descargar la tabla cifrada
           </h2>
-          <p className="text-sm text-slate-600">
-            Sin la contraseña nadie puede leerla. Guardala bien: si la olvidás, no hay forma de recuperar los datos.
-          </p>
+          <p className="text-sm text-slate-600">Sin la contraseña nadie puede leerla. Guardala bien: si la olvidás, no hay forma de recuperar los datos.</p>
         </div>
         <label className="block space-y-1.5">
           <span className="text-sm font-medium text-slate-900">Contraseña</span>
-          <input ref={first} type={visible ? 'text' : 'password'} autoComplete="new-password" className={inputClass} value={password} onChange={(e) => setPassword(e.target.value)} />
+          <input
+            ref={first}
+            type={visible ? 'text' : 'password'}
+            autoComplete="new-password"
+            className={inputClass}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
         </label>
         <label className="block space-y-1.5">
           <span className="text-sm font-medium text-slate-900">Repetila</span>
-          <input type={visible ? 'text' : 'password'} autoComplete="new-password" className={inputClass} value={repeat} onChange={(e) => setRepeat(e.target.value)} />
+          <input
+            type={visible ? 'text' : 'password'}
+            autoComplete="new-password"
+            className={inputClass}
+            value={repeat}
+            onChange={(e) => setRepeat(e.target.value)}
+          />
         </label>
         <label className="flex items-center gap-2 text-sm text-slate-700">
           <input type="checkbox" checked={visible} onChange={(e) => setVisible(e.target.checked)} className="h-4 w-4" />

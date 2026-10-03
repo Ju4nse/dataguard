@@ -40,7 +40,11 @@ function OriginalWithMarks({ text, spans }: { text: string; spans: Span[] }) {
         type="button"
         key={sp.start}
         onClick={() => toggleIgnore(sp.value)}
-        title={sp.ignored ? 'No se oculta. Tocá para volver a ocultarlo.' : `${DETECTION_LABELS[sp.type]}${sp.source === 'ia' ? ' · lo encontró la IA local' : ''}. Tocá si no es sensible.`}
+        title={
+          sp.ignored
+            ? 'No se oculta. Tocá para volver a ocultarlo.'
+            : `${DETECTION_LABELS[sp.type]}${sp.source === 'ia' ? ' · lo encontró la IA local' : ''}. Tocá si no es sensible.`
+        }
         className={`rounded px-0.5 text-left ${sp.ignored ? 'bg-slate-200 text-slate-500 line-through' : 'bg-amber-100 text-amber-900 ring-1 ring-amber-300 hover:bg-amber-200'}`}
       >
         {sp.ignored ? sp.value : maskForDisplay(sp.value)}
@@ -71,14 +75,20 @@ function PromptBubble({ turn }: { turn: PromptTurn }) {
       <div className="max-w-[92%] space-y-1.5 sm:max-w-[85%]">
         <p className="flex items-center gap-1.5 text-xs font-medium text-emerald-800">
           <Icon name="shield" className="h-3.5 w-3.5" />
-          {active.length > 0 ? `Protegido: ${active.length} dato${active.length === 1 ? '' : 's'} reemplazado${active.length === 1 ? '' : 's'}` : 'No encontramos datos sensibles'}
+          {active.length > 0
+            ? `Protegido: ${active.length} dato${active.length === 1 ? '' : 's'} reemplazado${active.length === 1 ? '' : 's'}`
+            : 'No encontramos datos sensibles'}
           {turn.aiUsed && <AiBadge />}
         </p>
         <div className="space-y-3 rounded-2xl rounded-tl-sm border border-emerald-200 bg-white px-4 py-3 shadow-sm">
           <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-slate-800">
             {parts.map((p, i) =>
               p.seudonimo ? (
-                <mark key={i} title={`Es ${maskForDisplay(p.text)}`} className="rounded bg-emerald-50 px-0.5 font-medium text-emerald-900 ring-1 ring-inset ring-emerald-200">
+                <mark
+                  key={i}
+                  title={`Es ${maskForDisplay(p.text)}`}
+                  className="rounded bg-emerald-50 px-0.5 font-medium text-emerald-900 ring-1 ring-inset ring-emerald-200"
+                >
                   {p.seudonimo}
                 </mark>
               ) : (
@@ -142,17 +152,23 @@ const STEPS = ['Escribí o pegá tu prompt', 'Copiá la versión protegida en la
 export function ChatStep() {
   const { turns, busy, aiProgress, sendPrompt, sendResponse, clear, registry } = useChat();
   const goToStep = useStore((s) => s.goToStep);
-  const [mode, setMode] = useState<Mode>('prompt');
+  // Lo natural es el paso siguiente al último mensaje: prompt → respuesta → prompt.
+  const nextMode = (): Mode => (turns.at(-1)?.kind === 'prompt' ? 'respuesta' : 'prompt');
+  const [mode, setMode] = useState<Mode>(nextMode);
+  // Cuando llega un mensaje nuevo (también el primero, que se manda desde el inicio) se ajusta el modo
+  // durante el render, sin efecto: es el patrón de React para estado derivado de un cambio.
+  const [seenTurns, setSeenTurns] = useState(turns.length);
+  if (seenTurns !== turns.length) {
+    setSeenTurns(turns.length);
+    setMode(nextMode());
+  }
   const [text, setText] = useState('');
   const end = useRef<HTMLDivElement>(null);
   const entries = registry.entries();
 
-  // Después de cada mensaje, lo natural es el paso siguiente: prompt → respuesta → prompt.
-  const lastKind = turns.at(-1)?.kind;
   useEffect(() => {
-    if (lastKind) setMode(lastKind === 'prompt' ? 'respuesta' : 'prompt');
     end.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, [turns.length, lastKind]);
+  }, [turns.length]);
 
   const submit = async (e?: FormEvent) => {
     e?.preventDefault();
@@ -248,8 +264,8 @@ export function ChatStep() {
         <Card className="flex flex-col gap-3 border-amber-200 bg-amber-50 p-4 sm:flex-row sm:items-center">
           <Icon name="key" className="hidden h-5 w-5 shrink-0 text-amber-700 sm:block" />
           <p className="flex-1 text-sm text-amber-900">
-            <strong className="font-semibold">{entries.length} seudónimos en esta conversación.</strong> Se pierden al cerrar la pestaña: si vas a
-            traducir respuestas más tarde, descargá la tabla.
+            <strong className="font-semibold">{entries.length} seudónimos en esta conversación.</strong> Se pierden al cerrar la pestaña: si vas a traducir
+            respuestas más tarde, descargá la tabla.
           </p>
           <EquivalencesActions rows={entries} fileName="chat" />
         </Card>

@@ -8,6 +8,6 @@ export default defineConfig({
     port: 5180,
     strictPort: true,
     // La API corre aparte; con el proxy la cookie de sesión queda en el mismo origen.
-    proxy: { '/api': 'http://localhost:8787' },
+    proxy: { '/api': 'http://127.0.0.1:8787' },
   },
 });

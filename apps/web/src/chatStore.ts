@@ -55,6 +55,7 @@ interface ChatState {
 }
 
 /** Tipos que se "aprenden": un nombre detectado en un mensaje se oculta también en los siguientes. */
+// prettier-ignore
 const LEARNED_TYPES = new Set<DetectionType>(['NOMBRE_PERSONA', 'RAZON_SOCIAL', 'DIRECCION']);
 
 let nextId = 1;

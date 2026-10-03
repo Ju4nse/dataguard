@@ -24,6 +24,7 @@ const SOCIETY = String.raw`(?:S\.?\s?A\.?\s?U\.?|S\.?\s?R\.?\s?L\.?|S\.?\s?A\.?\
 const SOCIETY_AT_END = new RegExp(`${SOCIETY}$`, 'u');
 
 /** Palabras que pueden ir con mayúscula por empezar la oración (o por estar todo en mayúsculas) pero no son parte del nombre. */
+// prettier-ignore
 const LEADING_STOPWORDS = new Set([
   'entre', 'el', 'la', 'los', 'las', 'con', 'por', 'para', 'segun', 'según', 'y', 'e', 'en', 'al', 'a', 'de', 'del',
   'sr', 'sra', 'señor', 'señora', 'empresa', 'cliente', 'proveedor', 'firma', 'firmamos', 'contrato', 'servicios', 'que', 'su', 'sus',
@@ -71,7 +72,8 @@ const SALARY_CONTEXT = near(String.raw`sueldo|salario|remuneraci[oó]n|haberes|h
 const IP_CONTEXT = near('ip|servidor|server|host|atacante|origen|destino');
 const PASSPORT_CONTEXT = near('pasaporte|passport');
 /** Antes de un número: indica que es un identificador interno, no un dato personal. */
-const NEGATIVE_CONTEXT = /\b(?:pedido|orden|factura|fact|remito|ticket|comprobante|c[oó]digo|cod|art[ií]culo|art|expediente|operaci[oó]n|transacci[oó]n|referencia|ref|legajo|serie|lote|sku|cae|cp|c[oó]digo postal|nro de cliente|versi[oó]n)\.?\s*(?:n[°ºro.]*\s*)?[:#]?\s*$/i;
+const NEGATIVE_CONTEXT =
+  /\b(?:pedido|orden|factura|fact|remito|ticket|comprobante|c[oó]digo|cod|art[ií]culo|art|expediente|operaci[oó]n|transacci[oó]n|referencia|ref|legajo|serie|lote|sku|cae|cp|c[oó]digo postal|nro de cliente|versi[oó]n)\.?\s*(?:n[°ºro.]*\s*)?[:#]?\s*$/i;
 const VERSION_BEFORE = /(?:versi[oó]n|\bv)\s*$/i;
 
 const MONTHS = 'enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre';
@@ -135,7 +137,7 @@ export const TEXT_PATTERNS: TextPattern[] = [
     // Alias de CBU/CVU: "alias perro.casa.sol". Solo con la palabra "alias" delante.
     type: 'CBU_CVU',
     // Puede terminar en punto de oración ("alias ferre.central.mp.") pero no seguir con más caracteres del alias.
-    regex: /(?<=\balias(?:\s+(?:cbu|cvu|de\s+cbu|del\s+cbu))?\s*[:\-]?\s*)[A-Za-z0-9][A-Za-z0-9.-]{4,18}[A-Za-z0-9](?![A-Za-z0-9-]|\.[A-Za-z0-9])/gi,
+    regex: /(?<=\balias(?:\s+(?:cbu|cvu|de\s+cbu|del\s+cbu))?\s*[:-]?\s*)[A-Za-z0-9][A-Za-z0-9.-]{4,18}[A-Za-z0-9](?![A-Za-z0-9-]|\.[A-Za-z0-9])/gi,
     validate: (m) => /[.\-\d]/.test(m),
     confidence: () => 'media',
     priority: 88,
@@ -224,7 +226,8 @@ export const TEXT_PATTERNS: TextPattern[] = [
   {
     // "Av. Corrientes 1234", "Calle San Martín 455", "Bv. Oroño 1500". Sin prefijo de calle no se puede distinguir de otras cosas.
     type: 'DIRECCION',
-    regex: /(?<!\p{L})(?:Av(?:da)?\.?|Avenida|Calle|Bv\.?|Boulevard|Bulevar|Pje\.?|Pasaje|Diag\.?|Diagonal|Ruta)[ \t]+(?:(?:\p{Lu}[\p{L}.]*|de|del|la|los|las|\d{1,2})[ \t]+){1,5}(?:N[°ºo]\.?[ \t]*)?\d{1,5}(?!\d)/gu,
+    regex:
+      /(?<!\p{L})(?:Av(?:da)?\.?|Avenida|Calle|Bv\.?|Boulevard|Bulevar|Pje\.?|Pasaje|Diag\.?|Diagonal|Ruta)[ \t]+(?:(?:\p{Lu}[\p{L}.]*|de|del|la|los|las|\d{1,2})[ \t]+){1,5}(?:N[°ºo]\.?[ \t]*)?\d{1,5}(?!\d)/gu,
     validate: () => true,
     confidence: () => 'media',
     priority: 45,

@@ -39,8 +39,16 @@ const PRINCIPLES: { icon: IconName; title: string; text: string }[] = [
     title: 'Seudonimización reversible',
     text: '"Pérez SA" pasa a ser "Empresa_07" en todo el archivo. Con la tabla de equivalencias traducís la respuesta de la IA.',
   },
-  { icon: 'building', title: 'Política de tu empresa', text: 'Si ingresás con tu empresa, se aplican sus reglas para cada tipo de dato. Vos no tenés que decidir nada.' },
-  { icon: 'eyeOff', title: 'Solo estadísticas', text: 'Tu empresa ve cuántos datos se protegieron y de qué tipo. Nunca tus archivos, sus nombres ni su contenido.' },
+  {
+    icon: 'building',
+    title: 'Política de tu empresa',
+    text: 'Si ingresás con tu empresa, se aplican sus reglas para cada tipo de dato. Vos no tenés que decidir nada.',
+  },
+  {
+    icon: 'eyeOff',
+    title: 'Solo estadísticas',
+    text: 'Tu empresa ve cuántos datos se protegieron y de qué tipo. Nunca tus archivos, sus nombres ni su contenido.',
+  },
 ];
 
 const DETECTS: { icon: IconName; title: string; items: string[] }[] = [
@@ -127,63 +135,63 @@ function UploadCard() {
       {tab === 'prompt' ? (
         <PromptStart />
       ) : (
-      <div
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragging(true);
-        }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={onDrop}
-        className={`group mt-2 flex flex-col items-center justify-center gap-5 rounded-lg border-2 border-dashed px-6 py-10 text-center transition-colors duration-200 ${
-          dragging ? 'border-brand-500 bg-brand-50' : 'border-slate-300 hover:border-brand-400'
-        }`}
-      >
-        {/* El ícono responde al arrastrar (sube y crece) y se vuelve un spinner mientras se protege. */}
         <div
-          className={`flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand-700 transition-transform duration-300 ${
-            dragging ? '-translate-y-1 scale-110' : 'group-hover:-translate-y-0.5'
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragging(true);
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={onDrop}
+          className={`group mt-2 flex flex-col items-center justify-center gap-5 rounded-lg border-2 border-dashed px-6 py-10 text-center transition-colors duration-200 ${
+            dragging ? 'border-brand-500 bg-brand-50' : 'border-slate-300 hover:border-brand-400'
           }`}
         >
-          {loading ? <Spinner className="h-6 w-6" /> : <Icon name="upload" className="h-6 w-6" />}
-        </div>
-        <div className="space-y-1" aria-live="polite">
-          <p className="font-semibold text-slate-900">
-            {aiProgress !== null
-              ? `La IA local está revisando el texto… ${Math.round(aiProgress * 100)}%`
-              : loading
-                ? 'Protegiendo tu archivo…'
-                : dragging
-                  ? 'Soltalo para protegerlo'
-                  : 'Arrastrá tu archivo acá'}
+          {/* El ícono responde al arrastrar (sube y crece) y se vuelve un spinner mientras se protege. */}
+          <div
+            className={`flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand-700 transition-transform duration-300 ${
+              dragging ? '-translate-y-1 scale-110' : 'group-hover:-translate-y-0.5'
+            }`}
+          >
+            {loading ? <Spinner className="h-6 w-6" /> : <Icon name="upload" className="h-6 w-6" />}
+          </div>
+          <div className="space-y-1" aria-live="polite">
+            <p className="font-semibold text-slate-900">
+              {aiProgress !== null
+                ? `La IA local está revisando el texto… ${Math.round(aiProgress * 100)}%`
+                : loading
+                  ? 'Protegiendo tu archivo…'
+                  : dragging
+                    ? 'Soltalo para protegerlo'
+                    : 'Arrastrá tu archivo acá'}
+            </p>
+            <p className="text-sm text-slate-600">CSV, Excel, ODS, PDF, Word, TXT, Markdown o JSON · hasta {MAX_SIZE_MB} MB</p>
+          </div>
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            <Button disabled={loading} onClick={() => input.current?.click()}>
+              <Icon name="upload" className="h-4 w-4" />
+              Elegir archivo
+            </Button>
+            <Button variant="secondary" disabled={loading} onClick={() => void loadDemo()}>
+              Probar con un ejemplo
+            </Button>
+          </div>
+          <input
+            ref={input}
+            type="file"
+            accept={ACCEPTED_EXTENSIONS.join(',')}
+            className="hidden"
+            aria-label="Elegir archivo para proteger"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void loadFile(file);
+              e.target.value = '';
+            }}
+          />
+          <p className="flex items-center gap-1.5 text-xs text-slate-600">
+            <Icon name="lock" className="h-3.5 w-3.5" />
+            Se procesa en tu navegador: no se sube a ningún lado
           </p>
-          <p className="text-sm text-slate-600">CSV, Excel, ODS, PDF, Word, TXT, Markdown o JSON · hasta {MAX_SIZE_MB} MB</p>
         </div>
-        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-          <Button disabled={loading} onClick={() => input.current?.click()}>
-            <Icon name="upload" className="h-4 w-4" />
-            Elegir archivo
-          </Button>
-          <Button variant="secondary" disabled={loading} onClick={() => void loadDemo()}>
-            Probar con un ejemplo
-          </Button>
-        </div>
-        <input
-          ref={input}
-          type="file"
-          accept={ACCEPTED_EXTENSIONS.join(',')}
-          className="hidden"
-          aria-label="Elegir archivo para proteger"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) void loadFile(file);
-            e.target.value = '';
-          }}
-        />
-        <p className="flex items-center gap-1.5 text-xs text-slate-600">
-          <Icon name="lock" className="h-3.5 w-3.5" />
-          Se procesa en tu navegador: no se sube a ningún lado
-        </p>
-      </div>
       )}
       <div className="mx-2 mt-2 border-t border-slate-200 px-2 pb-2 pt-4">
         <AiToggle />
@@ -229,8 +237,8 @@ export function UploadStep() {
                 Usá IA con los datos de tu empresa sin exponer información sensible
               </h1>
               <p className="max-w-xl animate-fade-up text-pretty text-slate-300 [animation-delay:160ms] sm:text-lg">
-                DataGuard detecta y protege los datos personales y confidenciales de tus archivos antes de que lleguen a ChatGPT, Claude o
-                Copilot. Todo el análisis corre en tu computadora, así que la protección no crea nuevas fugas.
+                DataGuard detecta y protege los datos personales y confidenciales de tus archivos antes de que lleguen a ChatGPT, Claude o Copilot. Todo el
+                análisis corre en tu computadora, así que la protección no crea nuevas fugas.
               </p>
             </div>
             <ul className="hidden animate-fade-up space-y-3 [animation-delay:240ms] sm:block">
@@ -359,8 +367,8 @@ export function UploadStep() {
                 ¿Sos responsable de seguridad?
               </h2>
               <p className="text-slate-300">
-                Definí la política de tu empresa y seguí cuántos datos sensibles se protegen por área, sin ver el contenido de ningún archivo. Acceso
-                con segundo factor y auditoría de cada consulta.
+                Definí la política de tu empresa y seguí cuántos datos sensibles se protegen por área, sin ver el contenido de ningún archivo. Acceso con
+                segundo factor y auditoría de cada consulta.
               </p>
             </div>
             {PANEL_URL ? (
@@ -370,7 +378,9 @@ export function UploadStep() {
               </ButtonLink>
             ) : (
               // Demo pública: el panel necesita el servidor de la empresa.
-              <p className="relative max-w-xs shrink-0 text-sm text-slate-300">El panel corre en el servidor de cada empresa; no está incluido en esta demo pública.</p>
+              <p className="relative max-w-xs shrink-0 text-sm text-slate-300">
+                El panel corre en el servidor de cada empresa; no está incluido en esta demo pública.
+              </p>
             )}
           </Reveal>
 
@@ -379,9 +389,8 @@ export function UploadStep() {
             <div>
               <p className="font-semibold">Limitaciones del prototipo</p>
               <p>
-                Es un prototipo académico. La detección usa reglas, validadores y diccionarios; el modelo de IA local (GLiNER) es opcional, está
-                en beta. Puede escaparse algún dato o marcarse de más: no lo uses todavía con
-                datos reales de tu empresa.
+                Es un prototipo académico. La detección usa reglas, validadores y diccionarios; el modelo de IA local (GLiNER) es opcional, está en beta. Puede
+                escaparse algún dato o marcarse de más: no lo uses todavía con datos reales de tu empresa.
               </p>
             </div>
           </aside>

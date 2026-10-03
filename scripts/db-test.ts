@@ -26,7 +26,7 @@ const api = new pg.Client({ connectionString: API_URL });
 const owner = new pg.Client({ connectionString: OWNER_URL });
 
 /** Ejecuta una consulta como si fuera el usuario indicado (lo que hará la API). */
-async function as<T extends pg.QueryResultRow = any>(userId: string | null, sql: string, params: unknown[] = [], aal = 'aal1') {
+async function as<T extends pg.QueryResultRow = pg.QueryResultRow>(userId: string | null, sql: string, params: unknown[] = [], aal = 'aal1') {
   await api.query('BEGIN');
   try {
     if (userId) await api.query(`SELECT set_config('app.user_id', $1, true), set_config('app.aal', $2, true)`, [userId, aal]);
@@ -104,29 +104,33 @@ async function main() {
       { tipo: 'EMAIL', accion: 'anonimizar', cantidad: 5 },
     ]);
     const r = await as(ID.empleado, REGISTRAR, ['web', 'tabla', det, 'XLSX', 120, null, null]);
-    eventoEmpleado = Number(r.rows[0].id);
+    eventoEmpleado = Number(r.rows[0]!.id);
     const e = await owner.query(`SELECT organizacion_id, area_id, tipo_archivo FROM app.eventos WHERE id = $1`, [eventoEmpleado]);
-    assert(e.rows[0].organizacion_id === ID.orgDemo && e.rows[0].area_id === ID.areaVentas, 'organización/área incorrectas');
-    assert(e.rows[0].tipo_archivo === 'xlsx', 'el tipo de archivo debería normalizarse a minúsculas');
+    assert(e.rows[0]!.organizacion_id === ID.orgDemo && e.rows[0]!.area_id === ID.areaVentas, 'organización/área incorrectas');
+    assert(e.rows[0]!.tipo_archivo === 'xlsx', 'el tipo de archivo debería normalizarse a minúsculas');
     const d = await owner.query(`SELECT tipo, cantidad FROM app.detecciones WHERE evento_id = $1 ORDER BY tipo`, [eventoEmpleado]);
     assert(d.rows.find((x) => x.tipo === 'DNI')?.cantidad === 15, 'las detecciones repetidas deberían sumarse');
   });
 
   await test('un empleado NO puede insertar directamente en las tablas', async () => {
     await fails(
-      as(ID.empleado, `INSERT INTO app.eventos (organizacion_id, usuario_id, origen, tipo_entrada, tuvo_datos_sensibles) VALUES ($1, $2, 'web', 'tabla', false)`, [ID.orgDemo, ID.empleado]),
+      as(
+        ID.empleado,
+        `INSERT INTO app.eventos (organizacion_id, usuario_id, origen, tipo_entrada, tuvo_datos_sensibles) VALUES ($1, $2, 'web', 'tabla', false)`,
+        [ID.orgDemo, ID.empleado],
+      ),
       /permission denied/,
     );
   });
 
   await test('un empleado solo ve sus propios eventos', async () => {
     const r = await as(ID.empleado, `SELECT DISTINCT usuario_id FROM app.eventos`);
-    assert(r.rows.length === 1 && r.rows[0].usuario_id === ID.empleado, `ve eventos de: ${r.rows.map((x) => x.usuario_id).join(', ')}`);
+    assert(r.rows.length === 1 && r.rows[0]!.usuario_id === ID.empleado, `ve eventos de: ${r.rows.map((x) => x.usuario_id).join(', ')}`);
   });
 
   await test('un empleado solo ve su propio usuario', async () => {
     const r = await as(ID.empleado, `SELECT id FROM app.usuarios`);
-    assert(r.rows.length === 1 && r.rows[0].id === ID.empleado, `ve ${r.rows.length} usuarios`);
+    assert(r.rows.length === 1 && r.rows[0]!.id === ID.empleado, `ve ${r.rows.length} usuarios`);
   });
 
   await test('un empleado NO puede ver el panel', async () => {
@@ -134,11 +138,17 @@ async function main() {
   });
 
   await test('un tipo de dato inexistente se rechaza', async () => {
-    await fails(as(ID.empleado, REGISTRAR, ['web', 'tabla', JSON.stringify([{ tipo: 'CONTRASENIA_BANCO', accion: 'eliminar', cantidad: 1 }]), null, null, null, null]), /invalid input value for enum/);
+    await fails(
+      as(ID.empleado, REGISTRAR, ['web', 'tabla', JSON.stringify([{ tipo: 'CONTRASENIA_BANCO', accion: 'eliminar', cantidad: 1 }]), null, null, null, null]),
+      /invalid input value for enum/,
+    );
   });
 
   await test('la extensión no puede mandar un sitio con formato de URL completa', async () => {
-    await fails(as(ID.empleado, REGISTRAR, ['extension', 'prompt', '[]', null, null, 'https://chatgpt.com/c/123?q=mi dni', 'ignorado']), /violates check constraint/);
+    await fails(
+      as(ID.empleado, REGISTRAR, ['extension', 'prompt', '[]', null, null, 'https://chatgpt.com/c/123?q=mi dni', 'ignorado']),
+      /violates check constraint/,
+    );
   });
 
   // ---------- Responsable ----------
@@ -150,29 +160,29 @@ async function main() {
     await fails(as(ID.responsable, `SELECT app.panel_resumen($1, $2)`, [desde, hasta], 'aal1'), /segundo factor/);
   });
 
-  let resumen: any;
+  let resumen: { totales: { eventos: number; detecciones: number }; por_tipo: unknown[]; por_mes: unknown[]; por_area: { area: string }[] } | undefined;
   await test('un responsable con segundo factor ve los agregados de su organización', async () => {
     const r = await as(ID.responsable, `SELECT app.panel_resumen($1, $2) AS r`, [desde, hasta], 'aal2');
-    resumen = r.rows[0].r;
-    assert(resumen.totales.eventos > 0 && resumen.totales.detecciones > 0, 'el resumen debería tener datos de demo');
-    assert(resumen.por_tipo.length > 0 && resumen.por_mes.length > 0, 'faltan series por tipo o por mes');
+    resumen = r.rows[0]!.r;
+    assert(resumen && resumen.totales.eventos > 0 && resumen.totales.detecciones > 0, 'el resumen debería tener datos de demo');
+    assert(resumen && resumen.por_tipo.length > 0 && resumen.por_mes.length > 0, 'faltan series por tipo o por mes');
   });
 
   await test('las áreas con menos de 5 personas no aparecen solas (se agrupan en "Otras áreas")', async () => {
-    const areas = (resumen?.por_area ?? []).map((a: any) => a.area);
+    const areas = (resumen?.por_area ?? []).map((a) => a.area);
     assert(!areas.includes('Marketing') && !areas.includes('Sistemas'), `aparecen áreas chicas: ${areas.join(', ')}`);
     assert(areas.includes('Otras áreas') && areas.includes('Ventas'), `áreas: ${areas.join(', ')}`);
   });
 
   await test('cada consulta al panel queda en la auditoría', async () => {
     const r = await owner.query(`SELECT count(*)::int AS n FROM app.auditoria WHERE usuario_id = $1 AND accion = 'panel_resumen'`, [ID.responsable]);
-    assert(r.rows[0].n >= 1, 'no hay registro de auditoría');
+    assert(r.rows[0]!.n >= 1, 'no hay registro de auditoría');
   });
 
   await test('un responsable NO puede leer la auditoría ni los eventos de otros fila por fila', async () => {
     await fails(as(ID.responsable, `SELECT * FROM app.auditoria`, [], 'aal2'), /permission denied/);
     const r = await as(ID.responsable, `SELECT count(*)::int AS n FROM app.eventos`, [], 'aal2');
-    assert(r.rows[0].n === 0, `el responsable ve ${r.rows[0].n} eventos sueltos`);
+    assert(r.rows[0]!.n === 0, `el responsable ve ${r.rows[0]!.n} eventos sueltos`);
   });
 
   await test('el detalle por empleado está bloqueado si la empresa no lo habilitó', async () => {
@@ -181,9 +191,17 @@ async function main() {
 
   // ---------- Aislamiento entre organizaciones ----------
   await test('un responsable de otra empresa no ve nada de Empresa Demo', async () => {
-    await as(ID.empleadoOtra, REGISTRAR, ['web', 'documento', JSON.stringify([{ tipo: 'CUIT_CUIL', accion: 'seudonimizar', cantidad: 2 }]), 'pdf', null, null, null]);
+    await as(ID.empleadoOtra, REGISTRAR, [
+      'web',
+      'documento',
+      JSON.stringify([{ tipo: 'CUIT_CUIL', accion: 'seudonimizar', cantidad: 2 }]),
+      'pdf',
+      null,
+      null,
+      null,
+    ]);
     const r = await as(ID.responsableOtra, `SELECT app.panel_resumen($1, $2) AS r`, [desde, hasta], 'aal2');
-    const otro = r.rows[0].r;
+    const otro = r.rows[0]!.r;
     assert(otro.totales.detecciones < 50, `ve ${otro.totales.detecciones} detecciones (¿datos de otra empresa?)`);
     // Su única área tiene 1 persona: se omite en vez de mostrarse.
     assert(otro.por_area.length === 0 && otro.areas_omitidas === 1, `por_area=${JSON.stringify(otro.por_area)} omitidas=${otro.areas_omitidas}`);
@@ -195,7 +213,7 @@ async function main() {
 
   await test('un responsable puede abrir y confirmar un incidente de su empresa', async () => {
     const r = await as(ID.responsable, `SELECT app.incidente_crear($1) AS id`, [eventoEmpleado], 'aal2');
-    await as(ID.responsable, `SELECT app.incidente_actualizar($1, 'confirmado')`, [r.rows[0].id], 'aal2');
+    await as(ID.responsable, `SELECT app.incidente_actualizar($1, 'confirmado')`, [r.rows[0]!.id], 'aal2');
   });
 
   // ---------- Administración ----------
@@ -210,7 +228,7 @@ async function main() {
   // ---------- Autenticación ----------
   await test('login: contraseña correcta devuelve el usuario; incorrecta no devuelve nada', async () => {
     const ok = await as(null, `SELECT * FROM app.autenticar($1, $2)`, ['seguridad@demo.test', 'demo1234']);
-    assert(ok.rows[0]?.usuario_id === ID.responsable && ok.rows[0].requiere_2fa === true, `login correcto: ${JSON.stringify(ok.rows)}`);
+    assert(ok.rows[0]?.usuario_id === ID.responsable && ok.rows[0]!.requiere_2fa === true, `login correcto: ${JSON.stringify(ok.rows)}`);
     const mal = await as(null, `SELECT * FROM app.autenticar($1, $2)`, ['seguridad@demo.test', 'otra']);
     const inexistente = await as(null, `SELECT * FROM app.autenticar($1, $2)`, ['nadie@demo.test', 'demo1234']);
     assert(mal.rows.length === 0 && inexistente.rows.length === 0, 'un login incorrecto no debería devolver filas');
@@ -222,13 +240,17 @@ async function main() {
   });
 
   await test('segundo factor: el código actual sirve una sola vez; uno inventado no sirve', async () => {
-    const codigo = (await owner.query(`SELECT app.totp_codigo(totp_secreto, floor(extract(epoch FROM now()) / 30)::bigint) AS c FROM app.usuarios WHERE id = $1`, [ID.responsableOtra])).rows[0].c;
+    const codigo = (
+      await owner.query(`SELECT app.totp_codigo(totp_secreto, floor(extract(epoch FROM now()) / 30)::bigint) AS c FROM app.usuarios WHERE id = $1`, [
+        ID.responsableOtra,
+      ])
+    ).rows[0]!.c;
     const ok = await as(null, `SELECT app.verificar_totp($1, $2) AS ok`, [ID.responsableOtra, codigo]);
     const repetido = await as(null, `SELECT app.verificar_totp($1, $2) AS ok`, [ID.responsableOtra, codigo]);
     const inventado = await as(null, `SELECT app.verificar_totp($1, '000000') AS ok`, [ID.responsableOtra]);
-    assert(ok.rows[0].ok === true, 'el código actual debería ser válido');
-    assert(repetido.rows[0].ok === false, 'el mismo código no debería servir dos veces');
-    assert(inventado.rows[0].ok === false || codigo === '000000', 'un código inventado no debería servir');
+    assert(ok.rows[0]!.ok === true, 'el código actual debería ser válido');
+    assert(repetido.rows[0]!.ok === false, 'el mismo código no debería servir dos veces');
+    assert(inventado.rows[0]!.ok === false || codigo === '000000', 'un código inventado no debería servir');
   });
 
   await test('la API no puede leer contraseñas ni secretos de 2FA, ni siquiera los propios', async () => {
@@ -238,7 +260,7 @@ async function main() {
 
   await test('cualquier empleado puede leer la política de su empresa', async () => {
     const r = await as(ID.empleado, `SELECT app.mi_politica() AS p`);
-    assert(r.rows[0].p.CREDENCIAL === 'eliminar', JSON.stringify(r.rows[0].p));
+    assert(r.rows[0]!.p.CREDENCIAL === 'eliminar', JSON.stringify(r.rows[0]!.p));
   });
 
   await api.end();

@@ -136,10 +136,7 @@ async function fetchCached(url: string, onBytes: (n: number) => void): Promise<U
  * Carpeta donde está publicado el modelo (VITE_MODEL_BASE). En desarrollo, Vite lo sirve desde
  * .cache/modelos (ver vite.config.ts).
  */
-const MODEL_BASE = new URL(
-  import.meta.env.VITE_MODEL_BASE ?? `${import.meta.env.BASE_URL}modelos/${MODEL.id.split('/')[1]}/`,
-  self.location.origin,
-).href;
+const MODEL_BASE = new URL(import.meta.env.VITE_MODEL_BASE ?? `${import.meta.env.BASE_URL}modelos/${MODEL.id.split('/')[1]}/`, self.location.origin).href;
 
 /** Borra del caché los archivos de versiones anteriores del modelo (pesan cientos de MB). */
 async function removeStale(keep: string[]) {

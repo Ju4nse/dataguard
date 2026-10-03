@@ -86,3 +86,16 @@ describe('seudónimos de nombres parciales y negocios', () => {
     expect(spans.map((s) => [s.type, s.value])).toEqual([['RAZON_SOCIAL', 'Ferretería Don Tito']]);
   });
 });
+
+describe('rendimiento del registro de seudónimos', () => {
+  it('50.000 apellidos sueltos no se vuelven lentos (índice, no recorrido)', () => {
+    // Palabras distintas solo con letras ("baaa", "caaa"…): los dígitos separan palabras.
+    const word = (n: number) => Array.from({ length: 4 }, (_, k) => String.fromCharCode(97 + (Math.floor(n / 26 ** k) % 26))).join('');
+    const reg = new PseudonymRegistry();
+    for (let i = 0; i < 2000; i++) reg.get('Persona', 'NOMBRE_PERSONA', `Ana ${word(i)}`);
+    const t0 = performance.now();
+    for (let i = 2000; i < 52_000; i++) reg.get('Persona', 'NOMBRE_PERSONA', word(i));
+    expect(performance.now() - t0).toBeLessThan(2000);
+    expect(reg.get('Persona', 'NOMBRE_PERSONA', word(7))).toBe('Persona_08');
+  });
+});

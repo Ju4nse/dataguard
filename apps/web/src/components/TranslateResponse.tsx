@@ -85,9 +85,7 @@ export function TranslateResponse({ equivalences }: { equivalences: EquivalenceR
           {result.irreversible.length > 0 && (
             <p className="flex items-start gap-2 text-sm text-slate-600">
               <Icon name="eyeOff" className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>
-                {result.irreversible.join(', ')}: son datos anonimizados y no se pueden recuperar (no quedan en la tabla de equivalencias).
-              </span>
+              <span>{result.irreversible.join(', ')}: son datos anonimizados y no se pueden recuperar (no quedan en la tabla de equivalencias).</span>
             </p>
           )}
           {total > 0 && (

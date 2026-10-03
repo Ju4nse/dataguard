@@ -65,7 +65,9 @@ describe('IA local en planillas', () => {
     const f = analyzeTable(t);
     expect(f[0]!.confidence === null || f[0]!.confidence === 'baja').toBe(true);
     const reqs = planTableModel(t, f);
-    const res = reqs.map((r) => r.texts.map((text, i): Span[] => [{ type: 'RAZON_SOCIAL', start: r.offsets[i]!, end: text.length, value: text.slice(r.offsets[i]), confidence: 'alta' }]));
+    const res = reqs.map((r) =>
+      r.texts.map((text, i): Span[] => [{ type: 'RAZON_SOCIAL', start: r.offsets[i]!, end: text.length, value: text.slice(r.offsets[i]), confidence: 'alta' }]),
+    );
     expect(applyTableModel(t, f, reqs, res).findings[0]).toMatchObject({ kind: 'columna', type: 'RAZON_SOCIAL', suggestedAction: 'seudonimizar' });
   });
 });

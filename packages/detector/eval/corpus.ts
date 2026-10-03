@@ -31,11 +31,17 @@ export const TEXT_CASES: TextCase[] = [
   { id: 'telefono-sin-separadores', text: 'Mandale un WhatsApp al [[TELEFONO|+5491155554444]] cuando puedas.' },
   { id: 'email-generico', text: 'Email genérico: [[EMAIL|info@lacteosnorte.com.ar]]; web: www.lacteosnorte.com.ar' },
   { id: 'dni-con-contexto', text: 'Datos del cliente: [[NOMBRE_PERSONA|Ana Laura Sosa]], DNI [[DNI|28.111.222]].' },
-  { id: 'reclamo-completo', text: `Reclamo de [[NOMBRE_PERSONA|Diego Armando Sosa]] (DNI [[DNI|25.876.543]]), domiciliado en [[DIRECCION|Calle Belgrano 455]], tel. [[TELEFONO|0341 456-7890]].` },
+  {
+    id: 'reclamo-completo',
+    text: `Reclamo de [[NOMBRE_PERSONA|Diego Armando Sosa]] (DNI [[DNI|25.876.543]]), domiciliado en [[DIRECCION|Calle Belgrano 455]], tel. [[TELEFONO|0341 456-7890]].`,
+  },
   { id: 'pasaporte', text: 'Pasaporte [[PASAPORTE|AAB123456]], vence en 2030.' },
 
   // ---------- Fiscal y bancario ----------
-  { id: 'empresa-cuit-factura', text: `La empresa [[RAZON_SOCIAL|Distribuidora del Sur S.R.L.]] (CUIT [[CUIT_CUIL|${cuit('30', '71234567')}]]) adeuda la factura 0001-00012345 por $ 1.250.000.` },
+  {
+    id: 'empresa-cuit-factura',
+    text: `La empresa [[RAZON_SOCIAL|Distribuidora del Sur S.R.L.]] (CUIT [[CUIT_CUIL|${cuit('30', '71234567')}]]) adeuda la factura 0001-00012345 por $ 1.250.000.`,
+  },
   { id: 'cuil-y-cuit-invalido', text: `CUIL del empleado: [[CUIT_CUIL|${cuit('20', '25876543')}]]; el CUIT 20-12345678-5 tiene mal el verificador.` },
   { id: 'cbu-y-alias', text: `Transferir al CBU [[CBU_CVU|${cbu('0170099', '2200000067890')}]] o al alias [[CBU_CVU|perro.casa.sol]] antes del viernes.` },
   { id: 'cvu', text: `Su CVU es [[CBU_CVU|${cbu('0000003', '1000123456789')}]].` },
@@ -51,7 +57,10 @@ export const TEXT_CASES: TextCase[] = [
   { id: 'mayusculas', text: '[[NOMBRE_PERSONA|ANA MARÍA LÓPEZ]] firmó la nota.' },
   { id: 'apellidos-coma-nombre', text: 'Apellido y nombre: [[NOMBRE_PERSONA|Benítez Acosta, Julieta]]' },
   { id: 'paciente-apellido-primero', text: 'La paciente [[NOMBRE_PERSONA|Gómez Valentina]] está [[DATO_SENSIBLE|embarazada]].' },
-  { id: 'tabla-en-texto', text: 'Cliente: [[RAZON_SOCIAL|Lácteos Norte SA]] | Contacto: [[NOMBRE_PERSONA|Camila Rodríguez]] | Cel: [[TELEFONO|(0351) 155-123456]]' },
+  {
+    id: 'tabla-en-texto',
+    text: 'Cliente: [[RAZON_SOCIAL|Lácteos Norte SA]] | Contacto: [[NOMBRE_PERSONA|Camila Rodríguez]] | Cel: [[TELEFONO|(0351) 155-123456]]',
+  },
   { id: 'direccion', text: 'Domicilio: [[DIRECCION|Av. Corrientes 1234]], piso 5, CABA.' },
 
   // ---------- Fechas y edad ----------
@@ -80,7 +89,10 @@ export const TEXT_CASES: TextCase[] = [
   { id: 'ip-y-version', text: 'IP del atacante: [[IP|203.0.113.45]]; versión 2.10.4.1 del firewall.' },
 
   // ---------- Ex-validación (se ajustaron reglas mirándolos) ----------
-  { id: 'ex-v-transferencia', text: `Por favor transferir a nombre de [[RAZON_SOCIAL|Ferretería Central SA]], CUIT [[CUIT_CUIL|${cuit('30', '70998877')}]], alias [[CBU_CVU|ferre.central.mp]].` },
+  {
+    id: 'ex-v-transferencia',
+    text: `Por favor transferir a nombre de [[RAZON_SOCIAL|Ferretería Central SA]], CUIT [[CUIT_CUIL|${cuit('30', '70998877')}]], alias [[CBU_CVU|ferre.central.mp]].`,
+  },
   { id: 'ex-v-legajo', text: 'Empleado: [[NOMBRE_PERSONA|Sergio Luna]] | DNI [[DNI|27.345.901]] | Sueldo: [[SALARIO|$ 1.420.000]] | Obra social: OSDE' },
   { id: 'ex-v-patente', text: 'Dominio del vehículo de la empresa: [[PATENTE|AC 456 BD]].' },
 
@@ -108,7 +120,10 @@ export const TEXT_CASES: TextCase[] = [
  * hay que mover el caso al set de arriba y escribir casos nuevos acá.
  */
 export const VALIDATION_CASES: TextCase[] = [
-  { id: 'v-mail-rrhh', text: 'Buen día, adjunto el CV de [[NOMBRE_PERSONA|Tomás Aguirre]] ([[EMAIL|t.aguirre88@hotmail.com]]), cel [[TELEFONO|+54 9 351 678-1234]].' },
+  {
+    id: 'v-mail-rrhh',
+    text: 'Buen día, adjunto el CV de [[NOMBRE_PERSONA|Tomás Aguirre]] ([[EMAIL|t.aguirre88@hotmail.com]]), cel [[TELEFONO|+54 9 351 678-1234]].',
+  },
   { id: 'v-reclamo', text: 'La Sra. [[NOMBRE_PERSONA|Graciela Ponce]] reclama por un débito no reconocido en su tarjeta [[TARJETA|5500 0000 0000 0004]].' },
   { id: 'v-medico', text: 'Se adjunta [[DATO_SENSIBLE|certificado médico]] del empleado por [[DATO_SENSIBLE|hipertensión]]; vuelve el lunes.' },
   { id: 'v-config', text: 'SMTP_HOST=smtp.empresa.com.ar\nSMTP_USER=notificaciones\nSMTP_PASSWORD=[[CREDENCIAL|Qx7!pLm2#9]]' },
@@ -119,11 +134,20 @@ export const VALIDATION_CASES: TextCase[] = [
   { id: 'v-dos-personas', text: 'Participaron [[NOMBRE_PERSONA|Florencia Ríos]] (Compras) y [[NOMBRE_PERSONA|Gustavo Herrera]] (Finanzas).' },
   { id: 'v-ip-log', text: '2025-04-02 10:15:33 ERROR login fallido desde [[IP|181.47.20.199]] usuario admin' },
   { id: 'v-religion', text: 'Pidió el día libre por ser [[DATO_SENSIBLE|judío]] y celebrar Yom Kipur.' },
-  { id: 'v2-cobranza', text: `Hola [[NOMBRE_PERSONA|Mariana Quiroga]], te recuerdo que la cuota vence el viernes. CBU para pagar: [[CBU_CVU|${cbu('0720001', '8800001234567')}]].` },
-  { id: 'v2-ficha', text: 'Apellido: [[NOMBRE_PERSONA|Villalba]] / Nombre: [[NOMBRE_PERSONA|Joaquín]] / CUIL: [[CUIT_CUIL|' + cuit('20', '35123456') + ']] / Edad: [[EDAD|29]]' },
+  {
+    id: 'v2-cobranza',
+    text: `Hola [[NOMBRE_PERSONA|Mariana Quiroga]], te recuerdo que la cuota vence el viernes. CBU para pagar: [[CBU_CVU|${cbu('0720001', '8800001234567')}]].`,
+  },
+  {
+    id: 'v2-ficha',
+    text: 'Apellido: [[NOMBRE_PERSONA|Villalba]] / Nombre: [[NOMBRE_PERSONA|Joaquín]] / CUIL: [[CUIT_CUIL|' + cuit('20', '35123456') + ']] / Edad: [[EDAD|29]]',
+  },
   { id: 'v2-cuenta-dev', text: 'Pasame la key de Stripe de test: [[CREDENCIAL|sk_test_4eC39HqLyjWDarjtT1zdp7dc]]' },
   { id: 'v2-sindical', text: 'El trabajador es [[DATO_SENSIBLE|delegado gremial]] desde 2019 y tiene [[DATO_SENSIBLE|asma]].' },
-  { id: 'v2-proveedor', text: 'Proveedor nuevo: [[RAZON_SOCIAL|Transportes del Litoral S.A.]], contacto [[EMAIL|compras@translitoral.com.ar]], tel. [[TELEFONO|0342 455-1200]].' },
+  {
+    id: 'v2-proveedor',
+    text: 'Proveedor nuevo: [[RAZON_SOCIAL|Transportes del Litoral S.A.]], contacto [[EMAIL|compras@translitoral.com.ar]], tel. [[TELEFONO|0342 455-1200]].',
+  },
   { id: 'v2-neg-planilla', text: 'Total facturado: 4.567.890 | Clientes activos: 1.234 | Ticket medio: 3.701' },
   { id: 'v2-neg-ciudad', text: 'Viajamos de Mercedes a Rosario y después a Villa María por la ruta 9.' },
   // Negativos nuevos
@@ -195,7 +219,10 @@ export const TABLE_CASES: TableCase[] = [
  * Mezcla positivos difíciles y negativos con mayúsculas que no son datos personales.
  */
 export const HOLDOUT_CASES: TextCase[] = [
-  { id: 'c-mail-cliente', text: 'Buenas, les escribo de [[RAZON_SOCIAL|Ferretería Don Tito]] por la factura vencida que nos reclamó [[NOMBRE_PERSONA|Graciela Benítez]].' },
+  {
+    id: 'c-mail-cliente',
+    text: 'Buenas, les escribo de [[RAZON_SOCIAL|Ferretería Don Tito]] por la factura vencida que nos reclamó [[NOMBRE_PERSONA|Graciela Benítez]].',
+  },
   { id: 'c-rrhh', text: 'Desde Recursos Humanos confirmamos que [[NOMBRE_PERSONA|Matías Szwarc]] se reincorpora el lunes tras su licencia.' },
   { id: 'c-medico', text: 'El parte indica que el operario sufrió [[DATO_SENSIBLE|una fractura de tibia]] y no puede manejar.' },
   { id: 'c-proveedor', text: 'Cotizamos con [[RAZON_SOCIAL|Metalúrgica Santa Lucía]] y con [[RAZON_SOCIAL|Plásticos del Oeste]]; la segunda es más barata.' },

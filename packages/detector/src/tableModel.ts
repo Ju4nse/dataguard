@@ -33,6 +33,7 @@ export type CellSpans = Map<number, Map<number, Span[]>>;
 const SAMPLE = 40;
 const MAX_TEXT_CELLS = 2000;
 /** Tipos que el modelo puede reconocer en una columna entera. */
+// prettier-ignore
 const COLUMN_TYPES = new Set<DetectionType>(['NOMBRE_PERSONA', 'RAZON_SOCIAL', 'DIRECCION', 'DATO_SENSIBLE']);
 /** Proporción de la muestra en la que el modelo tiene que reconocer el tipo para clasificar la columna. */
 const COLUMN_RATIO = 0.6;
@@ -53,7 +54,14 @@ export function planTableModel(table: Table, findings: ColumnFinding[]): ModelRe
     if (f.kind !== 'columna' && avgWords >= 5 && (f.kind === 'texto' || isFreeText(sample))) {
       const rows: number[] = [];
       values.forEach((v, r) => v && rows.length < MAX_TEXT_CELLS && rows.push(r));
-      requests.push({ column: f.index, mode: 'texto', rows, texts: rows.map((r) => values[r]!), offsets: rows.map(() => 0), skipped: nonEmpty.length - rows.length });
+      requests.push({
+        column: f.index,
+        mode: 'texto',
+        rows,
+        texts: rows.map((r) => values[r]!),
+        offsets: rows.map(() => 0),
+        skipped: nonEmpty.length - rows.length,
+      });
       continue;
     }
 

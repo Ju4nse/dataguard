@@ -12,11 +12,15 @@ function print(title: string, r: EvalReport) {
   console.log(`\n=== ${title} ===`);
   console.log('Tipo               Acierto  Falsos+  Perdidos  Precisión  Cobertura   F1');
   for (const [type, m] of Object.entries(r.byType).sort()) {
-    console.log(`${type.padEnd(18)} ${String(m.tp).padStart(7)} ${String(m.fp).padStart(8)} ${String(m.fn).padStart(9)}  ${pct(m.precision).padStart(9)}  ${pct(m.recall).padStart(9)}  ${pct(m.f1)}`);
+    console.log(
+      `${type.padEnd(18)} ${String(m.tp).padStart(7)} ${String(m.fp).padStart(8)} ${String(m.fn).padStart(9)}  ${pct(m.precision).padStart(9)}  ${pct(m.recall).padStart(9)}  ${pct(m.f1)}`,
+    );
   }
   const o = r.overall;
   console.log('─'.repeat(78));
-  console.log(`${'TOTAL'.padEnd(18)} ${String(o.tp).padStart(7)} ${String(o.fp).padStart(8)} ${String(o.fn).padStart(9)}  ${pct(o.precision).padStart(9)}  ${pct(o.recall).padStart(9)}  ${pct(o.f1)}`);
+  console.log(
+    `${'TOTAL'.padEnd(18)} ${String(o.tp).padStart(7)} ${String(o.fp).padStart(8)} ${String(o.fn).padStart(9)}  ${pct(o.precision).padStart(9)}  ${pct(o.recall).padStart(9)}  ${pct(o.f1)}`,
+  );
   if (showErrors && r.mistakes.length) {
     console.log('\nErrores:');
     for (const m of r.mistakes) console.log(`  ${m.kind}  ${m.type.padEnd(16)} ${m.caseId.padEnd(26)} "${m.value}"`);

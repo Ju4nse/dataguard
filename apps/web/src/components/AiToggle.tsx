@@ -1,6 +1,6 @@
 import { MODEL } from '@securedata/ml';
 import { useEffect, useState } from 'react';
-import { useAi } from '../lib/ai';
+import { hasStoredModel, removeStoredModel, useAi } from '../lib/ai';
 import { checkDevice, type DeviceCheck } from '../lib/device';
 import { Button, Icon } from './ui';
 
@@ -12,6 +12,7 @@ import { Button, Icon } from './ui';
 export function AiToggle({ tone = 'light' }: { tone?: 'light' | 'dark' }) {
   const { status, progress, error, enable, disable } = useAi();
   const [device, setDevice] = useState<DeviceCheck | null>(null);
+  const [stored, setStored] = useState(false);
   const dark = tone === 'dark';
 
   // Antes de ofrecer la descarga se revisa si el equipo puede correr el modelo.
@@ -19,6 +20,7 @@ export function AiToggle({ tone = 'light' }: { tone?: 'light' | 'dark' }) {
     if (status !== 'apagada' && status !== 'error') return;
     let alive = true;
     void checkDevice().then((d) => alive && setDevice(d));
+    void hasStoredModel().then((s) => alive && setStored(s));
     return () => {
       alive = false;
     };
@@ -74,7 +76,11 @@ export function AiToggle({ tone = 'light' }: { tone?: 'light' | 'dark' }) {
           <p className={`flex items-center gap-2 text-sm font-semibold ${strong}`}>
             <Icon name="sparkles" className={`h-4 w-4 ${dark ? 'text-brand-300' : 'text-brand-700'}`} />
             Detección avanzada con IA local
-            <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${dark ? 'bg-amber-400/15 text-amber-200' : 'bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-200'}`}>Beta</span>
+            <span
+              className={`rounded-full px-2 py-0.5 text-xs font-semibold ${dark ? 'bg-amber-400/15 text-amber-200' : 'bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-200'}`}
+            >
+              Beta
+            </span>
           </p>
           <p className={`text-sm ${muted}`}>
             Encuentra nombres, empresas y direcciones sin formato fijo. Descarga única de {MODEL.sizeMb} MB; después analiza sin conexión y nada sale de tu
@@ -86,6 +92,15 @@ export function AiToggle({ tone = 'light' }: { tone?: 'light' | 'dark' }) {
           {status === 'error' ? 'Reintentar' : 'Activar IA local'}
         </Button>
       </div>
+      {stored && status === 'apagada' && (
+        <button
+          type="button"
+          onClick={() => void removeStoredModel().then(() => setStored(false))}
+          className={`text-xs font-medium underline underline-offset-2 ${dark ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-slate-900'}`}
+        >
+          El modelo sigue guardado en este navegador: borrarlo para liberar {MODEL.sizeMb} MB
+        </button>
+      )}
       {status === 'error' && error && (
         <p role="alert" className={`text-sm ${dark ? 'text-red-300' : 'text-red-700'}`}>
           {error}

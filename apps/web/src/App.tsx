@@ -80,7 +80,10 @@ function MobileMenu() {
               </a>
             ))}
             {PANEL_URL && (
-              <a href={PANEL_URL} className="flex min-h-11 items-center gap-2 rounded-lg px-3 text-base font-medium text-brand-700 hover:bg-brand-50 sm:col-span-2">
+              <a
+                href={PANEL_URL}
+                className="flex min-h-11 items-center gap-2 rounded-lg px-3 text-base font-medium text-brand-700 hover:bg-brand-50 sm:col-span-2"
+              >
                 <Icon name="chart" className="h-5 w-5" />
                 Panel para empresas
               </a>
@@ -127,7 +130,10 @@ export default function App() {
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <a href="#contenido" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:shadow">
+      <a
+        href="#contenido"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:shadow"
+      >
         Saltar al contenido
       </a>
 
@@ -137,7 +143,11 @@ export default function App() {
           {home && (
             <nav aria-label="Secciones" className="hidden items-center gap-1 lg:flex">
               {NAV.map((n) => (
-                <a key={n.href} href={n.href} className="whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900">
+                <a
+                  key={n.href}
+                  href={n.href}
+                  className="whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
+                >
                   {n.label}
                 </a>
               ))}

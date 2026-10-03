@@ -94,7 +94,9 @@ function hardSplit(from: number, to: number, wordTokens: number[][], budget: num
   return chunks;
 }
 
+// prettier-ignore
 const SENTENCE_END = new Set(['.', '!', '?', ';', '…']);
+// prettier-ignore
 const ABBREVIATIONS = new Set(['av', 'avda', 'dr', 'dra', 'sr', 'sra', 'srta', 'lic', 'ing', 'arq', 'prof', 'pje', 'bv', 'nro', 'dpto', 'depto', 'tel', 'cel', 'gral', 'cnel', 'pres', 'ltda', 'cia']);
 
 /**
@@ -153,7 +155,12 @@ export function chunkWords(text: string, words: Word[], wordTokens: number[][], 
 export function buildFeeds(prompt: number[][], wordTokens: number[][], from: number, to: number, config: GlinerConfig, tok: GlinerTokenizer): GlinerFeeds {
   const ids: number[] = [tok.clsId];
   const wordsMask: number[] = [0];
-  for (const p of prompt) for (const id of p) (ids.push(id), wordsMask.push(0));
+  for (const p of prompt) {
+    for (const id of p) {
+      ids.push(id);
+      wordsMask.push(0);
+    }
+  }
   let wordIndex = 1;
   for (let w = from; w < to; w++) {
     const t = wordTokens[w]!;
@@ -165,7 +172,10 @@ export function buildFeeds(prompt: number[][], wordTokens: number[][], from: num
     wordIndex++; // aunque no tenga tokens, para que los índices de palabra sigan alineados
   }
   // Recorta si una palabra gigante excede el máximo (no debería pasar con chunkWords).
-  if (ids.length > config.maxTokens - 1) (ids.length = config.maxTokens - 1), (wordsMask.length = config.maxTokens - 1);
+  if (ids.length > config.maxTokens - 1) {
+    ids.length = config.maxTokens - 1;
+    wordsMask.length = config.maxTokens - 1;
+  }
   ids.push(tok.sepId);
   wordsMask.push(0);
 
@@ -202,7 +212,15 @@ const sigmoid = (x: number) => 1 / (1 + Math.exp(-x));
 export type Threshold = number | Record<string, number>;
 
 /** Logits → entidades candidatas por encima del umbral (sin resolver superposiciones). */
-export function decodeSpans(logits: Float32Array, words: Word[], from: number, to: number, labels: string[], config: GlinerConfig, threshold: Threshold): Entity[] {
+export function decodeSpans(
+  logits: Float32Array,
+  words: Word[],
+  from: number,
+  to: number,
+  labels: string[],
+  config: GlinerConfig,
+  threshold: Threshold,
+): Entity[] {
   const numWords = to - from;
   const numLabels = labels.length;
   const limits = labels.map((l) => (typeof threshold === 'number' ? threshold : (threshold[l] ?? 0.5)));

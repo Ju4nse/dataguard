@@ -7,7 +7,10 @@ export interface DeviceCheck {
 }
 
 // Módulo WebAssembly mínimo con una instrucción SIMD: onnxruntime-web la necesita.
-const SIMD_PROBE = new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 1, 4, 1, 96, 0, 0, 3, 2, 1, 0, 10, 30, 1, 28, 0, 65, 0, 253, 15, 253, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 253, 186, 1, 26, 11]);
+const SIMD_PROBE = new Uint8Array([
+  0, 97, 115, 109, 1, 0, 0, 0, 1, 4, 1, 96, 0, 0, 3, 2, 1, 0, 10, 30, 1, 28, 0, 65, 0, 253, 15, 253, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 253,
+  186, 1, 26, 11,
+]);
 
 interface NavigatorExtras {
   deviceMemory?: number;
@@ -31,13 +34,17 @@ export async function checkDevice(): Promise<DeviceCheck> {
 
   // deviceMemory está en Chrome y Edge (redondeado: 0.5, 1, 2, 4, 8). El modelo usa alrededor de 1 GB.
   if (nav.deviceMemory !== undefined && nav.deviceMemory < 4) {
-    warnings.push(`Tu equipo tiene poca memoria (${nav.deviceMemory} GB): la IA local puede andar lenta o no alcanzar. Cerrá otras pestañas antes de activarla.`);
+    warnings.push(
+      `Tu equipo tiene poca memoria (${nav.deviceMemory} GB): la IA local puede andar lenta o no alcanzar. Cerrá otras pestañas antes de activarla.`,
+    );
   }
 
   const mobile = window.matchMedia?.('(pointer: coarse)').matches && window.innerWidth < 900;
   const cellular = nav.connection?.type === 'cellular' || nav.connection?.saveData || ['slow-2g', '2g', '3g'].includes(nav.connection?.effectiveType ?? '');
   if (cellular || mobile) {
-    warnings.push(`La descarga es de ${MODEL.sizeMb} MB${cellular ? ' y parece que estás con datos móviles o una conexión lenta' : ''}: conviene hacerla con Wi-Fi.`);
+    warnings.push(
+      `La descarga es de ${MODEL.sizeMb} MB${cellular ? ' y parece que estás con datos móviles o una conexión lenta' : ''}: conviene hacerla con Wi-Fi.`,
+    );
   }
 
   try {

@@ -11,3 +11,6 @@ equivalencias*.csv
 
 # Modelos de IA descargados para evaluar (pesan cientos de MB)
 .cache/
+
+# Secreto de sesión del panel online (npm run panel:online)
+.env.panel

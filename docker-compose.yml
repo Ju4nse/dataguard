@@ -4,6 +4,8 @@ services:
   db:
     image: postgres:17-alpine
     container_name: securedata-db
+    # Vuelve a levantarse solo cuando arranca Docker (después de reiniciar la PC).
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-securedata}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-securedata_dev}
@@ -11,12 +13,12 @@ services:
       TZ: America/Argentina/Buenos_Aires
     ports:
       # 5433 para no chocar con un Postgres instalado localmente.
-      - "${POSTGRES_PORT:-5433}:5432"
+      - '${POSTGRES_PORT:-5433}:5432'
     volumes:
       - db-data:/var/lib/postgresql/data
       - ./db/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
       interval: 2s
       timeout: 3s
       retries: 30

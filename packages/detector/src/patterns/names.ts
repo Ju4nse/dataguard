@@ -36,7 +36,9 @@ const FIRST_NAMES = new Set(
 /** Nombres que también son lugares o palabras comunes: necesitan apellido y no estar después de "en", "de"… */
 const AMBIGUOUS = new Set(
   `rosario mercedes victoria pilar lujan dolores belen paz esperanza consuelo gloria luz sol soledad milagros clara celeste
-  franco marco leon santiago rosa morena abril guadalupe candela mia lourdes`.split(/\s+/).filter(Boolean),
+  franco marco leon santiago rosa morena abril guadalupe candela mia lourdes`
+    .split(/\s+/)
+    .filter(Boolean),
 );
 
 /** Palabras con mayúscula que siguen a un nombre de pila pero no son apellidos. */
@@ -47,34 +49,45 @@ const NOT_SURNAME = new Set(
   legales gerencia direccion administracion equipo cliente clientes proveedor proveedores empresa contrato anexo clausula
   articulo ley dni cuit cuil cbu cvu tel cel email mail legajo gerente director directora presidente jefe jefa encargado
   encargada responsable coordinador coordinadora supervisor supervisora analista asistente sucursal oficina planta deposito
-  primera segunda tercera cuarta quinta el la los las un una y o de del al en con por para sin sobre entre`.split(/\s+/).filter(Boolean),
+  primera segunda tercera cuarta quinta el la los las un una y o de del al en con por para sin sobre entre`
+    .split(/\s+/)
+    .filter(Boolean),
 );
 
 /** Títulos que anteceden a un nombre (sin el punto). */
 const TITLES = new Set(
   `sr sra srta dr dra lic ing arq prof cr cra cdor cdora senor senora don dona doctor doctora licenciado licenciada ingeniero
-  ingeniera profesor profesora contador contadora`.split(/\s+/).filter(Boolean),
+  ingeniera profesor profesora contador contadora`
+    .split(/\s+/)
+    .filter(Boolean),
 );
 
 /** Palabras que, justo antes de un nombre de pila, indican que es un lugar o una calle: "San Martín", "Calle Juan B. Justo". */
 const PLACE_BEFORE = new Set(
   `san santa santo calle av avda avenida bv boulevard bulevar pasaje pje plaza barrio estacion colegio escuela hospital club
-  fundacion universidad instituto teatro parque ruta diagonal villa puerto general`.split(/\s+/).filter(Boolean),
+  fundacion universidad instituto teatro parque ruta diagonal villa puerto general`
+    .split(/\s+/)
+    .filter(Boolean),
 );
 
 /**
  * Preposiciones de lugar: antes de un nombre ambiguo indican que es un lugar ("en Santiago del Estero").
  * "a" y "de" no entran: "Escribile a Victoria Gutiérrez" es una persona.
  */
+// prettier-ignore
 const PLACE_PREPOSITIONS = new Set(['en', 'desde', 'hasta', 'hacia']);
 
 /** Una palabra (o dos) antes del nombre que indican que lo que sigue es una persona. */
 const CONTEXT_SINGLE = new Set(
   `paciente empleado empleada titular apoderado apoderada contacto solicitante beneficiario beneficiaria afiliado afiliada
-  firmante destinatario destinataria remitente denunciante`.split(/\s+/).filter(Boolean),
+  firmante destinatario destinataria remitente denunciante`
+    .split(/\s+/)
+    .filter(Boolean),
 );
+// prettier-ignore
 const CONTEXT_BY = new Set(['representado', 'representada', 'firmado', 'firmada', 'atendido', 'atendida', 'autorizado', 'autorizada']);
 
+// prettier-ignore
 const CONNECTORS = new Set(['de', 'del', 'la', 'las', 'los', 'di', 'da', 'van', 'von']);
 
 interface Token {
@@ -97,7 +110,10 @@ export function isFirstName(word: string): boolean {
 
 /** ¿El valor de una celda parece un nombre de persona? ("Juan Pérez", "PEREZ, JUAN", "María José Gómez") */
 export function isPersonNameValue(value: string): boolean {
-  const words = value.trim().split(/[\s,]+/).filter(Boolean);
+  const words = value
+    .trim()
+    .split(/[\s,]+/)
+    .filter(Boolean);
   if (words.length < 2 || words.length > 5) return false;
   if (!words.every((w) => /^\p{L}[\p{L}'’.-]*$/u.test(w))) return false;
   if (words.some((w) => NOT_SURNAME.has(fold(w)) && !CONNECTORS.has(fold(w)))) return false;

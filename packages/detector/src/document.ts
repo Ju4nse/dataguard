@@ -50,10 +50,12 @@ export interface DocumentTransformResult {
 }
 
 /** Con estas claves, el valor completo es del tipo aunque no tenga un formato reconocible. */
+// prettier-ignore
 const HEADER_ONLY = new Set<DetectionType>([
   'NOMBRE_PERSONA', 'RAZON_SOCIAL', 'DIRECCION', 'FECHA_NACIMIENTO', 'EDAD', 'SALARIO', 'DATO_SENSIBLE', 'CREDENCIAL',
 ]);
 /** …salvo que el valor sea solo un número (ej. "cliente": 1001 es un código, no un nombre). */
+// prettier-ignore
 const NOT_NUMERIC = new Set<DetectionType>(['NOMBRE_PERSONA', 'RAZON_SOCIAL', 'DIRECCION', 'DATO_SENSIBLE']);
 
 /** Si la clave del JSON anuncia el tipo y el valor lo confirma, el valor completo es sensible. */
@@ -75,6 +77,7 @@ function wholeValueType(seg: Segment): DetectionType | null {
 }
 
 /** Tipos sin formato fijo: si se reconocen por la clave, se buscan también en el resto del documento. */
+// prettier-ignore
 const PROPAGATED = new Set<DetectionType>(['NOMBRE_PERSONA', 'RAZON_SOCIAL', 'DIRECCION']);
 
 /**

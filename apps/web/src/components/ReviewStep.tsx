@@ -155,7 +155,10 @@ export function ReviewStep() {
 
       <Card className="overflow-hidden">
         {/* Encabezado de columnas: solo desde 1024px. */}
-        <div aria-hidden="true" className={`hidden border-b border-slate-200 bg-slate-50 px-4 py-2 text-xs font-medium uppercase tracking-wide text-slate-600 ${ROW_GRID}`}>
+        <div
+          aria-hidden="true"
+          className={`hidden border-b border-slate-200 bg-slate-50 px-4 py-2 text-xs font-medium uppercase tracking-wide text-slate-600 ${ROW_GRID}`}
+        >
           <span>Columna</span>
           <span>Detección</span>
           <span>Tipo de dato</span>

@@ -68,9 +68,11 @@ describe('analyzeDocument + transformDocument', () => {
     const out = res.texts[0]!;
     expect(out).toContain('Entre Cliente_01, CUIT CUIT_01');
     // La segunda empresa que aparece recibe el número siguiente.
-    expect(transformDocument([{ text: 'A: Uno SA. B: Dos SRL.' }], analyzeDocument([{ text: 'A: Uno SA. B: Dos SRL.' }]).spans, {
-      RAZON_SOCIAL: { action: 'seudonimizar' },
-    }).texts[0]).toBe('A: Empresa_01. B: Empresa_02.');
+    expect(
+      transformDocument([{ text: 'A: Uno SA. B: Dos SRL.' }], analyzeDocument([{ text: 'A: Uno SA. B: Dos SRL.' }]).spans, {
+        RAZON_SOCIAL: { action: 'seudonimizar' },
+      }).texts[0],
+    ).toBe('A: Empresa_01. B: Empresa_02.');
     expect(out).toContain('Sr. Persona_01, DNI [DNI]');
     expect(out).toContain('***@gmail.com. Persona_01 acepta');
     expect(out).not.toMatch(/Sosa|30\.456\.789|msosa|Lácteos/);
@@ -85,7 +87,10 @@ describe('analyzeDocument + transformDocument', () => {
 
 describe('JSON', () => {
   it('una lista de registros planos se trata como tabla', () => {
-    const t = jsonAsTable([{ nombre: 'Ana', dni: 30123456 }, { nombre: 'Luis', email: 'l@x.com' }]);
+    const t = jsonAsTable([
+      { nombre: 'Ana', dni: 30123456 },
+      { nombre: 'Luis', email: 'l@x.com' },
+    ]);
     expect(t?.headers).toEqual(['nombre', 'dni', 'email']);
     expect(t?.rows[1]).toEqual(['Luis', null, 'l@x.com']);
     expect(jsonAsTable({ a: 1 })).toBeNull();
