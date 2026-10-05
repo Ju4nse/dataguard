@@ -2,7 +2,7 @@ export * from './types';
 export { scanText, countByType, replaceSpans } from './scanText';
 export { analyzeTable, classifyColumn, summarizeFindings, DEFAULT_ACTIONS } from './classifyColumn';
 export { applyDecisions, anonymizeValue, ANONYMIZED_TOKENS, PseudonymRegistry } from './transform';
-export { analyzeDocument, transformDocument, DEFAULT_DOCUMENT_ACTIONS } from './document';
+export { analyzeDocument, transformDocument, documentActionFor, DEFAULT_DOCUMENT_ACTIONS } from './document';
 export type { Segment, TypeSummary, DocumentAnalysis, TypeDecision, DocumentTransformResult } from './document';
 export { combineModelSpans } from './combine';
 export { applyTableModel, planTableModel, type CellSpans, type ModelRequest } from './tableModel';

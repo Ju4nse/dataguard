@@ -1,0 +1,9 @@
+@import 'tailwindcss';
+@import '@securedata/shared/theme.css';
+
+body {
+  width: 360px;
+  margin: 0;
+  background: #f8fafc;
+  color: #0f172a;
+}

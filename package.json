@@ -8,7 +8,7 @@
   ],
   "scripts": {
     "dev": "npm run dev --workspace @securedata/web",
-    "build": "npm run build --workspace @securedata/web && npm run build --workspace @securedata/panel",
+    "build": "npm run build --workspace @securedata/web && npm run build --workspace @securedata/panel && npm run build --workspace @securedata/extension",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.json --noEmit && npm run typecheck --workspaces --if-present",
@@ -25,6 +25,7 @@
     "db:totp": "tsx scripts/db-totp.ts",
     "dev:api": "npm run dev --workspace @securedata/api",
     "dev:panel": "npm run dev --workspace @securedata/panel",
+    "dev:extension": "npm run dev --workspace @securedata/extension",
     "calibrar:ia": "tsx scripts/calibrar-ia.ts",
     "lint": "eslint .",
     "format": "prettier --write .",

@@ -19,8 +19,15 @@ export const config = {
   databaseUrl: process.env.DATABASE_URL_API ?? 'postgres://securedata_api:api_dev@localhost:5433/securedata',
   sessionSecret: new TextEncoder().encode(process.env.SESSION_SECRET ?? DEV_SECRET),
   sessionHours: 8,
-  /** Orígenes desde los que se aceptan requests que modifican datos (protección CSRF). */
-  allowedOrigins: (process.env.ALLOWED_ORIGINS ?? 'http://localhost:5173,http://localhost:5174,http://localhost:5180').split(',').map((s) => s.trim()),
+  /**
+   * Orígenes desde los que se aceptan requests que modifican datos (protección CSRF). La extensión
+   * siempre: su ID sale de la clave de apps/extension/public/manifest.json (en la Chrome Web Store
+   * cambia: ponelo en EXTENSION_ID).
+   */
+  allowedOrigins: [
+    ...(process.env.ALLOWED_ORIGINS ?? 'http://localhost:5173,http://localhost:5174,http://localhost:5180').split(',').map((s) => s.trim()),
+    `chrome-extension://${process.env.EXTENSION_ID ?? 'kinpmadcicacoodohlbipajehcgmfcim'}`,
+  ],
   /**
    * Confiar en X-Forwarded-For (la IP real del cliente) solo detrás de un proxy propio. Sin proxy,
    * cualquiera podría inventar ese encabezado para esquivar el límite de intentos.

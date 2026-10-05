@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "DataGuard",
+  "version": "0.1.0",
+  "description": "Avisa antes de enviar datos sensibles a ChatGPT o Claude y los reemplaza por seudónimos. Tus prompts nunca salen de tu computadora.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsImhGruh7DYWUFWO2vBkqlhmFCn1Kc3tADe4Q4DUtQWQBlZqkWAu1iHJgmGp/wrYollaGyhvoLTLtoKjUCQRgOyuK88OZDLQPREdotBBJIxt/lyiNBIuf2OQd9pOS05DKOTsgJ4LQwOg3313tJxJMPzHb8dqPIizRwhwXjdLwis/RSnntzJ6XJ0LCIIU4mT9d5J8WdOnJ6iyMKQXLg79ebmEC0DkBN2Lk6e9TiwWF/h2wgOe/IVktHpMGEX2TfAyOr2BbcztZPvbRiDmRbWIo3nxM300Sony1b3duba55tL+uuN1LdH3t4xV6vzt0FbymTliUunqkniywSSTyDn8PQIDAQAB",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "DataGuard",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://chatgpt.com/*", "https://chat.openai.com/*", "https://claude.ai/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "permissions": ["storage", "alarms"],
+  "host_permissions": ["http://localhost:8787/*", "http://127.0.0.1:8787/*"],
+  "optional_host_permissions": ["https://*/*"]
+}

@@ -51,6 +51,8 @@ La app del empleado funciona **sin** API ni base: el procesamiento es 100% en el
  ├─ lee el archivo, detecta y protege          └─ login con contraseña + 2FA
  │  TODO localmente (packages/detector)             │ GET /api/panel/resumen (solo agregados)
  └─ con sesión: POST /api/eventos (solo metadatos)  │
+ Extensión en ChatGPT / Claude (apps/extension)      │
+ └─ igual: detecta en la página, solo metadatos      │
               └──────────────┬──────────────────────┘
                      apps/api (Hono)  ── verifica la sesión y hace SET LOCAL app.user_id / app.aal
                              │
@@ -106,6 +108,25 @@ El panel del responsable se puede abrir desde tus otros dispositivos (celular, n
 
 La API corre en modo producción (cookie segura, secreto propio), escucha solo en `127.0.0.1:8790` y sirve el panel en el mismo puerto; Tailscale hace de proxy. Si la PC se suspende, el panel no responde hasta que despierte (los datos no se pierden). Para que esté siempre disponible: que Windows no suspenda con el cargador enchufado y que Docker Desktop arranque al iniciar sesión (la base tiene `restart: unless-stopped`).
 
+## Extensión de navegador (ChatGPT y Claude)
+
+`apps/extension` es una extensión de Chrome (Manifest V3) que revisa cada prompt **antes de enviarlo** en chatgpt.com y claude.ai, con el mismo detector que la app web (`packages/detector`). Si encuentra datos sensibles, frena el envío y muestra qué encontró (enmascarado) y cómo se va a enviar:
+
+- **Proteger y enviar** (por defecto, con Enter): reemplaza los datos por seudónimos o los anonimiza según la política de la empresa y envía.
+- **Solo reemplazar:** deja el texto protegido en el cuadro para revisarlo antes de enviar.
+- **Enviar sin proteger:** solo si la política de la empresa no exige proteger esos tipos.
+- **Cancelar** (Esc): no envía nada.
+
+Mientras se escribe, un indicador abajo a la derecha avisa cuántos datos sensibles hay. Al tocarlo muestra los seudónimos de la pestaña (`Persona_01` → nombre real) para leer la respuesta de la IA. Los seudónimos viven solo en la memoria de la pestaña: son los mismos en toda la conversación y se borran al cerrarla. **Nunca se guardan prompts**: con sesión, al panel llegan solo el sitio, la decisión (enmascarado / ignorado / cancelado) y los tipos con sus cantidades (`origen: extension`, `tipoEntrada: prompt`).
+
+**Probarla:**
+
+1. `npm run build -w @securedata/extension` (o `npm run dev:extension`, que recompila al guardar).
+2. En Chrome, abrí `chrome://extensions`, activá **Modo de desarrollador** → **Cargar descomprimida** → elegí `apps/extension/dist`. Después de cada cambio, tocá ↻ en la tarjeta de la extensión y recargá ChatGPT o Claude.
+3. Opcional, para aplicar la política y registrar eventos: `npm run db:up` y `npm run dev:api`, y en el popup de la extensión entrá con un usuario de demo (ej. `empleado@demo.test`). Para otro servidor (como el del panel online), cambiá la dirección en **Servidor**: la extensión pide permiso para ese sitio.
+
+El `key` del manifest fija el ID de la extensión (`kinpmadcicacoodohlbipajehcgmfcim`), y la API acepta pedidos desde ese origen. Cuando se publique en la Chrome Web Store, el ID cambia: hay que ponerlo en la variable `EXTENSION_ID` de la API. Si ChatGPT o Claude cambian su HTML y la extensión deja de frenar el envío, los selectores están en `apps/extension/src/content/sites.ts`. Por ahora la extensión usa solo las reglas; la IA local (GLiNER, 300 MB) queda para más adelante.
+
 ## Comandos
 
 | Comando | Qué hace |
@@ -116,7 +137,7 @@ La API corre en modo producción (cookie segura, secreto propio), escucha solo e
 | `npm run e2e` | Procesa el fixture de ejemplo y verifica que no quede ningún dato sensible |
 | `npm run fixtures` | Regenera los archivos de prueba (datos ficticios) |
 | `npm run verify-clean -- <original> <depurado>` | Compara un original con su versión depurada |
-| `npm run build` | Build de producción de la web |
+| `npm run build` | Build de producción de la web, el panel y la extensión |
 | `npm run eval` | Mide la calidad del detector (precisión y cobertura por tipo); `-- --errores` lista cada fallo |
 | `npm run eval:ia` | Compara reglas contra reglas + IA local, también como documento largo (necesita el modelo en `.cache/`); `-- --control` agrega el set de control |
 | `npm run calibrar:ia` | Barre los umbrales por etiqueta de la IA local sobre los sets de calibración |
@@ -125,6 +146,7 @@ La API corre en modo producción (cookie segura, secreto propio), escucha solo e
 | `npm run db:test` | Verifica estructura, permisos y autenticación de la base (26 pruebas) |
 | `npm run db:totp -- <email>` | Código 2FA actual de un usuario de demo (para probar sin celular) |
 | `npm run dev:api` / `dev:panel` | API y panel en modo desarrollo |
+| `npm run dev:extension` | Compila la extensión en `apps/extension/dist` y recompila al guardar |
 | `npm run db:psql` | Consola SQL dentro del contenedor |
 | `npm run panel:online` | Publica el panel en tu red de Tailscale (ver arriba) |
 | `npm run lint` | ESLint en todo el monorepo |
@@ -177,6 +199,7 @@ apps/
   web/        app del empleado (React + Vite + Tailwind)
   panel/      panel del responsable (React + Recharts), acceso con 2FA
   api/        API (Hono): login, sesión, eventos y panel; los permisos los aplica Postgres
+  extension/  extensión de Chrome para ChatGPT y Claude (avisa y seudonimiza antes de enviar)
 db/init/      esquema, funciones, seguridad, datos de demo, autenticación y políticas
 fixtures/     archivos de prueba con datos FICTICIOS
 scripts/      generador de fixtures y verificación de fugas

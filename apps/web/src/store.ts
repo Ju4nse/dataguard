@@ -7,7 +7,7 @@ import {
   planTableModel,
   type CellSpans,
   DEFAULT_ACTIONS,
-  DEFAULT_DOCUMENT_ACTIONS,
+  documentActionFor,
   fold,
   jsonLeaves,
   rebuildJson,
@@ -120,18 +120,11 @@ function initialDecisions(findings: ColumnFinding[], policy: Policy): Record<num
   return out;
 }
 
-/** En documentos no se puede "eliminar una columna": la política "eliminar" se aplica como "anonimizar". */
-function documentAction(type: DetectionType, policy: Policy): TypeDecision['action'] {
-  const p = policy[type];
-  if (!p) return DEFAULT_DOCUMENT_ACTIONS[type];
-  return p === 'eliminar' ? 'anonimizar' : p;
-}
-
 /** Conserva lo que el usuario ya eligió y agrega la acción de la política (o la sugerida) para los tipos nuevos. */
 export function mergeTypeDecisions(analysis: DocumentAnalysis, current: Partial<Record<DetectionType, TypeDecision>>, policy: Policy) {
   const out = { ...current };
   for (const { type } of analysis.summary) {
-    out[type] ??= { action: documentAction(type, policy), prefix: PSEUDONYM_PREFIXES[type] };
+    out[type] ??= { action: documentActionFor(type, policy), prefix: PSEUDONYM_PREFIXES[type] };
   }
   return out;
 }
