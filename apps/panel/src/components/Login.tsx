@@ -68,6 +68,14 @@ export function Login({ onDone }: { onDone: () => void }) {
   const [codigo, setCodigo] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  /** El servidor corre con el segundo factor desactivado (modo demo): se avisa con qué usuario entrar. */
+  const [demoMode, setDemoMode] = useState(false);
+
+  useEffect(() => {
+    void api<{ mfaDesactivado?: boolean }>('/salud')
+      .then((r) => setDemoMode(!!r.mfaDesactivado))
+      .catch(() => {});
+  }, []);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -95,6 +103,12 @@ export function Login({ onDone }: { onDone: () => void }) {
       title={step === 'password' ? 'Ingresar' : 'Segundo factor'}
       subtitle={step === 'password' ? 'Usá el usuario que te dio el administrador.' : 'Ingresá el código de 6 dígitos de tu app autenticadora.'}
     >
+      {demoMode && step === 'password' && (
+        <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-inset ring-amber-200">
+          <strong className="font-semibold">Modo demo, sin segundo factor.</strong> Entrá con <code className="font-mono">seguridad@demo.test</code> y la
+          contraseña. Los usuarios que todavía no configuraron el segundo factor (como gerente) igual piden el QR.
+        </p>
+      )}
       <form onSubmit={submit} className="space-y-4">
         {step === 'password' ? (
           <>

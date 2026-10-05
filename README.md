@@ -102,6 +102,8 @@ El panel del responsable se puede abrir desde tus otros dispositivos (celular, n
 2. En la consola de Tailscale ([DNS](https://login.tailscale.com/admin/dns)) dejá activado **MagicDNS** y activá **HTTPS Certificates**.
 3. Corré `npm run panel:online`. Genera un secreto de sesión propio (`.env.panel`, fuera de git), levanta la base, compila el panel y lo publica con HTTPS en `https://<tu-pc>.<tu-red>.ts.net` mediante `tailscale serve`.
 
+**Sin segundo factor (solo desarrollo o demo):** `npm run panel:online -- --sin-2fa`. Los usuarios que ya tienen el segundo factor configurado (`seguridad@demo.test`) entran solo con la contraseña, y el panel muestra un aviso mientras esté así. No lo uses con datos reales.
+
 La API corre en modo producción (cookie segura, secreto propio), escucha solo en `127.0.0.1:8790` y sirve el panel en el mismo puerto; Tailscale hace de proxy. Si la PC se suspende, el panel no responde hasta que despierte (los datos no se pierden). Para que esté siempre disponible: que Windows no suspenda con el cargador enchufado y que Docker Desktop arranque al iniciar sesión (la base tiene `restart: unless-stopped`).
 
 ## Comandos

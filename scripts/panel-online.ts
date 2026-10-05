@@ -4,7 +4,8 @@
  *   2. Levanta Postgres y compila el panel.
  *   3. Arranca la API en modo producción, sirviendo el panel, solo en 127.0.0.1:8790.
  *   4. `tailscale serve` la publica con HTTPS en https://<tu-pc>.<tu-red>.ts.net
- * Uso: npm run panel:online   (Ctrl+C para cortar; la base sigue en Docker)
+ * Uso: npm run panel:online              (Ctrl+C para cortar; la base sigue en Docker)
+ *      npm run panel:online -- --sin-2fa  (solo demo: entrar sin el código del segundo factor)
  */
 import { execFileSync, execSync, spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
@@ -14,6 +15,7 @@ import { join, resolve } from 'node:path';
 const ROOT = resolve(import.meta.dirname, '..');
 const ENV_FILE = join(ROOT, '.env.panel');
 const PORT = 8790;
+const withoutMfa = process.argv.includes('--sin-2fa');
 
 function step(text: string) {
   console.log(`\n▶ ${text}`);
@@ -99,9 +101,11 @@ try {
       PANEL_DIR: join(ROOT, 'apps/panel/dist'),
       TRUST_PROXY: '1',
       ALLOWED_ORIGINS: origin,
+      ...(withoutMfa ? { DESACTIVAR_2FA: '1' } : {}),
     },
   });
   console.log(`\n  Panel: ${origin}\n  Abrilo desde cualquier dispositivo con Tailscale y tu cuenta.\n`);
+  if (withoutMfa) console.log('  ⚠ Segundo factor desactivado: entrá con seguridad@demo.test y la contraseña.\n');
   const stop = () => api.kill();
   process.on('SIGINT', stop);
   process.on('SIGTERM', stop);

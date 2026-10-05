@@ -16,6 +16,8 @@ export interface Me {
   politica: Partial<Record<DetectionType, string>>;
   aal: 'aal1' | 'aal2';
   mfa: 'ok' | 'configurar';
+  /** El servidor corre con el segundo factor desactivado (modo demo). */
+  mfaDesactivado?: boolean;
 }
 
 export interface Resumen {

@@ -70,6 +70,11 @@ app.post('/auth/login', async (c) => {
     const r = await withSession(null, (db) => db.query(`SELECT * FROM app.autenticar($1, $2)`, [body.data.email, body.data.password]));
     const u = r.rows[0];
     if (!u) return c.json({ error: 'Email o contraseña incorrectos' }, 401);
+    // Con el segundo factor desactivado (solo demo), quien ya lo tiene configurado entra directo.
+    if (config.mfaDisabled && u.requiere_2fa) {
+      await setSession(c, { userId: u.usuario_id, aal: 'aal2', mfa: 'ok' });
+      return c.json({ estado: 'ok' });
+    }
     const mfa = u.requiere_2fa ? 'pendiente' : u.debe_configurar_2fa ? 'configurar' : 'ok';
     await setSession(c, { userId: u.usuario_id, aal: 'aal1', mfa });
     return c.json({ estado: mfa });
@@ -144,7 +149,7 @@ app.get('/me', async (c) => {
          WHERE u.id = app.uid()`,
       );
       const p = await db.query(`SELECT app.mi_politica() AS politica`);
-      return { usuario: u.rows[0], politica: p.rows[0].politica, aal: s.aal, mfa: s.mfa };
+      return { usuario: u.rows[0], politica: p.rows[0].politica, aal: s.aal, mfa: s.mfa, mfaDesactivado: config.mfaDisabled };
     });
     if (!data.usuario) return c.json({ error: 'Sesión inválida' }, 401);
     return c.json(data);
@@ -236,7 +241,7 @@ app.get('/panel/usuarios', async (c) => {
 app.get('/salud', async (c) => {
   try {
     await pool.query('SELECT 1');
-    return c.json({ estado: 'ok' });
+    return c.json({ estado: 'ok', mfaDesactivado: config.mfaDisabled });
   } catch {
     return c.json({ estado: 'sin base de datos' }, 503);
   }
@@ -253,6 +258,10 @@ if (config.panelDir) {
   server.use('/*', serveStatic({ root }));
   // Rutas del panel que no son archivos: la aplicación de una sola página.
   server.get('*', serveStatic({ root, path: 'index.html' }));
+}
+
+if (config.mfaDisabled) {
+  console.warn('⚠ SEGUNDO FACTOR DESACTIVADO (DESACTIVAR_2FA=1): solo para desarrollo o demo, nunca en una instalación real.');
 }
 
 serve({ fetch: server.fetch, port: config.port, hostname: config.host }, (info) => {

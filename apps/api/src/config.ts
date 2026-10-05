@@ -26,6 +26,11 @@ export const config = {
    * cualquiera podría inventar ese encabezado para esquivar el límite de intentos.
    */
   trustProxy: process.env.TRUST_PROXY === '1',
+  /**
+   * Solo para desarrollo/demo: los usuarios que YA tienen segundo factor entran solo con la contraseña.
+   * Lo activa `npm run panel:online -- --sin-2fa`. Nunca en una instalación real.
+   */
+  mfaDisabled: process.env.DESACTIVAR_2FA === '1',
   /** Carpeta del panel compilado: si está, la API también lo sirve (un solo puerto para publicar). */
   panelDir: process.env.PANEL_DIR,
 };
