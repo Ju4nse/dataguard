@@ -94,6 +94,14 @@ npm run eval:ia
 
 En desarrollo (`npm run dev`) Vite sirve el modelo desde `.cache/` y la IA local funciona sin publicarlo. En GitHub Pages lo genera el workflow de deploy (`.github/workflows/pages.yml`): baja el original de un commit fijo, lo cuantiza (queda en caché entre deploys) y lo publica junto a la app en partes de menos de 100 MB con `scripts/preparar-modelo-pages.py`, que también agrega el aviso de licencia (Apache-2.0). Para servirlo desde otro lado, `VITE_MODEL_BASE` indica la carpeta.
 
+### Entrenar el modelo (fine-tuning)
+
+El modelo se puede ajustar a textos como los de DataGuard sin que pese más (cambian los valores de los pesos, no la cantidad). Se entrena una vez, fuera de la app, con datos **ficticios**; los usuarios no le enseñan nada mientras lo usan (su texto nunca sale del navegador).
+
+1. `npm run entrenamiento:datos`: `scripts/generar-entrenamiento.ts` genera `.cache/entrenamiento/train.json` (4000 ejemplos) y `dev.json` (500, con plantillas que el entrenamiento no ve). Son mails, chats, formularios y prompts con nombres, empresas, direcciones y datos de salud, más casos negativos (cargos, áreas, herramientas, organismos, ciudades, calles sin número). Usa el mismo corte de palabras que la IA del navegador y excluye toda entidad de los sets de evaluación. `-- --muestra 20` muestra ejemplos marcados para revisarlos.
+2. Abrí [`entrenamiento/entrenar_gliner.ipynb`](entrenamiento/entrenar_gliner.ipynb) en Google Colab ([abrir directo](https://colab.research.google.com/github/Ju4nse/dataguard/blob/main/entrenamiento/entrenar_gliner.ipynb)) (GPU T4 gratis), subí los dos archivos y ejecutá todo (~30-45 min). Entrena desde `urchade/gliner_multi_pii-v1`, compara antes/después, exporta a ONNX, lo comprime con `quantize-model.py --plegado` y lo guarda en tu Google Drive.
+3. Copiá `model_ft_w8p.onnx` a `.cache/modelos/gliner_multi_pii-v1/onnx/` y medilo: `npm run eval:ia -- --modelo onnx/model_ft_w8p.onnx`. Si mejora, recalibrá (`npm run calibrar:ia -- --modelo …`) y recién al final corré una vez `--control`: si no le gana al modelo actual en el set de control, no se usa.
+
 ## Panel online (Tailscale)
 
 El panel del responsable se puede abrir desde tus otros dispositivos (celular, notebook) a través de [Tailscale](https://tailscale.com): una red privada entre tus dispositivos. La base sigue en esta PC y nada queda expuesto a internet.
@@ -120,6 +128,7 @@ La API corre en modo producción (cookie segura, secreto propio), escucha solo e
 | `npm run eval` | Mide la calidad del detector (precisión y cobertura por tipo); `-- --errores` lista cada fallo |
 | `npm run eval:ia` | Compara reglas contra reglas + IA local, también como documento largo (necesita el modelo en `.cache/`); `-- --control` agrega el set de control |
 | `npm run calibrar:ia` | Barre los umbrales por etiqueta de la IA local sobre los sets de calibración |
+| `npm run entrenamiento:datos` | Genera ejemplos ficticios para entrenar la IA local (ver "Entrenar el modelo") |
 | `npm run db:up` / `db:down` | Levanta / apaga Postgres en Docker (puerto 5433) |
 | `npm run db:reset` | Borra la base y la recrea desde `db/init` (esquema + datos de demo) |
 | `npm run db:test` | Verifica estructura, permisos y autenticación de la base (26 pruebas) |

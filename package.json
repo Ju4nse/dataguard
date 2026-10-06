@@ -26,6 +26,7 @@
     "dev:api": "npm run dev --workspace @securedata/api",
     "dev:panel": "npm run dev --workspace @securedata/panel",
     "calibrar:ia": "tsx scripts/calibrar-ia.ts",
+    "entrenamiento:datos": "tsx scripts/generar-entrenamiento.ts",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
