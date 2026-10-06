@@ -68,7 +68,14 @@ const PHONE_CONTEXT = near(String.raw`tel|tel[eé]fono|cel|celular|m[oó]vil|wha
 const PATENTE_CONTEXT = near('patente|dominio', 45);
 const CARD_CONTEXT = near(String.raw`tarjeta|visa|master(?:card)?|amex|american express|cr[eé]dito|d[eé]bito|naranja|cabal`);
 const BIRTH_CONTEXT = near(String.raw`nacid[oa]|naci[oó]|nacimiento|f\.?\s?nac\.?|fec\.?\s?nac\.?|dob|born`);
-const SALARY_CONTEXT = near(String.raw`sueldo|salario|remuneraci[oó]n|haberes|honorarios|cobra|gana|bruto|neto|aguinaldo`);
+const SALARY_WORDS = String.raw`sueldo|salario|remuneraci[oó]n|haberes|honorarios|cobra|gana|bruto|neto|aguinaldo`;
+const SALARY_CONTEXT = near(SALARY_WORDS);
+/** Un número sin moneda solo es un sueldo si la palabra está pegada: "mi sueldo es: 300000", "sueldo 850000". */
+const SALARY_TIGHT = near(SALARY_WORDS, 12);
+/** Palabras de montos y cantidades: un número cerca de ellas no es un DNI (salvo que diga "DNI"). */
+const AMOUNT_CONTEXT = near(
+  String.raw`total|monto|importe|precio|costo|cuesta|vale|valor|saldo|deuda|pag[oóa]|pagar|cobr[oóa]|factur\p{L}*|vend\p{L}*|venta|gast\p{L}*|presupuesto|cotizaci[oó]n|unidades|stock|cantidad`,
+);
 const IP_CONTEXT = near('ip|servidor|server|host|atacante|origen|destino');
 const PASSPORT_CONTEXT = near('pasaporte|passport');
 /** Antes de un número: indica que es un identificador interno, no un dato personal. */
@@ -166,9 +173,25 @@ export const TEXT_PATTERNS: TextPattern[] = [
   {
     type: 'DNI',
     regex: /(?<![\d.])\d{1,2}\.?\d{3}\.?\d{3}(?![\d.]?\d)/g,
-    // Sin la palabra "DNI" o "documento" cerca, 8 dígitos sueltos pueden ser un monto o un código.
     validate: (m, before) => isValidDni(m) && DNI_CONTEXT.test(before) && !NEGATIVE_CONTEXT.test(before) && !/\$\s*$/.test(before),
     priority: 70,
+  },
+  {
+    // Sin la palabra "DNI": "soy Juanse (46751217)". Ante la duda se protege, pero con confianza baja (para revisar).
+    // No si parece un monto (moneda, %, "total", "factura"…), un código ("pedido", "artículo"), un teléfono, un sueldo
+    // ni el medio de un CUIT inválido ("20-12345678-5").
+    type: 'DNI',
+    regex:
+      /(?<![\d.,$-])\d{1,2}\.?\d{3}\.?\d{3}(?![\d.,]?\d|-\d)(?!\s?(?:%|\$|pesos|ars|usd|u\$s|d[oó]lares|euros|mil\b|millones|unidades|habitantes|personas|usuarios|visitas|kg|km|m2|litros))/gi,
+    validate: (m, before) =>
+      isValidDni(m) &&
+      !NEGATIVE_CONTEXT.test(before) &&
+      !/(?:\$|u\$s|usd|ars)\s*$/i.test(before) &&
+      !AMOUNT_CONTEXT.test(before) &&
+      !SALARY_CONTEXT.test(before) &&
+      !PHONE_CONTEXT.test(before),
+    confidence: () => 'baja',
+    priority: 69,
   },
   {
     type: 'FECHA_NACIMIENTO',
@@ -203,12 +226,26 @@ export const TEXT_PATTERNS: TextPattern[] = [
     priority: 60,
   },
   {
-    // Montos con contexto de sueldo: "sueldo bruto de $ 1.850.000", "remuneración: 2.300.000 pesos".
+    // Montos con contexto de sueldo: "sueldo bruto de $ 1.850.000", "remuneración: 2.300.000 pesos", "sueldo: 300000$", "USD 2.500".
     type: 'SALARIO',
-    regex: /\$\s?\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\$\s?\d{4,}(?:,\d{1,2})?|(?<![\d.])\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?\s?(?:pesos|ARS|USD|d[oó]lares)\b/gi,
+    regex: new RegExp(
+      [
+        String.raw`(?:\$|u\$s|usd|ars)\s?(?:\d{1,3}(?:\.\d{3})+|\d{4,})(?:,\d{1,2})?`,
+        String.raw`(?<![\d.])(?:\d{1,3}(?:\.\d{3})+|\d{4,})(?:,\d{1,2})?\s?(?:\$|pesos\b|ars\b|usd\b|d[oó]lares\b)`,
+      ].join('|'),
+      'gi',
+    ),
     validate: (_m, before) => SALARY_CONTEXT.test(before),
     confidence: () => 'media',
     priority: 58,
+  },
+  {
+    // Sin moneda, solo con la palabra pegada: "mi sueldo es: 300000", "sueldo neto 1.250.000". Un año ("sueldo 2025") no.
+    type: 'SALARIO',
+    regex: /(?<![\d.,$])(?:\d{1,3}(?:\.\d{3})+|\d{4,})(?:,\d{1,2})?(?![\d.,]?\d)(?!\s?(?:%|años|meses|d[ií]as|horas|empleados|personas))/gi,
+    validate: (m, before) => SALARY_TIGHT.test(before) && !/^(?:19|20)\d{2}$/.test(m),
+    confidence: () => 'media',
+    priority: 57,
   },
   {
     // "45 años de edad" → "45 años"; "Edad: 67" → "67".

@@ -51,6 +51,8 @@ La app del empleado funciona **sin** API ni base: el procesamiento es 100% en el
  ├─ lee el archivo, detecta y protege          └─ login con contraseña + 2FA
  │  TODO localmente (packages/detector)             │ GET /api/panel/resumen (solo agregados)
  └─ con sesión: POST /api/eventos (solo metadatos)  │
+ Extensión en ChatGPT / Claude (apps/extension)      │
+ └─ igual: detecta en la página, solo metadatos      │
               └──────────────┬──────────────────────┘
                      apps/api (Hono)  ── verifica la sesión y hace SET LOCAL app.user_id / app.aal
                              │
@@ -67,10 +69,11 @@ La app del empleado funciona **sin** API ni base: el procesamiento es 100% en el
 
 ## IA local (GLiNER)
 
-`packages/ml` corre [`gliner_multi_pii-v1`](https://huggingface.co/onnx-community/gliner_multi_pii-v1) (multilingüe, entrenado para datos personales, Apache-2.0) con `onnxruntime-web` dentro de un Web Worker (`apps/web/src/lib/ai.worker.ts`). El pre y post-procesamiento de GLiNER está implementado en `packages/ml/src/gliner.ts` (no usamos el paquete `gliner` de npm: depende de versiones viejas y su separador de palabras corta las tildes).
+`packages/ml` corre [`gliner_multi_pii-v1`](https://huggingface.co/onnx-community/gliner_multi_pii-v1) (multilingüe, entrenado para datos personales, Apache-2.0) con `onnxruntime-web` dentro de un Web Worker. La descarga, el caché y la ejecución están en `packages/ml/src/browser.ts` y los usan **la app web y la extensión**: las dos corren el mismo modelo con la misma configuración. El pre y post-procesamiento de GLiNER está implementado en `packages/ml/src/gliner.ts` (no usamos el paquete `gliner` de npm: depende de versiones viejas y su separador de palabras corta las tildes).
 
 - **Modelo propio de 298 MB** (`scripts/quantize-model.py --plegado`): el `model_int8.onnx` publicado cuantiza también las activaciones y pierde casi toda la calidad (un nombre claro daba 0,4 en vez de ~0,9). El nuestro guarda solo los pesos en 8 bits y onnxruntime los pasa a float32 al cargar: misma calidad que el modelo completo de 1,16 GB, a velocidad completa.
 - **Opcional:** el usuario la activa con un clic; antes de bajar se avisa el tamaño. Queda guardada en el sistema de archivos privado del navegador (OPFS) y se carga sola en las visitas siguientes; las versiones viejas se borran.
+- **Un solo modelo:** qué modelo es (`MODEL`), sus umbrales y de dónde se baja (`MODEL_PATH`, junto a la app publicada) están en `packages/ml/src/model.ts`. La extensión no trae el modelo adentro: lo baja del mismo lugar que la web. El caché se invalida si cambia `MODEL.revision` o si se publica otro archivo con el mismo nombre (se compara el `sha256` del manifiesto publicado). Para cambiar de modelo: actualizar `MODEL` y el workflow de Pages (`MODELO_REVISION`); `packages/ml/test/published-model.test.ts` falla si no coinciden.
 - **Privacidad:** el worker solo descarga los archivos del modelo; ningún texto del usuario sale del navegador.
 - **Varios hilos:** con aislamiento de origen (COOP/COEP) usa hasta 4 núcleos. En desarrollo lo da `vite.config.ts`; en GitHub Pages, que no permite configurar cabeceras, lo da `public/aislamiento-sw.js` (si no se puede, corre en un hilo).
 - **Cómo se combina** (`packages/detector/src/combine.ts`): lo validado por reglas (dígito verificador, formato, diccionario de datos sensibles) siempre gana; el modelo suma lo que las reglas no vieron y extiende nombres incompletos. Filtros genéricos descartan lo que no es un dato personal: cargos ("La empleada"), áreas ("Compras"), marcas y organismos públicos, lugares, calles sin número.
@@ -114,6 +117,27 @@ El panel del responsable se puede abrir desde tus otros dispositivos (celular, n
 
 La API corre en modo producción (cookie segura, secreto propio), escucha solo en `127.0.0.1:8790` y sirve el panel en el mismo puerto; Tailscale hace de proxy. Si la PC se suspende, el panel no responde hasta que despierte (los datos no se pierden). Para que esté siempre disponible: que Windows no suspenda con el cargador enchufado y que Docker Desktop arranque al iniciar sesión (la base tiene `restart: unless-stopped`).
 
+## Extensión de navegador (ChatGPT y Claude)
+
+`apps/extension` es una extensión de Chrome (Manifest V3) que revisa cada prompt **antes de enviarlo** en chatgpt.com y claude.ai, con el mismo detector que la app web (`packages/detector`). Si encuentra datos sensibles, frena el envío y muestra qué encontró (enmascarado) y cómo se va a enviar:
+
+- **Proteger y enviar** (por defecto, con Enter): reemplaza los datos por seudónimos o los anonimiza según la política de la empresa y envía.
+- **Solo reemplazar:** deja el texto protegido en el cuadro para revisarlo antes de enviar.
+- **Enviar sin proteger:** solo si la política de la empresa no exige proteger esos tipos.
+- **Cancelar** (Esc): no envía nada.
+
+Mientras se escribe, un indicador abajo a la derecha avisa cuántos datos sensibles hay. Al tocarlo muestra los seudónimos de la pestaña (`Persona_01` → nombre real) para leer la respuesta de la IA. Los seudónimos viven solo en la memoria de la pestaña: son los mismos en toda la conversación y se borran al cerrarla. **Nunca se guardan prompts**: con sesión, al panel llegan solo el sitio, la decisión (enmascarado / ignorado / cancelado) y los tipos con sus cantidades (`origen: extension`, `tipoEntrada: prompt`).
+
+**Probarla:**
+
+1. `npm run build -w @securedata/extension` (o `npm run dev:extension`, que recompila al guardar).
+2. En Chrome, abrí `chrome://extensions`, activá **Modo de desarrollador** → **Cargar descomprimida** → elegí `apps/extension/dist`. Después de cada cambio, tocá ↻ en la tarjeta de la extensión y recargá ChatGPT o Claude.
+3. Opcional, para aplicar la política y registrar eventos: `npm run db:up` y `npm run dev:api`, y en el popup de la extensión entrá con un usuario de demo (ej. `empleado@demo.test`). Para otro servidor (como el del panel online), cambiá la dirección en **Servidor**: la extensión pide permiso para ese sitio.
+
+El `key` del manifest fija el ID de la extensión (`kinpmadcicacoodohlbipajehcgmfcim`), y la API acepta pedidos desde ese origen. Cuando se publique en la Chrome Web Store, el ID cambia: hay que ponerlo en la variable `EXTENSION_ID` de la API. Si ChatGPT o Claude cambian su HTML y la extensión deja de frenar el envío, los selectores están en `apps/extension/src/content/sites.ts`. 
+
+**IA local en la extensión:** se activa desde el popup (descarga única del mismo modelo que la web). Corre en un documento oculto de la extensión (`apps/extension/src/offscreen`), en un solo hilo: un prompt tarda alrededor de medio segundo. El texto se analiza mientras se escribe; al enviar, si la IA todavía no lo revisó, se espera hasta 12 segundos (el indicador dice "Revisando con la IA local…") y después siguen solo las reglas. El texto va del script de contenido al modelo dentro de la extensión, nunca a la red. Sin usarla durante 10 minutos se libera la memoria del modelo (más de 1 GB); queda guardado y vuelve a cargarse en unos segundos.
+
 ## Comandos
 
 | Comando | Qué hace |
@@ -124,7 +148,7 @@ La API corre en modo producción (cookie segura, secreto propio), escucha solo e
 | `npm run e2e` | Procesa el fixture de ejemplo y verifica que no quede ningún dato sensible |
 | `npm run fixtures` | Regenera los archivos de prueba (datos ficticios) |
 | `npm run verify-clean -- <original> <depurado>` | Compara un original con su versión depurada |
-| `npm run build` | Build de producción de la web |
+| `npm run build` | Build de producción de la web, el panel y la extensión |
 | `npm run eval` | Mide la calidad del detector (precisión y cobertura por tipo); `-- --errores` lista cada fallo |
 | `npm run eval:ia` | Compara reglas contra reglas + IA local, también como documento largo (necesita el modelo en `.cache/`); `-- --control` agrega el set de control |
 | `npm run calibrar:ia` | Barre los umbrales por etiqueta de la IA local sobre los sets de calibración |
@@ -134,6 +158,7 @@ La API corre en modo producción (cookie segura, secreto propio), escucha solo e
 | `npm run db:test` | Verifica estructura, permisos y autenticación de la base (26 pruebas) |
 | `npm run db:totp -- <email>` | Código 2FA actual de un usuario de demo (para probar sin celular) |
 | `npm run dev:api` / `dev:panel` | API y panel en modo desarrollo |
+| `npm run dev:extension` | Compila la extensión en `apps/extension/dist` y recompila al guardar |
 | `npm run db:psql` | Consola SQL dentro del contenedor |
 | `npm run panel:online` | Publica el panel en tu red de Tailscale (ver arriba) |
 | `npm run lint` | ESLint en todo el monorepo |
@@ -186,6 +211,7 @@ apps/
   web/        app del empleado (React + Vite + Tailwind)
   panel/      panel del responsable (React + Recharts), acceso con 2FA
   api/        API (Hono): login, sesión, eventos y panel; los permisos los aplica Postgres
+  extension/  extensión de Chrome para ChatGPT y Claude (avisa y seudonimiza antes de enviar)
 db/init/      esquema, funciones, seguridad, datos de demo, autenticación y políticas
 fixtures/     archivos de prueba con datos FICTICIOS
 scripts/      generador de fixtures y verificación de fugas

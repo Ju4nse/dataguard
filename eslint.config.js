@@ -9,12 +9,20 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    files: ['apps/web/**/*.{ts,tsx}', 'apps/panel/**/*.{ts,tsx}'],
+    files: ['apps/web/**/*.{ts,tsx}', 'apps/panel/**/*.{ts,tsx}', 'apps/extension/src/**/*.{ts,tsx}'],
     ...reactHooks.configs.flat.recommended,
     languageOptions: { globals: globals.browser },
   },
   {
-    files: ['apps/api/**/*.ts', 'scripts/**/*.ts', 'packages/**/*.ts', '*.{js,ts}', 'apps/*/*.config.ts'],
+    files: [
+      'apps/api/**/*.ts',
+      'scripts/**/*.ts',
+      'packages/**/*.ts',
+      '*.{js,ts}',
+      'apps/*/*.config.ts',
+      'apps/extension/build.ts',
+      'apps/extension/scripts/**/*.ts',
+    ],
     languageOptions: { globals: globals.node },
   },
   {

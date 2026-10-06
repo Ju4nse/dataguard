@@ -1,0 +1,28 @@
+{
+  "name": "@securedata/extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx build.ts --watch",
+    "build": "tsc -p tsconfig.json --noEmit && tsx build.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "icons": "tsx scripts/icons.ts"
+  },
+  "dependencies": {
+    "@securedata/detector": "*",
+    "@securedata/ml": "*",
+    "@securedata/shared": "*",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/chrome": "^0.1.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.3.2"
+  }
+}

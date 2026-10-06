@@ -8,7 +8,7 @@ describe('scanText', () => {
     const text =
       'Cliente Juan, DNI 30.123.456, CUIT 20-12345678-6, mail juan.perez@gmail.com, ' +
       'cel +54 9 11 4567-8901, CBU 2850590940090418135201, tarjeta 4111 1111 1111 1111.';
-    expect(types(text)).toEqual(['DNI', 'CUIT_CUIL', 'EMAIL', 'TELEFONO', 'CBU_CVU', 'TARJETA']);
+    expect(types(text)).toEqual(['NOMBRE_PERSONA', 'DNI', 'CUIT_CUIL', 'EMAIL', 'TELEFONO', 'CBU_CVU', 'TARJETA']);
   });
 
   it('devuelve posiciones exactas', () => {
@@ -21,6 +21,53 @@ describe('scanText', () => {
   it('no confunde montos ni códigos con DNI si no hay contexto', () => {
     expect(types('Facturamos 30123456 pesos en el trimestre')).toEqual([]);
     expect(types('Pedido nro 12345678 despachado')).toEqual([]);
+  });
+
+  it('un número con forma de DNI sin la palabra "DNI" se protege igual, con confianza baja', () => {
+    const spans = scanText('hola soy juanse (30123456), te escribo por un reclamo');
+    expect(spans.find((s) => s.type === 'DNI')).toMatchObject({ value: '30123456', confidence: 'baja' });
+    expect(scanText('mi DNI es 30123456')[0]?.confidence).toBe('alta');
+    // Montos, cantidades, teléfonos y CUIT inválidos no.
+    expect(types('El total fue 15000000')).toEqual([]);
+    expect(types('Vendimos 12500000 unidades')).toEqual([]);
+    expect(types('llamame al 46751217')).toEqual([]);
+    expect(types('el CUIT 20-12345678-5 tiene mal el verificador')).toEqual([]);
+  });
+
+  it('detecta sueldos con el signo al final, en dólares o sin moneda pegados a "sueldo"', () => {
+    expect(scanText('mi sueldo es: 300000$ por mes').map((s) => s.value)).toEqual(['300000$']);
+    expect(scanText('cobra USD 2.500 por mes').map((s) => s.value)).toEqual(['USD 2.500']);
+    expect(scanText('sueldo neto 1.250.000').map((s) => s.value)).toEqual(['1.250.000']);
+    expect(types('sueldo 2025: aumentos')).toEqual([]);
+    expect(types('el sueldo de 1500 empleados')).toEqual([]);
+  });
+
+  it('en la ficha de una persona, el nombre solo y el monto también son datos personales', () => {
+    expect(scanText('Milagros, $ 300000, 30123456, mili@gmail.com, emprendedora.').map((s) => `${s.type}:${s.value}`)).toEqual([
+      'NOMBRE_PERSONA:Milagros',
+      'SALARIO:$ 300000',
+      'DNI:30123456',
+      'EMAIL:mili@gmail.com',
+    ]);
+    expect(types('Le escribí a Lucía ayer')).toEqual(['NOMBRE_PERSONA']);
+    // Sin datos de una persona en el renglón, ni el lugar ni el monto.
+    expect(types('Nos vemos en Rosario, el pasaje sale $ 30000.')).toEqual([]);
+    // Con una empresa o una factura, el monto es del negocio.
+    expect(types('Distribuidora del Sur S.R.L., mail ventas@dsur.com.ar, facturó $ 1.250.000')).not.toContain('SALARIO');
+    expect(types('Juan Pérez, juan@gmail.com, total del pedido $ 45.000')).not.toContain('SALARIO');
+  });
+
+  it('detecta el nombre en una presentación, aunque sea un apodo en minúscula', () => {
+    const names = (text: string) =>
+      scanText(text)
+        .filter((s) => s.type === 'NOMBRE_PERSONA')
+        .map((s) => s.value);
+    expect(names('hola soy juanse, te escribo por un reclamo')).toEqual(['juanse']);
+    expect(names('mi nombre es juan perez')).toEqual(['juan perez']);
+    expect(names('Me llamo Ana Gómez y necesito ayuda')).toEqual(['Ana Gómez']);
+    expect(names('Hola, soy Juan')).toEqual(['Juan']);
+    expect(names('soy contador y trabajo en una pyme')).toEqual([]);
+    expect(names('soy analista de datos')).toEqual([]);
   });
 
   it('no marca un número de 10 dígitos pegado sin contexto como teléfono', () => {

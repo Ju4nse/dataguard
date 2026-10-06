@@ -120,6 +120,73 @@ export function isPersonNameValue(value: string): boolean {
   return words.some((w) => FIRST_NAMES.has(fold(w)) && !AMBIGUOUS.has(fold(w))) || words.filter((w) => FIRST_NAMES.has(fold(w))).length >= 2;
 }
 
+/** Palabras que pueden seguir a "soy" y no son un nombre (aunque empiecen como uno: "soy analista"). */
+// prettier-ignore
+const NOT_INTRO_NAME = new Set(['yo', 'el', 'la', 'un', 'una', 'de', 'del', 'muy', 'nuevo', 'nueva', 'responsable', 'encargado', 'encargada']);
+
+/**
+ * ¿El token i empieza un nombre después de una presentación? Devuelve desde qué token va el nombre.
+ * - Fuerte ("me llamo", "mi nombre es"): lo que sigue es el nombre aunque esté en minúscula o sea un apodo.
+ * - "soy": solo si sigue un nombre del diccionario, una palabra con mayúscula o un apodo que empieza
+ *   como un nombre ("juanse", "marianito"); "soy contador" no.
+ */
+function introduction(tokens: Token[], i: number, gap: (a: Token, b: Token) => string): { from: number; strong: boolean } | null {
+  const t = tokens[i]!;
+  const next = tokens[i + 1];
+  if (!next || !/^[ \t]*:?[ \t]+$/.test(gap(t, next)) || NOT_SURNAME.has(next.folded) || NOT_INTRO_NAME.has(next.folded)) return null;
+  const prev = tokens[i - 1];
+  const prev2 = tokens[i - 2];
+  const strong = (t.folded === 'llamo' && prev?.folded === 'me') || (t.folded === 'es' && prev?.folded === 'nombre' && prev2?.folded === 'mi');
+  if (strong) return { from: i + 1, strong };
+  if (t.folded !== 'soy') return null;
+  const w = next.folded;
+  const nickname = [...FIRST_NAMES].some((n) => n.length >= 4 && w.length > n.length && w.startsWith(n));
+  const known = FIRST_NAMES.has(w) && !(AMBIGUOUS.has(w) && !isCap(next.word));
+  return known || nickname || (isCap(next.word) && !CONTEXT_SINGLE.has(w)) ? { from: i + 1, strong: false } : null;
+}
+
+/** Hasta dos palabras más después de la primera del nombre: con mayúscula, o en minúscula si la primera es un nombre conocido ("juan perez"). */
+function collectIntroName(tokens: Token[], from: number, gap: (a: Token, b: Token) => string): number {
+  let last = from;
+  const firstKnown = FIRST_NAMES.has(tokens[from]!.folded);
+  for (let j = from + 1; j < tokens.length && j <= from + 2; j++) {
+    const t = tokens[j]!;
+    if (!/^[ \t]+$/.test(gap(tokens[j - 1]!, t)) || NOT_SURNAME.has(t.folded) || NOT_INTRO_NAME.has(t.folded)) break;
+    if (!isCap(t.word) && !firstKnown) break;
+    last = j;
+  }
+  return last;
+}
+
+/** Nombre de pila solo, sin apellido ("Lucía", "Milagros"). */
+export interface LoneFirstName {
+  span: Span;
+  /** También es un lugar o una palabra común (Milagros, Rosario, Paz): necesita más evidencia. */
+  ambiguous: boolean;
+  /** Es un campo de una lista o ficha: al principio del renglón o entre comas, "|" o ";". */
+  field: boolean;
+}
+
+/** Nombres de pila del diccionario, con mayúscula, que no forman parte de un nombre completo ni de un lugar. */
+export function findLoneFirstNames(text: string): LoneFirstName[] {
+  const tokens = tokenize(text);
+  const out: LoneFirstName[] = [];
+  tokens.forEach((t, i) => {
+    if (!isCap(t.word) || isAllCaps(t.word) || !FIRST_NAMES.has(t.folded)) return;
+    const prev = tokens[i - 1];
+    const before = text.slice(prev ? prev.end : 0, t.start);
+    if (prev && /^\.?[ \t]+$/.test(before) && (PLACE_BEFORE.has(prev.folded) || PLACE_PREPOSITIONS.has(prev.folded))) return;
+    const after = text.slice(t.end).match(/^[^\p{L}\d]*/u)![0];
+    const field = /(?:^|[\n,;|:])[ \t]*$/.test(text.slice(0, t.start)) && /^[ \t]*(?:[,;|\n]|$)/.test(after);
+    out.push({
+      span: { type: 'NOMBRE_PERSONA', start: t.start, end: t.end, value: t.word, confidence: 'baja' },
+      ambiguous: AMBIGUOUS.has(t.folded),
+      field,
+    });
+  });
+  return out;
+}
+
 export function findNames(text: string): Span[] {
   const tokens = tokenize(text);
   const out: Span[] = [];
@@ -182,6 +249,17 @@ export function findNames(text: string): Span[] {
       const words = tokens.slice(i + 1, last + 1).filter((x) => !CONNECTORS.has(x.word));
       if (words.length >= 2 || (words.length === 1 && isFirstName(words[0]!.word))) {
         push(i + 1, last, words.some((w) => FIRST_NAMES.has(w.folded)) ? 'alta' : 'media');
+        i = last;
+        continue;
+      }
+    }
+
+    // 2b) Presentaciones: "me llamo juanse", "mi nombre es Ana Gómez", "hola, soy Juan".
+    const intro = introduction(tokens, i, gap);
+    if (intro) {
+      const last = collectIntroName(tokens, intro.from, gap);
+      if (last >= intro.from) {
+        push(intro.from, last, intro.strong ? 'alta' : 'media');
         i = last;
         continue;
       }

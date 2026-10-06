@@ -24,6 +24,15 @@ export const MODEL = {
 /** Repositorio original en Hugging Face (de ahí salen el tokenizador y el modelo completo). */
 export const HF_BASE = `https://huggingface.co/${MODEL.id}/resolve/${MODEL.revision}/`;
 
+/**
+ * Carpeta del modelo publicado, relativa a la app web (en Pages: https://ju4nse.github.io/dataguard/modelos/…/).
+ * La web y la extensión lo bajan del mismo lugar: si se publica otro modelo, las dos usan el nuevo.
+ */
+export const MODEL_PATH = `modelos/${MODEL.id.split('/')[1]}/`;
+
+/** Dónde está publicada la app web con su modelo (GitHub Pages). */
+export const PUBLISHED_APP_URL = 'https://ju4nse.github.io/dataguard/';
+
 /** URL de un archivo del modelo; `base` es la carpeta donde está publicado (termina en "/"). */
 export const modelFileUrl = (file: string, base: string = HF_BASE) => `${base}${file}`;
 

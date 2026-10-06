@@ -166,6 +166,16 @@ export function transformDocument(
   return { texts, equivalences: registry.entries(), transformedCounts: counts };
 }
 
+/**
+ * Acción para un tipo en un documento o prompt: la política de la empresa manda sobre la sugerida.
+ * "Eliminar" (columna) no existe fuera de las planillas: equivale a anonimizar.
+ */
+export function documentActionFor(type: DetectionType, policy: Partial<Record<DetectionType, Action>>): TypeDecision['action'] {
+  const p = policy[type];
+  if (!p) return DEFAULT_DOCUMENT_ACTIONS[type];
+  return p === 'eliminar' ? 'anonimizar' : p;
+}
+
 /** Acción sugerida por tipo en documentos (no existe "eliminar columna"). */
 export const DEFAULT_DOCUMENT_ACTIONS: Record<DetectionType, TypeDecision['action']> = {
   EMAIL: 'anonimizar',
