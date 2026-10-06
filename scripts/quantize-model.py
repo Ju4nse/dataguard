@@ -11,6 +11,8 @@ Uso (desde la raíz del repo, con el modelo completo descargado en .cache/):
     pip install onnx onnxruntime onnx-ir
     python scripts/quantize-model.py            # matrices en 8 bits
     python scripts/quantize-model.py --bits 4   # matrices en 4 bits (más chico)
+    python scripts/quantize-model.py --plegado --entrada export/model.onnx --salida export/model_ft_w8p.onnx
+                                                # un modelo propio (ej. el exportado por entrenar_gliner.ipynb)
 Después: npm run eval:ia -- --modelo onnx/model_w8.onnx
 """
 
@@ -20,10 +22,8 @@ import os
 import numpy as np
 import onnx
 from onnx import helper, numpy_helper
-from onnxruntime.quantization.matmul_nbits_quantizer import MatMulNBitsQuantizer
 
 DIR = os.path.join(".cache", "modelos", "gliner_multi_pii-v1", "onnx")
-EMBEDDINGS = "token_rep_layer.bert_layer.model.embeddings.word_embeddings.weight"
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--bits", type=int, default=8, choices=[4, 8], help="bits de las matrices (MatMul)")
@@ -34,10 +34,12 @@ parser.add_argument(
     help="matrices en int8 por columna con Cast+Mul: onnxruntime las convierte a float32 una sola vez al "
     "cargar (plegado de constantes) y después calcula a velocidad completa. Misma descarga, más RAM.",
 )
+parser.add_argument("--entrada", help="modelo ONNX completo (por defecto, el de .cache/modelos)")
+parser.add_argument("--salida", help="archivo de salida (por defecto, al lado de la entrada)")
 args = parser.parse_args()
 
-src = os.path.join(DIR, "model.onnx")
-dst = os.path.join(DIR, "model_w8p.onnx" if args.plegado else f"model_w{args.bits}.onnx")
+src = args.entrada or os.path.join(DIR, "model.onnx")
+dst = args.salida or os.path.join(os.path.dirname(src), "model_w8p.onnx" if args.plegado else f"model_w{args.bits}.onnx")
 
 model = onnx.load(src)
 original_opset = next(o.version for o in model.opset_import if o.domain in ("", "ai.onnx"))
@@ -74,6 +76,8 @@ def fold_matmuls(model):
 if args.plegado:
     model = fold_matmuls(model)
 else:
+    from onnxruntime.quantization.matmul_nbits_quantizer import MatMulNBitsQuantizer
+
     q = MatMulNBitsQuantizer(model, bits=args.bits, block_size=args.block, is_symmetric=True, op_types_to_quantize=("MatMul",), quant_axes=(("MatMul", 0),))
     q.process()
     model = q.model.model
@@ -84,9 +88,14 @@ else:
         if o.domain in ("", "ai.onnx"):
             o.version = original_opset
 
-# 2) Embeddings: int8 simétrico por fila.
+# 2) Embeddings: int8 simétrico por fila. Es la tabla más grande que entra a un Gather (vocabulario x 768);
+# se busca por forma y no por nombre, porque cada exportador nombra los pesos distinto.
 graph = model.graph
-init = next(t for t in graph.initializer if t.name == EMBEDDINGS)
+inits = {t.name: t for t in graph.initializer}
+gathered = {n.input[0] for n in graph.node if n.op_type == "Gather" and n.input[0] in inits}
+EMBEDDINGS = max(gathered, key=lambda name: int(np.prod(inits[name].dims)) if len(inits[name].dims) == 2 else 0)
+init = inits[EMBEDDINGS]
+assert init.dims[0] > 100_000, f"no parece la tabla de embeddings: {EMBEDDINGS} {list(init.dims)}"
 w = numpy_helper.to_array(init).astype(np.float32)
 scale = np.abs(w).max(axis=1, keepdims=True) / 127.0
 scale[scale == 0] = 1.0

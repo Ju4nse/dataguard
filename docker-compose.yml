@@ -1,5 +1,7 @@
 # Base de datos local para desarrollo. Los scripts de db/init se ejecutan solo la primera vez
 # (con el volumen vacío). Para volver a aplicarlos: npm run db:reset
+# Nombre fijo: si no, Compose usa el nombre de la carpeta y cada worktree/clon crearía otra base.
+name: proyectodps
 services:
   db:
     image: postgres:17-alpine
