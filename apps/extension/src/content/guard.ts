@@ -9,7 +9,7 @@ import { analyzePrompt, protectPrompt, toDetections, type PromptAnalysis } from 
 import { getSettings, onSettingsChanged, type Settings } from '../lib/storage';
 import { createAiClient } from './ai';
 import { readText, writeText } from './editor';
-import { composerFrom, findComposer, findSendButton, isSendButton, type Composer, type Site } from './sites';
+import { clickableFrom, composerFrom, findComposer, findSendButton, isDisabled, isSendButton, type Composer, type Site } from './sites';
 import { askUser, mountIndicator, setAiActive, setChecking, setPendingCount, showCopyFallback, type Choice } from './ui';
 
 /** Al enviar, cuánto se espera a la IA local como mucho (la primera vez carga el modelo del disco); después, solo reglas. */
@@ -50,7 +50,7 @@ export async function guard(site: Site) {
     // El botón puede tardar un instante en habilitarse después de cambiar el texto.
     for (let i = 0; i < 20; i++) {
       const button = findSendButton(site, composer);
-      if (button && !button.disabled) {
+      if (button && !isDisabled(button)) {
         busy = skipReview;
         try {
           button.click();
@@ -158,7 +158,7 @@ export async function guard(site: Site) {
   window.addEventListener(
     'click',
     (e) => {
-      const button = e.target instanceof Element ? e.target.closest('button') : null;
+      const button = clickableFrom(e.target);
       if (!button || busy) return;
       const composer = findComposer(site);
       if (composer && isSendButton(site, button, composer) && intercept(composer)) block(e);

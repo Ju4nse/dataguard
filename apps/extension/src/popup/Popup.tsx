@@ -2,6 +2,7 @@ import { friendlyAiError, MODEL } from '@securedata/ml';
 import { hasStoredModel, removeStoredModel } from '@securedata/ml/storage';
 import { DETECTION_LABELS, type DetectionType } from '@securedata/shared';
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { SITES } from '../content/sites';
 import type { AiRequest } from '../lib/ai';
 import { ApiError, login, logout, refreshSession, verify2fa } from '../lib/api';
 import { DEFAULT_API_BASE, getSettings, onSettingsChanged, saveSettings, type Settings } from '../lib/storage';
@@ -224,6 +225,9 @@ function ServerForm({ settings }: { settings: Settings }) {
   );
 }
 
+/** "ChatGPT, Claude, Gemini… y Copilot". */
+const siteList = new Intl.ListFormat('es', { type: 'conjunction' }).format(SITES.map((s) => s.name));
+
 const askWorker = async (req: AiRequest) => {
   try {
     await chrome.runtime.sendMessage(req);
@@ -350,8 +354,8 @@ export function Popup() {
       <div className="flex gap-3 rounded-xl bg-emerald-50 p-4 text-sm text-emerald-900 ring-1 ring-inset ring-emerald-200">
         <ShieldIcon className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
         <p>
-          <strong className="font-semibold">Protegiendo ChatGPT y Claude.</strong> Revisamos cada prompt en tu computadora y, si tiene datos sensibles, te
-          avisamos antes de enviarlo.
+          <strong className="font-semibold">Protegiendo {siteList}.</strong> Revisamos cada prompt en tu computadora y, si tiene datos sensibles, te avisamos
+          antes de enviarlo.
         </p>
       </div>
 

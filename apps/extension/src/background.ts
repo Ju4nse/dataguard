@@ -4,14 +4,13 @@
  */
 import { DETECTION_TYPES } from '@securedata/shared';
 import { handleAiMessage, onIdleAlarm, resumeAi } from './background-ai';
+import { siteFor } from './content/sites';
 import type { AiRequest, OffscreenEvent } from './lib/ai';
 import { refreshSession, sendEvent } from './lib/api';
 import type { Detection, Message } from './lib/messages';
 import { getSettings } from './lib/storage';
 
 const REFRESH_ALARM = 'refrescar-sesion';
-/** Sitios en los que corre el script de contenido (los mismos que el manifest). */
-const SITES = new Set(['chatgpt.com', 'chat.openai.com', 'claude.ai']);
 const ACTIONS = new Set(['eliminar', 'anonimizar', 'seudonimizar', 'mantener']);
 const DECISIONS = new Set(['enmascarado', 'ignorado', 'cancelado']);
 
@@ -52,7 +51,7 @@ async function recordEvent(message: Message, senderUrl: string | undefined) {
   if (!session || !senderUrl) return; // sin sesión la extensión protege igual, pero no registra nada
   const sitio = new URL(senderUrl).hostname.replace(/^www\./, '');
   const detecciones = cleanDetections(message.detecciones);
-  if (!SITES.has(sitio) || !DECISIONS.has(message.decision) || !detecciones?.length) return;
+  if (!siteFor(sitio) || !DECISIONS.has(message.decision) || !detecciones?.length) return;
   try {
     await sendEvent(sitio, message.decision, detecciones);
   } catch {

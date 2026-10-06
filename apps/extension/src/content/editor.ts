@@ -23,7 +23,8 @@ async function shows(composer: Composer, text: string): Promise<boolean> {
 
 /**
  * Reemplaza el texto del cuadro como si el usuario lo hubiera escrito, para que el editor del sitio
- * (ProseMirror en ChatGPT y Claude) actualice su estado. Devuelve false si no lo pudo reemplazar.
+ * (ProseMirror en ChatGPT y Claude, Quill en Gemini, Lexical en Perplexity) actualice su estado.
+ * Devuelve false si no lo pudo reemplazar.
  */
 export async function writeText(composer: Composer, text: string): Promise<boolean> {
   composer.focus();
@@ -34,12 +35,17 @@ export async function writeText(composer: Composer, text: string): Promise<boole
     return shows(composer, text);
   }
 
-  const range = document.createRange();
-  range.selectNodeContents(composer);
   const selection = window.getSelection()!;
-  selection.removeAllRanges();
-  selection.addRange(range);
+  /** Selecciona todo el cuadro. Algunos editores (Lexical) toman la selección un instante después: se espera. */
+  const selectAll = async () => {
+    const range = document.createRange();
+    range.selectNodeContents(composer);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    await new Promise((r) => setTimeout(r, 30));
+  };
 
+  await selectAll();
   if (text.includes('\n')) {
     // Varios renglones: como pegado, así el editor arma un párrafo por renglón.
     const data = new DataTransfer();
@@ -50,10 +56,8 @@ export async function writeText(composer: Composer, text: string): Promise<boole
   }
   if (await shows(composer, text)) return true;
 
-  // Último intento: insertar como texto escrito.
-  selection.removeAllRanges();
-  range.selectNodeContents(composer);
-  selection.addRange(range);
+  // Último intento: insertar como texto escrito (Gemini ignora el pegado, y así arma los párrafos igual).
+  await selectAll();
   document.execCommand('insertText', false, text);
   return shows(composer, text);
 }
