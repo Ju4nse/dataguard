@@ -1,5 +1,8 @@
+import { friendlyAiError, MODEL } from '@securedata/ml';
+import { hasStoredModel, removeStoredModel } from '@securedata/ml/storage';
 import { DETECTION_LABELS, type DetectionType } from '@securedata/shared';
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import type { AiRequest } from '../lib/ai';
 import { ApiError, login, logout, refreshSession, verify2fa } from '../lib/api';
 import { DEFAULT_API_BASE, getSettings, onSettingsChanged, saveSettings, type Settings } from '../lib/storage';
 
@@ -221,6 +224,104 @@ function ServerForm({ settings }: { settings: Settings }) {
   );
 }
 
+const askWorker = async (req: AiRequest) => {
+  try {
+    await chrome.runtime.sendMessage(req);
+  } catch {
+    // El service worker se reinicia con el próximo mensaje.
+  }
+};
+
+/** IA local: el mismo modelo que la app web, descargado una vez y guardado en esta computadora. */
+function AiSection({ settings }: { settings: Settings }) {
+  const { aiEnabled, aiStatus } = settings;
+  const [stored, setStored] = useState(false);
+  const [removing, setRemoving] = useState(false);
+
+  useEffect(() => {
+    if (aiEnabled) return;
+    (async () => setStored(await hasStoredModel()))();
+  }, [aiEnabled]);
+
+  const remove = async () => {
+    setRemoving(true);
+    await askWorker({ tipo: 'ia-desactivar' });
+    await removeStoredModel();
+    setStored(false);
+    setRemoving(false);
+  };
+
+  const estado = aiEnabled ? aiStatus.estado : 'apagada';
+  return (
+    <Section title="IA local">
+      {estado === 'apagada' && (
+        <>
+          <p className="text-sm text-slate-600">
+            Encuentra nombres, empresas, direcciones y datos de salud que las reglas no ven. Corre en tu computadora: tus prompts no salen de ella.
+          </p>
+          <Button className="w-full" onClick={() => void askWorker({ tipo: 'ia-activar' })}>
+            {stored ? 'Activar' : `Activar (descarga única de ${MODEL.sizeMb} MB)`}
+          </Button>
+          {stored && (
+            <Button variant="secondary" className="w-full" disabled={removing} onClick={() => void remove()}>
+              Borrar el modelo guardado
+            </Button>
+          )}
+        </>
+      )}
+      {estado === 'descargando' && (
+        <>
+          <div className="space-y-1">
+            <div className="flex justify-between text-sm text-slate-600">
+              <span>Descargando el modelo…</span>
+              <span className="tabular-nums">{Math.round(aiStatus.avance * 100)}%</span>
+            </div>
+            <div
+              className="h-2 overflow-hidden rounded-full bg-slate-100"
+              role="progressbar"
+              aria-valuenow={Math.round(aiStatus.avance * 100)}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            >
+              <div className="h-full rounded-full bg-brand-700 transition-[width]" style={{ width: `${aiStatus.avance * 100}%` }} />
+            </div>
+          </div>
+          <p className="text-xs text-slate-500">Podés cerrar esta ventana: la descarga sigue. Mientras tanto protegen las reglas.</p>
+        </>
+      )}
+      {estado === 'lista' && (
+        <>
+          <p className="flex items-center gap-2 text-sm text-emerald-800">
+            <span className="h-2 w-2 rounded-full bg-emerald-500" aria-hidden="true" />
+            Activa. Revisa cada prompt junto con las reglas.
+          </p>
+          <div className="flex gap-2">
+            <Button variant="secondary" className="flex-1" onClick={() => void askWorker({ tipo: 'ia-desactivar' })}>
+              Desactivar
+            </Button>
+            <Button variant="secondary" className="flex-1" disabled={removing} onClick={() => void remove()}>
+              Borrar el modelo
+            </Button>
+          </div>
+        </>
+      )}
+      {estado === 'error' && (
+        <>
+          <ErrorText>{friendlyAiError(aiStatus.error ?? '')}</ErrorText>
+          <div className="flex gap-2">
+            <Button className="flex-1" onClick={() => void askWorker({ tipo: 'ia-activar' })}>
+              Reintentar
+            </Button>
+            <Button variant="secondary" className="flex-1" onClick={() => void askWorker({ tipo: 'ia-desactivar' })}>
+              Desactivar
+            </Button>
+          </div>
+        </>
+      )}
+    </Section>
+  );
+}
+
 export function Popup() {
   const [settings, setSettings] = useState<Settings | null>(null);
 
@@ -254,6 +355,7 @@ export function Popup() {
         </p>
       </div>
 
+      {settings && <AiSection settings={settings} />}
       {settings && (settings.session ? <Connected settings={settings} /> : <LoginForm />)}
       {settings && <ServerForm key={settings.apiBase} settings={settings} />}
 

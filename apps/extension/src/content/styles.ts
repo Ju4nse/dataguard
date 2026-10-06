@@ -63,6 +63,7 @@ h2 { margin: 0; font-size: 17px; font-weight: 700; color: var(--ink); }
 .types li + li { border-top: 1px solid var(--line); }
 .type { font-weight: 600; }
 .count { color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.ai { padding: 0 6px; border-radius: 6px; background: var(--mark); color: var(--mark-ink); font-size: 11px; font-weight: 700; }
 .examples { margin-left: auto; color: var(--ink-2); font-family: ui-monospace, monospace; font-size: 12px; text-align: right; overflow-wrap: anywhere; }
 .label { margin: 0 0 6px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-2); }
 .preview {

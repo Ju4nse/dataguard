@@ -1,3 +1,4 @@
+import { AI_OFF, type AiStatus } from './ai';
 import type { Policy } from './protect';
 
 /** Usuario conectado y política de su empresa. No es secreto: la cookie de sesión la guarda Chrome (httpOnly). */
@@ -11,11 +12,15 @@ export interface Settings {
   /** Dirección del servidor de DataGuard (la API), sin "/api" al final. */
   apiBase: string;
   session: SessionInfo | null;
+  /** El usuario activó la IA local. */
+  aiEnabled: boolean;
+  /** Estado de la IA local (lo actualiza el service worker). */
+  aiStatus: AiStatus;
 }
 
 export const DEFAULT_API_BASE = 'http://localhost:8787';
 
-const DEFAULTS: Settings = { apiBase: DEFAULT_API_BASE, session: null };
+const DEFAULTS: Settings = { apiBase: DEFAULT_API_BASE, session: null, aiEnabled: false, aiStatus: AI_OFF };
 
 /** Configuración guardada en chrome.storage.local. Nunca se guardan prompts ni seudónimos. */
 export async function getSettings(): Promise<Settings> {

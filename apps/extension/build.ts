@@ -1,7 +1,7 @@
 /**
  * Compila la extensión en dist/ (cargala en chrome://extensions → "Cargar descomprimida").
  * Son dos compilaciones porque Chrome pide formatos distintos:
- *   1. Popup y service worker: módulos ES (el manifest declara "type": "module").
+ *   1. Popup, service worker y documento oculto de la IA local: módulos ES (el manifest declara "type": "module").
  *   2. Script de contenido: un solo archivo clásico (IIFE); los content scripts no pueden importar módulos.
  * Uso: npm run build -w @securedata/extension   ·   npm run dev -w @securedata/extension (recompila al guardar)
  */
@@ -18,6 +18,8 @@ const extensionPages: InlineConfig = {
   root,
   configFile: false,
   plugins: [react(), tailwindcss()],
+  // El worker de la IA local importa onnxruntime: tiene que ser un módulo.
+  worker: { format: 'es' },
   build: {
     outDir: 'dist',
     emptyOutDir: false,
@@ -25,7 +27,7 @@ const extensionPages: InlineConfig = {
     // Sin polyfill de modulepreload: Chrome lo trae y la CSP de las extensiones no admite scripts en línea.
     modulePreload: { polyfill: false },
     rollupOptions: {
-      input: { popup: resolve(root, 'popup.html'), background: resolve(root, 'src/background.ts') },
+      input: { popup: resolve(root, 'popup.html'), offscreen: resolve(root, 'offscreen.html'), background: resolve(root, 'src/background.ts') },
       output: { entryFileNames: '[name].js', chunkFileNames: 'chunks/[name]-[hash].js', assetFileNames: 'assets/[name]-[hash][extname]' },
     },
   },

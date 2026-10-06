@@ -1,4 +1,5 @@
 import type { Span } from '@securedata/detector';
+import { removeStoredModel as removeModelFiles } from '@securedata/ml/storage';
 import { create } from 'zustand';
 import type { AiRequest, AiResponse } from './ai.worker';
 import { friendlyAiError } from './device';
@@ -104,27 +105,11 @@ export function detectWithAi(segments: string[], onProgress?: (v: number) => voi
   });
 }
 
-/** Carpeta del sistema de archivos privado del navegador donde el worker guarda el modelo. */
-const MODEL_DIR = 'dataguard-modelos-v1';
-
 /** ¿Quedó el modelo guardado en el navegador? (por ejemplo, después de desactivar la IA) */
-export async function hasStoredModel(): Promise<boolean> {
-  try {
-    const dir = await (await navigator.storage.getDirectory()).getDirectoryHandle(MODEL_DIR);
-    const entries = (dir as unknown as { keys(): AsyncIterable<string> }).keys();
-    for await (const _ of entries) return true;
-    return false;
-  } catch {
-    return false;
-  }
-}
+export { hasStoredModel } from '@securedata/ml/storage';
 
 /** Desactiva la IA y borra el modelo guardado (libera varios cientos de MB). */
 export async function removeStoredModel(): Promise<void> {
   useAi.getState().disable();
-  try {
-    await (await navigator.storage.getDirectory()).removeEntry(MODEL_DIR, { recursive: true });
-  } catch {
-    // Ya no estaba.
-  }
+  await removeModelFiles();
 }

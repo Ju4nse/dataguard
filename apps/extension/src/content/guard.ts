@@ -1,20 +1,28 @@
 /**
  * Revisa el prompt al enviarlo y, si tiene datos sensibles, frena el envío y ofrece reemplazarlos por
- * seudónimos. Todo pasa en la página: el texto nunca sale de la computadora y al service worker solo
- * le llegan tipos y cantidades.
+ * seudónimos. Todo pasa en la computadora: al panel solo le llegan tipos y cantidades, y con la IA
+ * local activa el texto va al modelo dentro de la extensión, nunca a la red.
  */
 import { PseudonymRegistry } from '@securedata/detector';
 import type { Decision, Message } from '../lib/messages';
 import { analyzePrompt, protectPrompt, toDetections, type PromptAnalysis } from '../lib/protect';
 import { getSettings, onSettingsChanged, type Settings } from '../lib/storage';
+import { createAiClient } from './ai';
 import { readText, writeText } from './editor';
 import { composerFrom, findComposer, findSendButton, isSendButton, type Composer, type Site } from './sites';
-import { askUser, mountIndicator, setPendingCount, showCopyFallback, type Choice } from './ui';
+import { askUser, mountIndicator, setAiActive, setChecking, setPendingCount, showCopyFallback, type Choice } from './ui';
+
+/** Al enviar, cuánto se espera a la IA local como mucho (la primera vez carga el modelo del disco); después, solo reglas. */
+const AI_SEND_TIMEOUT_MS = 12_000;
 
 /** Activa la protección en la página. */
 export async function guard(site: Site) {
   let settings: Settings = await getSettings();
-  onSettingsChanged((s) => (settings = s));
+  const ai = createAiClient(() => settings.aiEnabled && settings.aiStatus.estado === 'lista');
+  onSettingsChanged((s) => {
+    settings = s;
+    setAiActive(ai.active());
+  });
   // Seudónimos de la pestaña: solo en memoria, se pierden al cerrarla. "Persona_01" es la misma en toda la conversación.
   let registry = new PseudonymRegistry();
   /** Mientras el aviso está abierto o se envía lo ya revisado, no se vuelve a interceptar. */
@@ -31,6 +39,7 @@ export async function guard(site: Site) {
   };
 
   mountIndicator({ rows: () => registry.entries(), forget: () => (registry = new PseudonymRegistry()) });
+  setAiActive(ai.active());
 
   /**
    * Envía lo que hay en el cuadro con el botón del sitio. Lo ya protegido pasa otra vez por la revisión
@@ -90,9 +99,40 @@ export async function guard(site: Site) {
     if (choice === 'proteger-enviar') await send(composer, false);
   }
 
-  /** Revisa el cuadro: si hay algo que proteger, abre el aviso y devuelve true (hay que frenar el envío). */
+  /**
+   * La IA local todavía no revisó este texto: se frena el envío, se espera su resultado (o el tiempo
+   * máximo) y se sigue como siempre. Si no encontró nada, se envía sin mostrar nada.
+   */
+  async function reviewWithAi(composer: Composer, text: string) {
+    busy = true;
+    setChecking();
+    let spans;
+    try {
+      spans = await ai.request(text, AI_SEND_TIMEOUT_MS);
+    } finally {
+      busy = false;
+    }
+    if (!spans) ai.skip(text); // sin respuesta: este texto queda revisado solo con las reglas
+    // Si el usuario siguió escribiendo mientras tanto, no se envía: lo hará de nuevo cuando termine.
+    if (readText(composer) !== text) {
+      setPendingCount(0);
+      return;
+    }
+    const a = analyzePrompt(text, policy(), registry, spans ?? []);
+    setPendingCount(0);
+    if (a) await review(composer, a);
+    else await send(composer, false);
+  }
+
+  /** Revisa el cuadro: si hay algo que proteger (o falta que lo revise la IA), frena el envío y devuelve true. */
   function intercept(composer: Composer): boolean {
-    const a = analyzePrompt(readText(composer), policy(), registry);
+    const text = readText(composer);
+    if (!text.trim()) return false;
+    if (ai.active() && !ai.has(text)) {
+      void reviewWithAi(composer, text);
+      return true;
+    }
+    const a = analyzePrompt(text, policy(), registry, ai.get(text));
     if (!a) return false;
     void review(composer, a);
     return true;
@@ -136,18 +176,23 @@ export async function guard(site: Site) {
     true,
   );
 
-  // Aviso mientras se escribe (sin modificar nada).
+  // Aviso mientras se escribe (sin modificar nada). Con la IA local, el texto ya se va analizando.
+  const countIn = (text: string) => analyzePrompt(text, policy(), registry, ai.get(text))?.summary.reduce((n, s) => n + s.count, 0) ?? 0;
   let timer: ReturnType<typeof setTimeout> | undefined;
   document.addEventListener(
     'input',
     (e) => {
       const composer = composerFrom(site, e.target);
       if (!composer) return;
+      ai.prepare();
       clearTimeout(timer);
-      timer = setTimeout(() => {
-        const a = analyzePrompt(readText(composer), policy(), registry);
-        setPendingCount(a ? a.summary.reduce((n, s) => n + s.count, 0) : 0);
-      }, 400);
+      timer = setTimeout(async () => {
+        const text = readText(composer);
+        if (!busy) setPendingCount(countIn(text)); // si ya se está enviando, el indicador muestra eso
+        if (!ai.active() || !text.trim() || ai.has(text)) return;
+        await ai.request(text, AI_SEND_TIMEOUT_MS);
+        if (!busy && readText(composer) === text) setPendingCount(countIn(text));
+      }, 500);
     },
     true,
   );

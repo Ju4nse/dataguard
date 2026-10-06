@@ -38,10 +38,13 @@ function learnedTerms(registry: PseudonymRegistry): CustomTerm[] {
   return terms;
 }
 
-/** Analiza un prompt. Devuelve null si no hay nada que proteger. No modifica el registro de seudónimos. */
-export function analyzePrompt(text: string, policy: Policy, registry: PseudonymRegistry): PromptAnalysis | null {
+/**
+ * Analiza un prompt. Devuelve null si no hay nada que proteger. No modifica el registro de seudónimos.
+ * @param modelSpans lo que encontró la IA local en el texto (si está activa); se combina con las reglas.
+ */
+export function analyzePrompt(text: string, policy: Policy, registry: PseudonymRegistry, modelSpans: Span[] = []): PromptAnalysis | null {
   if (!text.trim()) return null;
-  const analysis = analyzeDocument([{ text }], learnedTerms(registry));
+  const analysis = analyzeDocument([{ text }], learnedTerms(registry), [], [modelSpans]);
   const decisions: Partial<Record<DetectionType, TypeDecision>> = {};
   for (const { type } of analysis.summary) decisions[type] = { action: documentActionFor(type, policy), prefix: PSEUDONYM_PREFIXES[type] };
   const summary = analysis.summary.filter((s) => decisions[s.type]!.action !== 'mantener');

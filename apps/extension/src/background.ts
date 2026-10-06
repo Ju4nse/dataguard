@@ -1,8 +1,10 @@
 /**
- * Service worker: mantiene la sesión y la política al día y registra los avisos en el panel.
+ * Service worker: mantiene la sesión y la política al día, registra los avisos en el panel y maneja la IA local.
  * Chrome lo apaga cuando no hay actividad, así que no guarda estado en variables: todo va a chrome.storage.
  */
 import { DETECTION_TYPES } from '@securedata/shared';
+import { handleAiMessage, onIdleAlarm, resumeAi } from './background-ai';
+import type { AiRequest, OffscreenEvent } from './lib/ai';
 import { refreshSession, sendEvent } from './lib/api';
 import type { Detection, Message } from './lib/messages';
 import { getSettings } from './lib/storage';
@@ -24,12 +26,14 @@ async function refreshQuietly() {
 async function setup() {
   await chrome.alarms.create(REFRESH_ALARM, { periodInMinutes: 30 });
   await refreshQuietly();
+  await resumeAi().catch(() => {});
 }
 
 chrome.runtime.onInstalled.addListener(() => void setup());
 chrome.runtime.onStartup.addListener(() => void setup());
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === REFRESH_ALARM) void refreshQuietly();
+  else void onIdleAlarm(alarm.name);
 });
 
 /** Se rearma el evento campo por campo: aunque un script de contenido tuviera un bug, al servidor solo llegan metadatos. */
@@ -56,6 +60,8 @@ async function recordEvent(message: Message, senderUrl: string | undefined) {
   }
 }
 
-chrome.runtime.onMessage.addListener((message: Message, sender) => {
-  if (sender.id === chrome.runtime.id && message?.tipo === 'evento') void recordEvent(message, sender.url);
+chrome.runtime.onMessage.addListener((message: Message | AiRequest | OffscreenEvent, sender, sendResponse) => {
+  if (sender.id !== chrome.runtime.id) return;
+  if (message?.tipo === 'evento') void recordEvent(message, sender.url);
+  else if (typeof message?.tipo === 'string' && message.tipo.startsWith('ia-')) return handleAiMessage(message as AiRequest | OffscreenEvent, sendResponse);
 });

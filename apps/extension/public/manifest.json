@@ -29,7 +29,10 @@
       "run_at": "document_idle"
     }
   ],
-  "permissions": ["storage", "alarms"],
+  "permissions": ["storage", "alarms", "offscreen", "unlimitedStorage"],
   "host_permissions": ["http://localhost:8787/*", "http://127.0.0.1:8787/*"],
-  "optional_host_permissions": ["https://*/*"]
+  "optional_host_permissions": ["https://*/*"],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  }
 }

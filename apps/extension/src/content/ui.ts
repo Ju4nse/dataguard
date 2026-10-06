@@ -71,6 +71,7 @@ export function askUser(o: AskOptions): Promise<Choice> {
         {},
         h('span', { class: 'type' }, DETECTION_LABELS[s.type]),
         h('span', { class: 'count' }, `×${s.count}`),
+        s.ai > 0 && h('span', { class: 'ai', title: 'Lo encontró la IA local' }, 'IA'),
         h('span', { class: 'examples' }, s.examples.join(' · ')),
       ),
     ),
@@ -150,23 +151,37 @@ let pillText: HTMLSpanElement | null = null;
 let panel: HTMLDivElement | null = null;
 let getRows: () => EquivalenceRow[] = () => [];
 let onForget: () => void = () => {};
+let idleText = 'DataGuard activo';
 
 /** Indicador fijo abajo a la derecha: avisa mientras se escribe y abre la lista de seudónimos. */
 export function mountIndicator(opts: { rows: () => EquivalenceRow[]; forget: () => void }): void {
   getRows = opts.rows;
   onForget = opts.forget;
-  pillText = h('span', {}, 'DataGuard activo');
+  pillText = h('span', {}, idleText);
   pill = h('button', { class: 'pill', type: 'button', 'aria-expanded': 'false', title: 'DataGuard: ver los seudónimos de esta pestaña' }, shield(), pillText);
   pill.addEventListener('click', togglePanel);
   shadow().append(pill);
+}
+
+/** Texto del indicador cuando no hay nada que avisar (con la IA local activa lo dice). */
+export function setAiActive(on: boolean): void {
+  const next = on ? 'DataGuard activo · IA local' : 'DataGuard activo';
+  if (pillText?.textContent === idleText) pillText.textContent = next;
+  idleText = next;
 }
 
 /** Cantidad de datos sensibles en lo que se está escribiendo (0: ninguno). */
 export function setPendingCount(count: number): void {
   if (!pill || !pillText) return;
   pill.classList.toggle('warn', count > 0);
-  pillText.textContent =
-    count === 0 ? 'DataGuard activo' : count === 1 ? '1 dato sensible: se protege al enviar' : `${count} datos sensibles: se protegen al enviar`;
+  pillText.textContent = count === 0 ? idleText : count === 1 ? '1 dato sensible: se protege al enviar' : `${count} datos sensibles: se protegen al enviar`;
+}
+
+/** Al enviar, mientras la IA local termina de revisar el prompt. */
+export function setChecking(): void {
+  if (!pill || !pillText) return;
+  pill.classList.remove('warn');
+  pillText.textContent = 'Revisando con la IA local…';
 }
 
 function togglePanel() {
