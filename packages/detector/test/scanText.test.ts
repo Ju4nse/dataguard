@@ -23,6 +23,38 @@ describe('scanText', () => {
     expect(types('Pedido nro 12345678 despachado')).toEqual([]);
   });
 
+  it('un número con forma de DNI sin la palabra "DNI" se protege igual, con confianza baja', () => {
+    const spans = scanText('hola soy juanse (30123456), te escribo por un reclamo');
+    expect(spans.find((s) => s.type === 'DNI')).toMatchObject({ value: '30123456', confidence: 'baja' });
+    expect(scanText('mi DNI es 30123456')[0]?.confidence).toBe('alta');
+    // Montos, cantidades, teléfonos y CUIT inválidos no.
+    expect(types('El total fue 15000000')).toEqual([]);
+    expect(types('Vendimos 12500000 unidades')).toEqual([]);
+    expect(types('llamame al 46751217')).toEqual([]);
+    expect(types('el CUIT 20-12345678-5 tiene mal el verificador')).toEqual([]);
+  });
+
+  it('detecta sueldos con el signo al final, en dólares o sin moneda pegados a "sueldo"', () => {
+    expect(scanText('mi sueldo es: 300000$ por mes').map((s) => s.value)).toEqual(['300000$']);
+    expect(scanText('cobra USD 2.500 por mes').map((s) => s.value)).toEqual(['USD 2.500']);
+    expect(scanText('sueldo neto 1.250.000').map((s) => s.value)).toEqual(['1.250.000']);
+    expect(types('sueldo 2025: aumentos')).toEqual([]);
+    expect(types('el sueldo de 1500 empleados')).toEqual([]);
+  });
+
+  it('detecta el nombre en una presentación, aunque sea un apodo en minúscula', () => {
+    const names = (text: string) =>
+      scanText(text)
+        .filter((s) => s.type === 'NOMBRE_PERSONA')
+        .map((s) => s.value);
+    expect(names('hola soy juanse, te escribo por un reclamo')).toEqual(['juanse']);
+    expect(names('mi nombre es juan perez')).toEqual(['juan perez']);
+    expect(names('Me llamo Ana Gómez y necesito ayuda')).toEqual(['Ana Gómez']);
+    expect(names('Hola, soy Juan')).toEqual(['Juan']);
+    expect(names('soy contador y trabajo en una pyme')).toEqual([]);
+    expect(names('soy analista de datos')).toEqual([]);
+  });
+
   it('no marca un número de 10 dígitos pegado sin contexto como teléfono', () => {
     expect(types('Código de operación 1145678901')).toEqual([]);
     expect(types('Tel: 1145678901')).toEqual(['TELEFONO']);

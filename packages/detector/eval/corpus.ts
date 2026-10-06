@@ -37,6 +37,11 @@ export const TEXT_CASES: TextCase[] = [
   },
   { id: 'pasaporte', text: 'Pasaporte [[PASAPORTE|AAB123456]], vence en 2030.' },
 
+  {
+    id: 'presentacion-apodo',
+    text: 'hola soy [[NOMBRE_PERSONA|juanse]] ([[DNI|30123456]]), [[EMAIL|juanse.prueba@gmail.com]], mi sueldo es: [[SALARIO|300000$]] por mes',
+  },
+  { id: 'me-llamo', text: 'Me llamo [[NOMBRE_PERSONA|Ana Gómez]] y te paso mi documento: [[DNI|27.345.901]].' },
   // ---------- Fiscal y bancario ----------
   {
     id: 'empresa-cuit-factura',
@@ -77,6 +82,7 @@ export const TEXT_CASES: TextCase[] = [
   // ---------- Salarios ----------
   { id: 'sueldo', text: 'El sueldo bruto de [[NOMBRE_PERSONA|Pablo Romero]] es de [[SALARIO|$ 1.850.000]] mensuales.' },
   { id: 'remuneracion', text: 'Remuneración acordada: [[SALARIO|2.300.000 pesos]] más bonos.' },
+  { id: 'sueldo-signo-al-final', text: 'Mi sueldo es: [[SALARIO|300000$]] por mes y el aguinaldo [[SALARIO|USD 1.200]].' },
   { id: 'neg-monto-venta', text: 'La venta total de marzo fue de $ 12.500.000 y el ticket promedio de $ 8.400.' },
 
   // ---------- Credenciales e infraestructura ----------
@@ -111,6 +117,8 @@ export const TEXT_CASES: TextCase[] = [
   { id: 'neg-procesamiento', text: 'Los datos se procesan en el navegador; no se envía información a servidores.' },
   { id: 'neg-articulo-cp', text: 'El artículo 12345678 cuesta $ 4.500 y el envío a CP 2000 es gratis.' },
   { id: 'neg-factura-telefono', text: 'Factura B 0003-00045678 emitida el 01/04/2025.' },
+  { id: 'neg-soy-profesion', text: 'Hola, soy contador y trabajo en una pyme de 12 personas.' },
+  { id: 'neg-cantidades', text: 'Vendimos 12500000 unidades; el total fue 15000000 y la población es de 46751217 habitantes.' },
   { id: 'neg-mayusculas-oracion', text: 'Entre Ríos y Santa Fe lideran las ventas. Mar del Plata creció un 8%.' },
 ];
 
