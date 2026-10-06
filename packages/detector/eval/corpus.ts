@@ -41,6 +41,7 @@ export const TEXT_CASES: TextCase[] = [
     id: 'presentacion-apodo',
     text: 'hola soy [[NOMBRE_PERSONA|juanse]] ([[DNI|30123456]]), [[EMAIL|juanse.prueba@gmail.com]], mi sueldo es: [[SALARIO|300000$]] por mes',
   },
+  { id: 'ficha-nombre-solo', text: '[[NOMBRE_PERSONA|Milagros]], [[SALARIO|$ 300000]], [[DNI|30123456]], [[EMAIL|mili.prueba@gmail.com]], emprendedora.' },
   { id: 'me-llamo', text: 'Me llamo [[NOMBRE_PERSONA|Ana Gómez]] y te paso mi documento: [[DNI|27.345.901]].' },
   // ---------- Fiscal y bancario ----------
   {
@@ -117,6 +118,7 @@ export const TEXT_CASES: TextCase[] = [
   { id: 'neg-procesamiento', text: 'Los datos se procesan en el navegador; no se envía información a servidores.' },
   { id: 'neg-articulo-cp', text: 'El artículo 12345678 cuesta $ 4.500 y el envío a CP 2000 es gratis.' },
   { id: 'neg-factura-telefono', text: 'Factura B 0003-00045678 emitida el 01/04/2025.' },
+  { id: 'neg-lugar-y-pasaje', text: 'Nos vemos en Rosario, el pasaje sale $ 30000 y la entrada $ 5000.' },
   { id: 'neg-soy-profesion', text: 'Hola, soy contador y trabajo en una pyme de 12 personas.' },
   { id: 'neg-cantidades', text: 'Vendimos 12500000 unidades; el total fue 15000000 y la población es de 46751217 habitantes.' },
   { id: 'neg-mayusculas-oracion', text: 'Entre Ríos y Santa Fe lideran las ventas. Mar del Plata creció un 8%.' },

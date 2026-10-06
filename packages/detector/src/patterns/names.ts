@@ -158,6 +158,35 @@ function collectIntroName(tokens: Token[], from: number, gap: (a: Token, b: Toke
   return last;
 }
 
+/** Nombre de pila solo, sin apellido ("Lucía", "Milagros"). */
+export interface LoneFirstName {
+  span: Span;
+  /** También es un lugar o una palabra común (Milagros, Rosario, Paz): necesita más evidencia. */
+  ambiguous: boolean;
+  /** Es un campo de una lista o ficha: al principio del renglón o entre comas, "|" o ";". */
+  field: boolean;
+}
+
+/** Nombres de pila del diccionario, con mayúscula, que no forman parte de un nombre completo ni de un lugar. */
+export function findLoneFirstNames(text: string): LoneFirstName[] {
+  const tokens = tokenize(text);
+  const out: LoneFirstName[] = [];
+  tokens.forEach((t, i) => {
+    if (!isCap(t.word) || isAllCaps(t.word) || !FIRST_NAMES.has(t.folded)) return;
+    const prev = tokens[i - 1];
+    const before = text.slice(prev ? prev.end : 0, t.start);
+    if (prev && /^\.?[ \t]+$/.test(before) && (PLACE_BEFORE.has(prev.folded) || PLACE_PREPOSITIONS.has(prev.folded))) return;
+    const after = text.slice(t.end).match(/^[^\p{L}\d]*/u)![0];
+    const field = /(?:^|[\n,;|:])[ \t]*$/.test(text.slice(0, t.start)) && /^[ \t]*(?:[,;|\n]|$)/.test(after);
+    out.push({
+      span: { type: 'NOMBRE_PERSONA', start: t.start, end: t.end, value: t.word, confidence: 'baja' },
+      ambiguous: AMBIGUOUS.has(t.folded),
+      field,
+    });
+  });
+  return out;
+}
+
 export function findNames(text: string): Span[] {
   const tokens = tokenize(text);
   const out: Span[] = [];

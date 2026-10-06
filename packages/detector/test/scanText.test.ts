@@ -8,7 +8,7 @@ describe('scanText', () => {
     const text =
       'Cliente Juan, DNI 30.123.456, CUIT 20-12345678-6, mail juan.perez@gmail.com, ' +
       'cel +54 9 11 4567-8901, CBU 2850590940090418135201, tarjeta 4111 1111 1111 1111.';
-    expect(types(text)).toEqual(['DNI', 'CUIT_CUIL', 'EMAIL', 'TELEFONO', 'CBU_CVU', 'TARJETA']);
+    expect(types(text)).toEqual(['NOMBRE_PERSONA', 'DNI', 'CUIT_CUIL', 'EMAIL', 'TELEFONO', 'CBU_CVU', 'TARJETA']);
   });
 
   it('devuelve posiciones exactas', () => {
@@ -40,6 +40,21 @@ describe('scanText', () => {
     expect(scanText('sueldo neto 1.250.000').map((s) => s.value)).toEqual(['1.250.000']);
     expect(types('sueldo 2025: aumentos')).toEqual([]);
     expect(types('el sueldo de 1500 empleados')).toEqual([]);
+  });
+
+  it('en la ficha de una persona, el nombre solo y el monto también son datos personales', () => {
+    expect(scanText('Milagros, $ 300000, 30123456, mili@gmail.com, emprendedora.').map((s) => `${s.type}:${s.value}`)).toEqual([
+      'NOMBRE_PERSONA:Milagros',
+      'SALARIO:$ 300000',
+      'DNI:30123456',
+      'EMAIL:mili@gmail.com',
+    ]);
+    expect(types('Le escribí a Lucía ayer')).toEqual(['NOMBRE_PERSONA']);
+    // Sin datos de una persona en el renglón, ni el lugar ni el monto.
+    expect(types('Nos vemos en Rosario, el pasaje sale $ 30000.')).toEqual([]);
+    // Con una empresa o una factura, el monto es del negocio.
+    expect(types('Distribuidora del Sur S.R.L., mail ventas@dsur.com.ar, facturó $ 1.250.000')).not.toContain('SALARIO');
+    expect(types('Juan Pérez, juan@gmail.com, total del pedido $ 45.000')).not.toContain('SALARIO');
   });
 
   it('detecta el nombre en una presentación, aunque sea un apodo en minúscula', () => {
