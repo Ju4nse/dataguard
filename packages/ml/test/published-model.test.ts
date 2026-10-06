@@ -22,9 +22,8 @@ describe('el modelo publicado es el mismo que usa el código', () => {
     expect(workflow).toContain(`apps/web/dist/${MODEL_PATH.replace(/\/$/, '')}`);
   });
 
-  it('scripts que generan y publican el modelo', () => {
-    expect(read('scripts/quantize-model.py')).toContain(`"${folder}"`);
-    expect(read('scripts/quantize-model.py')).toContain(`"${onnxFile}"`);
+  // quantize-model.py no entra: es una herramienta general (--entrada/--salida, también para el modelo entrenado).
+  it('script que publica el modelo', () => {
     const prepare = read('scripts/preparar-modelo-pages.py');
     expect(prepare).toContain(`"${folder}"`);
     expect(prepare).toContain(`"${onnxFile}"`);
