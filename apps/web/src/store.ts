@@ -10,6 +10,7 @@ import {
   documentActionFor,
   fold,
   jsonLeaves,
+  PseudonymRegistry,
   rebuildJson,
   transformDocument,
   type ColumnDecision,
@@ -20,11 +21,13 @@ import {
   type JsonLeaf,
   type Segment,
   type Span,
+  type Table,
   type TransformResult,
   type TypeDecision,
 } from '@securedata/detector';
 import { PSEUDONYM_PREFIXES, type Action, type DetectionType } from '@securedata/shared';
 import { detectWithAi, useAi } from './lib/ai';
+import { protectTable } from './lib/docTables';
 import { sendEvent, type Session } from './lib/api';
 import { ACCEPTED_EXTENSIONS, extensionOf, MAX_SIZE_MB, parseFile, type FileFormat, type ParsedSheet } from './lib/files';
 
@@ -37,6 +40,8 @@ export interface DocumentResult {
   text: string;
   equivalences: EquivalenceRow[];
   transformedCounts: Partial<Record<DetectionType, number>>;
+  /** Las tablas del documento, protegidas con los mismos seudónimos (para los gráficos). */
+  tables: Table[];
 }
 
 interface State {
@@ -74,6 +79,8 @@ interface State {
   aiError: string | null;
   typeDecisions: Partial<Record<DetectionType, TypeDecision>>;
   docResult: DocumentResult | null;
+  /** Tablas que tiene adentro el documento (Word), para graficarlas. */
+  docTables: ParsedSheet[];
 
   /** Sesión opcional del empleado: trae la política de su empresa y habilita el envío de metadatos al panel. */
   session: Session | null;
@@ -156,6 +163,7 @@ const empty = {
   aiError: null,
   typeDecisions: {},
   docResult: null,
+  docTables: [],
   usageSent: false,
 };
 
@@ -268,6 +276,7 @@ export const useStore = create<State>((set, get) => ({
         fileName: file.name,
         format: parsed.kind === 'json' ? 'json' : parsed.format,
         segments,
+        docTables: parsed.kind === 'documento' ? (parsed.tables ?? []) : [],
         jsonRoot: parsed.kind === 'json' ? parsed.root : null,
         ignoredValues: [],
         analysis,
@@ -378,13 +387,16 @@ export const useStore = create<State>((set, get) => ({
     })),
 
   applyDocument: () => {
-    const { segments, analysis, typeDecisions, format, jsonRoot } = get();
+    const { segments, analysis, typeDecisions, format, jsonRoot, docTables, customTerms, ignoredValues, session } = get();
     if (!analysis) return;
-    const res = transformDocument(segments, analysis.spans, typeDecisions);
+    // Un solo registro para el texto y sus tablas: "Persona_01" es la misma en los dos.
+    const registry = new PseudonymRegistry();
+    const res = transformDocument(segments, analysis.spans, typeDecisions, registry);
+    const tables = docTables.map((t) => protectTable(t, typeDecisions, session?.politica ?? {}, registry, customTerms, ignoredValues));
     const text =
       // En JSON, cada segmento es una hoja con su ruta (ver loadFile).
       format === 'json' ? JSON.stringify(rebuildJson(jsonRoot, segments as JsonLeaf[], res.texts), null, 2) : res.texts.join('');
-    set({ docResult: { text, equivalences: res.equivalences, transformedCounts: res.transformedCounts }, step: 'resultado' });
+    set({ docResult: { text, equivalences: registry.entries(), transformedCounts: res.transformedCounts, tables }, step: 'resultado' });
   },
 
   backToReview: () => set({ step: 'revisar' }),
@@ -400,8 +412,8 @@ export const useStore = create<State>((set, get) => ({
     const { result, docResult } = get();
     if (step === 'subir') get().reset();
     else if (step === 'traducir' || step === 'chat') set({ step });
-    // Los gráficos son de planillas: con un documento se vuelve a su resultado.
-    else if (step === 'graficos' && !result) set({ step: docResult ? 'resultado' : 'subir' });
+    // Gráficos: de una planilla o de las tablas de un documento (si no tiene, se vuelve a su resultado).
+    else if (step === 'graficos' && !result && !(docResult && get().docTables.length)) set({ step: docResult ? 'resultado' : 'subir' });
     else if (result || docResult) set({ step });
     else get().reset();
   },

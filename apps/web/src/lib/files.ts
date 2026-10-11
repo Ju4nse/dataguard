@@ -14,7 +14,7 @@ export interface ParseRequest {
 
 export type ParseOk =
   | { ok: true; kind: 'tabla'; format: 'csv' | 'xlsx' | 'json'; delimiter: string; sheets: ParsedSheet[] }
-  | { ok: true; kind: 'documento'; format: 'docx' | 'txt' | 'md' | 'pdf'; text: string }
+  | { ok: true; kind: 'documento'; format: 'docx' | 'txt' | 'md' | 'pdf'; text: string; /** Tablas del documento (Word). */ tables?: ParsedSheet[] }
   | { ok: true; kind: 'json'; root: unknown };
 
 export type ParseResponse = ParseOk | { ok: false; error: string };

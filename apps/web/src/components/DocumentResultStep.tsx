@@ -10,7 +10,7 @@ const PREVIEW_CHARS = 20000;
 const FORMAT_NAMES: Record<string, string> = { pdf: 'PDF', docx: 'Word', txt: 'texto', md: 'Markdown', json: 'JSON' };
 
 export function DocumentResultStep() {
-  const { docResult, analysis, fileName, format, recordUsage } = useStore();
+  const { docResult, analysis, fileName, format, recordUsage, docTables, openCharts } = useStore();
   const [copyState, setCopyState] = useState<'idle' | 'ok' | 'error'>('idle');
   if (!docResult) return null;
   const { text, equivalences, transformedCounts } = docResult;
@@ -59,6 +59,12 @@ export function DocumentResultStep() {
               <Icon name="download" className="h-4 w-4" />
               Descargar .{ext}
             </Button>
+            {docTables.length > 0 && (
+              <Button variant="secondary" onClick={openCharts}>
+                <Icon name="chart" className="h-4 w-4" />
+                Graficar {docTables.length === 1 ? 'la tabla' : `las ${docTables.length} tablas`}
+              </Button>
+            )}
           </>
         }
       />

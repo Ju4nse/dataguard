@@ -291,3 +291,202 @@ export function formatValue(n: number, money = false): string {
   const text = n.toLocaleString('es-AR', { maximumFractionDigits: abs < 10 ? 2 : abs < 1000 ? 1 : 0 });
   return money ? `$ ${text}` : text;
 }
+
+// ---------- Comparaciones ----------
+
+export interface PeriodOption {
+  key: string;
+  label: string;
+}
+
+/** Períodos con datos de una columna de fechas (en orden), con la granularidad que corresponde al rango. */
+export function periodOptions(table: Table, dateColumn: number): { granularity: Granularity; options: PeriodOption[] } {
+  const dates = table.rows.map((r) => parseDate(r[dateColumn] ?? null)).filter((d): d is Date => d !== null);
+  const granularity = granularityFor(dates);
+  const seen = new Map<string, string>();
+  for (const d of dates) {
+    const p = periodKey(d, granularity);
+    seen.set(p.key, p.label);
+  }
+  return { granularity, options: [...seen].sort(([a], [b]) => a.localeCompare(b)).map(([key, label]) => ({ key, label })) };
+}
+
+/** Valores de una categoría, de los que más filas tienen a los que menos. */
+export function categoryOptions(table: Table, column: number): string[] {
+  const counts = new Map<string, { label: string; n: number }>();
+  for (const row of table.rows) {
+    const raw = row[column] ?? null;
+    if (isEmpty(raw)) continue;
+    const label = cellToString(raw).trim();
+    const c = counts.get(label.toLowerCase()) ?? { label, n: 0 };
+    c.n += 1;
+    counts.set(label.toLowerCase(), c);
+  }
+  return [...counts.values()].sort((a, b) => b.n - a.n).map((c) => c.label);
+}
+
+export interface ComparisonRow {
+  label: string;
+  a: number;
+  b: number;
+}
+
+export interface Comparison {
+  title: string;
+  valueLabel: string;
+  money: boolean;
+  /** Lo que se compara ("mar 25" y "abr 25", o "Córdoba" y "Salta"). */
+  labelA: string;
+  labelB: string;
+  /** Primera columna de la tabla: "Provincia", "Período" o "" (un solo total). */
+  rowLabel: string;
+  /** 'tiempo': filas en orden (la evolución de las dos); 'ranking': de mayor a menor. */
+  shape: 'tiempo' | 'ranking';
+  rows: ComparisonRow[];
+  totalA: number;
+  totalB: number;
+  /** Cuánto cambia B respecto de A, en % (null si A es 0). */
+  pct: number | null;
+}
+
+interface Measure {
+  measure: number | null;
+  operation: Operation;
+}
+
+/** Suma y cuenta por clave, y devuelve el valor según la operación. */
+function accumulator(operation: Operation) {
+  const groups = new Map<string, { sum: number; count: number }>();
+  return {
+    add(key: string, value: number) {
+      const g = groups.get(key) ?? { sum: 0, count: 0 };
+      g.sum += value;
+      g.count += 1;
+      groups.set(key, g);
+    },
+    get(key: string): number {
+      const g = groups.get(key);
+      if (!g) return 0;
+      return operation === 'promedio' ? (g.count ? g.sum / g.count : 0) : operation === 'conteo' ? g.count : g.sum;
+    },
+  };
+}
+
+const measureValue = (row: CellValue[], m: Measure) => (m.measure === null ? 1 : parseNumber(row[m.measure] ?? null));
+const changePct = (a: number, b: number) => (a === 0 ? null : ((b - a) / Math.abs(a)) * 100);
+const measureLabel = (m: Measure, profiles: ColumnProfile[]) => valueLabel({ dimension: 0, measure: m.measure, operation: m.operation }, profiles);
+const isMoney = (m: Measure, profiles: ColumnProfile[]) => m.measure !== null && profiles[m.measure]!.money && m.operation !== 'conteo';
+
+/** Totales de los dos grupos y, si se pide, desglose por una clave de cada fila. */
+function compareGroups(
+  table: Table,
+  m: Measure,
+  inA: (row: CellValue[]) => boolean,
+  inB: (row: CellValue[]) => boolean,
+  keyOf?: (row: CellValue[]) => string | null,
+) {
+  const acc = accumulator(m.operation);
+  for (const row of table.rows) {
+    const v = measureValue(row, m);
+    if (v === null) continue;
+    const key = keyOf?.(row);
+    if (inA(row)) {
+      acc.add('a', v);
+      if (key) acc.add(`a|${key}`, v);
+    }
+    if (inB(row)) {
+      acc.add('b', v);
+      if (key) acc.add(`b|${key}`, v);
+    }
+  }
+  return { totalA: acc.get('a'), totalB: acc.get('b'), row: (key: string) => ({ a: acc.get(`a|${key}`), b: acc.get(`b|${key}`) }) };
+}
+
+/**
+ * Compara dos períodos (dos meses, dos años…), en total o desglosado por una categoría
+ * ("Monto por Provincia en marzo y en abril").
+ */
+export function comparePeriods(table: Table, profiles: ColumnProfile[], o: Measure & { date: number; a: string; b: string; by: number | null }): Comparison {
+  const { granularity, options } = periodOptions(table, o.date);
+  const label = (key: string) => options.find((p) => p.key === key)?.label ?? key;
+  const periodOf = (row: CellValue[]) => {
+    const d = parseDate(row[o.date] ?? null);
+    return d ? periodKey(d, granularity).key : null;
+  };
+  const names = new Map<string, string>();
+  const keyOf =
+    o.by === null
+      ? undefined
+      : (row: CellValue[]) => {
+          const raw = row[o.by!] ?? null;
+          if (isEmpty(raw)) return null;
+          const name = cellToString(raw).trim();
+          names.set(name.toLowerCase(), name);
+          return name.toLowerCase();
+        };
+  const g = compareGroups(
+    table,
+    o,
+    (r) => periodOf(r) === o.a,
+    (r) => periodOf(r) === o.b,
+    keyOf,
+  );
+  const rows =
+    o.by === null
+      ? [{ label: 'Total', a: g.totalA, b: g.totalB }]
+      : [...names]
+          .map(([key, name]) => ({ label: name, ...g.row(key) }))
+          .filter((r) => r.a !== 0 || r.b !== 0)
+          .sort((x, y) => Math.max(y.a, y.b) - Math.max(x.a, x.b))
+          .slice(0, TOP);
+  const by = o.by !== null ? profiles[o.by]!.header : '';
+  const measure = measureLabel(o, profiles);
+  return {
+    title: `${measure}${by ? ` por ${by}` : ''}: ${label(o.a)} y ${label(o.b)}`,
+    valueLabel: measure,
+    money: isMoney(o, profiles),
+    labelA: label(o.a),
+    labelB: label(o.b),
+    rowLabel: by,
+    shape: 'ranking',
+    rows,
+    totalA: g.totalA,
+    totalB: g.totalB,
+    pct: changePct(g.totalA, g.totalB),
+  };
+}
+
+/** Compara dos valores de una categoría ("Córdoba" y "Salta"): su evolución si hay fechas, si no el total. */
+export function compareCategories(
+  table: Table,
+  profiles: ColumnProfile[],
+  o: Measure & { column: number; a: string; b: string; date: number | null },
+): Comparison {
+  const is = (value: string) => (row: CellValue[]) =>
+    cellToString(row[o.column] ?? null)
+      .trim()
+      .toLowerCase() === value.toLowerCase();
+  const periods = o.date !== null ? periodOptions(table, o.date) : null;
+  const keyOf = periods
+    ? (row: CellValue[]) => {
+        const d = parseDate(row[o.date!] ?? null);
+        return d ? periodKey(d, periods.granularity).key : null;
+      }
+    : undefined;
+  const g = compareGroups(table, o, is(o.a), is(o.b), keyOf);
+  const rows = periods ? periods.options.map((p) => ({ label: p.label, ...g.row(p.key) })) : [{ label: 'Total', a: g.totalA, b: g.totalB }];
+  const measure = measureLabel(o, profiles);
+  return {
+    title: `${measure}${periods ? ' por período' : ''}: ${o.a} y ${o.b}`,
+    valueLabel: measure,
+    money: isMoney(o, profiles),
+    labelA: o.a,
+    labelB: o.b,
+    rowLabel: periods ? 'Período' : '',
+    shape: periods ? 'tiempo' : 'ranking',
+    rows,
+    totalA: g.totalA,
+    totalB: g.totalB,
+    pct: changePct(g.totalA, g.totalB),
+  };
+}

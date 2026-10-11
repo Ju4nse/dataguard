@@ -2,6 +2,7 @@
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import { jsonAsTable, type CellValue } from '@securedata/detector';
+import { tablesFromHtml } from './docTables';
 import type { ParsedSheet, ParseRequest, ParseResponse } from './files';
 
 /** Los CSV/TXT exportados en Windows en Argentina suelen venir en Windows-1252, no en UTF-8. */
@@ -55,9 +56,15 @@ async function parse(file: File): Promise<ParseResponse> {
 
   if (ext === '.docx') {
     const mammoth = await import('mammoth');
-    const { value } = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
+    const arrayBuffer = await file.arrayBuffer();
+    const { value } = await mammoth.extractRawText({ arrayBuffer });
+    // Las tablas, para graficarlas: el texto plano las pierde, el HTML las conserva.
+    const { value: html } = await mammoth.convertToHtml({ arrayBuffer });
+    const tables = tablesFromHtml(html)
+      .map((rows, i) => toSheet(`Tabla ${i + 1}`, rows))
+      .filter((t) => t.headers.length >= 2 && t.rows.length >= 2);
     // mammoth separa los párrafos con líneas en blanco dobles.
-    return { ok: true, kind: 'documento', format: 'docx', text: value.replace(/\n{3,}/g, '\n\n').trim() };
+    return { ok: true, kind: 'documento', format: 'docx', text: value.replace(/\n{3,}/g, '\n\n').trim(), tables };
   }
 
   if (ext === '.txt' || ext === '.md') {

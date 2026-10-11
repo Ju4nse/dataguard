@@ -1,6 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import type { Table } from '@securedata/detector';
-import { buildChart, formatValue, granularityFor, parseDate, parseNumber, profileColumns, suggestCharts, summarize, variation } from './charts';
+import {
+  buildChart,
+  categoryOptions,
+  compareCategories,
+  comparePeriods,
+  formatValue,
+  granularityFor,
+  parseDate,
+  parseNumber,
+  periodOptions,
+  profileColumns,
+  suggestCharts,
+  summarize,
+  variation,
+} from './charts';
 
 describe('parseNumber', () => {
   it('entiende el formato argentino y el inglés', () => {
@@ -145,5 +159,47 @@ describe('resumen', () => {
     expect(granularityFor([d('2025-01-01'), d('2025-02-15')])).toBe('dia');
     expect(granularityFor([d('2025-01-01'), d('2026-06-01')])).toBe('mes');
     expect(granularityFor([d('2019-01-01'), d('2025-06-01')])).toBe('anio');
+  });
+});
+
+describe('comparaciones', () => {
+  const p = profileColumns(VENTAS);
+
+  it('lista los períodos con datos y los valores de una categoría', () => {
+    expect(periodOptions(VENTAS, 0).options.map((o) => o.key)).toEqual(['2025-01', '2025-02', '2025-04']);
+    expect(categoryOptions(VENTAS, 2)).toEqual(['Córdoba', 'Santa Fe']);
+  });
+
+  it('dos períodos, desglosados por provincia', () => {
+    const c = comparePeriods(VENTAS, p, { date: 0, a: '2025-01', b: '2025-04', by: 2, measure: 4, operation: 'suma' });
+    expect(c.rows).toEqual([
+      { label: 'Córdoba', a: 100000, b: 30000 },
+      { label: 'Santa Fe', a: 50000, b: 70000 },
+    ]);
+    expect([c.totalA, c.totalB]).toEqual([150000, 100000]);
+    expect(c.pct).toBeCloseTo(-33.33, 1);
+    expect(c.rowLabel).toBe('Provincia');
+  });
+
+  it('dos períodos en total (sin desglose)', () => {
+    const c = comparePeriods(VENTAS, p, { date: 0, a: '2025-01', b: '2025-02', by: null, measure: null, operation: 'conteo' });
+    expect(c.rows).toEqual([{ label: 'Total', a: 2, b: 1 }]);
+    expect(c.pct).toBe(-50);
+  });
+
+  it('dos categorías: su evolución si hay fechas', () => {
+    const c = compareCategories(VENTAS, p, { column: 2, a: 'Córdoba', b: 'santa fe', date: 0, measure: 4, operation: 'suma' });
+    expect(c.shape).toBe('tiempo');
+    expect(c.rows.map((r) => [r.a, r.b])).toEqual([
+      [100000, 50000],
+      [200000, 0],
+      [30000, 70000],
+    ]);
+    expect([c.totalA, c.totalB]).toEqual([330000, 120000]);
+  });
+
+  it('dos categorías sin fechas: el total de cada una', () => {
+    const c = compareCategories(VENTAS, p, { column: 1, a: 'Ferretería Central', b: 'Lácteos Norte', date: null, measure: 4, operation: 'promedio' });
+    expect(c.rows).toEqual([{ label: 'Total', a: 150000, b: 60000 }]);
   });
 });

@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { Bar, BarChart, CartesianGrid, LabelList, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, type TooltipContentProps } from 'recharts';
 import { cellToString, type Table } from '@securedata/detector';
 import {
   buildChart,
@@ -16,18 +15,39 @@ import {
   type Operation,
 } from '../lib/charts';
 import { useStore } from '../store';
-import { Button, Card, Icon, prefersReducedMotion, selectClass } from './ui';
+import { ChartCard } from './charts/ChartParts';
+import { CompareCard } from './charts/CompareCard';
+import { Button, Card, Icon, selectClass } from './ui';
+
+/** Una tabla para graficar: la original y su versión protegida. */
+interface Source {
+  name: string;
+  real: Table;
+  protegida: Table;
+}
+
+/** Planilla: la hoja actual. Documento (Word): cada tabla que tenga adentro. */
+function useSources(): { sources: Source[]; kind: 'planilla' | 'documento' } {
+  const { mode, result, sheets, sheetIndex, docTables, docResult } = useStore();
+  if (mode === 'tabla') {
+    const sheet = sheets[sheetIndex];
+    return { kind: 'planilla', sources: sheet && result ? [{ name: sheet.name, real: sheet, protegida: result.table }] : [] };
+  }
+  return { kind: 'documento', sources: docResult ? docTables.map((t, i) => ({ name: t.name, real: t, protegida: docResult.tables[i] ?? t })) : [] };
+}
 
 /**
- * Gráficos de la planilla: se calculan en el navegador, sin IA y sin mandar nada. Por defecto con los
- * datos reales (nadie más los ve); con seudónimos, para compartir una captura sin datos sensibles.
+ * Gráficos: se calculan en el navegador, sin IA y sin mandar nada. Por defecto con los datos reales
+ * (nadie más los ve); con seudónimos, para compartir una imagen sin datos sensibles.
  */
 export default function ChartsStep() {
-  const { result, sheets, sheetIndex, fileName, backToResult } = useStore();
+  const { fileName, sheets, backToResult } = useStore();
+  const { sources, kind } = useSources();
   const [source, setSource] = useState<'real' | 'protegida'>('real');
-  const original = sheets[sheetIndex];
-  if (!result || !original) return null;
-  const table = source === 'real' ? original : result.table;
+  const [index, setIndex] = useState(0);
+  const current = sources[Math.min(index, sources.length - 1)];
+  if (!current) return null;
+  const table = current[source];
 
   return (
     <div className="space-y-6">
@@ -37,11 +57,13 @@ export default function ChartsStep() {
             <Icon name="arrowLeft" className="h-4 w-4" />
             Volver al resultado
           </Button>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Gráficos de tu planilla</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            {kind === 'planilla' ? 'Gráficos de tu planilla' : 'Gráficos de las tablas del documento'}
+          </h1>
           <p className="flex items-start gap-1.5 text-sm text-slate-600">
             <Icon name="lock" className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
             {fileName}
-            {sheets.length > 1 ? ` · hoja ${original.name}` : ''}. Se calculan en tu navegador: ningún dato sale de tu computadora.
+            {kind === 'planilla' && sheets.length > 1 ? ` · hoja ${current.name}` : ''}. Se calculan en tu navegador: ningún dato sale de tu computadora.
           </p>
         </div>
         <div className="space-y-1">
@@ -63,11 +85,24 @@ export default function ChartsStep() {
               </button>
             ))}
           </div>
-          <p className="text-xs text-slate-500">{source === 'real' ? 'Solo vos los ves.' : 'Para compartir una captura sin datos sensibles.'}</p>
+          <p className="text-xs text-slate-500">{source === 'real' ? 'Solo vos los ves.' : 'Para compartir una imagen sin datos sensibles.'}</p>
         </div>
       </div>
-      {/* Al cambiar de datos se arma todo de nuevo (las columnas pueden cambiar: la versión protegida puede no tener algunas). */}
-      <ChartsView key={source} table={table} />
+      {sources.length > 1 && (
+        <label className="flex max-w-sm flex-col gap-1.5 text-sm font-medium text-slate-700">
+          <span>Tabla</span>
+          <select className={selectClass} value={index} onChange={(e) => setIndex(Number(e.target.value))}>
+            {sources.map((s, i) => (
+              <option key={i} value={i}>
+                {s.name} ({s.real.headers.slice(0, 3).join(', ')}
+                {s.real.headers.length > 3 ? '…' : ''})
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      {/* Al cambiar de tabla o de datos se arma todo de nuevo (la versión protegida puede no tener algunas columnas). */}
+      <ChartsView key={`${index}-${source}`} table={table} />
     </div>
   );
 }
@@ -80,7 +115,7 @@ function ChartsView({ table }: { table: Table }) {
   if (dimensions.length === 0) {
     return (
       <Card className="space-y-2 p-6">
-        <h2 className="font-semibold text-slate-900">No encontramos qué graficar en esta hoja</h2>
+        <h2 className="font-semibold text-slate-900">No encontramos qué graficar en esta tabla</h2>
         <p className="text-sm text-slate-600">
           Hace falta una columna con fechas o con valores que se repiten (Provincia, Cliente, Producto…) y, si querés sumar, otra con números (Monto, Cantidad).
           Las columnas de identificadores (DNI, CUIT, teléfono) no se grafican.
@@ -99,6 +134,7 @@ function ChartsView({ table }: { table: Table }) {
         ))}
       </div>
       <Builder table={table} profiles={profiles} dimensions={dimensions} initial={charts[0]?.spec} />
+      <CompareCard table={table} profiles={profiles} />
     </>
   );
 }
@@ -142,161 +178,6 @@ function SummaryCards({ table, profiles, time }: { table: Table; profiles: Colum
         </p>
       )}
     </section>
-  );
-}
-
-// ---------- Gráficos ----------
-
-const AXIS_TICK = { fill: 'var(--ink-muted)', fontSize: 12 };
-/** Con "menos movimiento" pedido en el sistema, los gráficos aparecen sin animación. */
-const animate = () => !prefersReducedMotion();
-const CURSOR = { fill: 'rgba(42,120,214,0.06)' };
-/** Más períodos que esto se leen mejor como línea que como columnas. */
-const MAX_COLUMNS = 36;
-
-/** Tarjeta con su vista de tabla: los valores nunca dependen solo del gráfico (ni del color). */
-function ChartCard({ chart, bare = false }: { chart: ChartData; bare?: boolean }) {
-  const [asTable, setAsTable] = useState(false);
-  const body = (
-    <>
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div>
-          <h2 className="text-sm font-semibold text-slate-900">{chart.title}</h2>
-          {chart.grouped > 0 && chart.spec.operation === 'promedio' && <p className="text-xs text-slate-500">Se muestran las 10 con el promedio más alto.</p>}
-        </div>
-        <div className="-mr-2 -mt-2 flex shrink-0 items-center">
-          <button
-            type="button"
-            onClick={() => setAsTable((v) => !v)}
-            className="inline-flex min-h-11 items-center rounded-md px-3 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 sm:min-h-8"
-          >
-            {asTable ? 'Ver gráfico' : 'Ver tabla'}
-          </button>
-        </div>
-      </div>
-      {chart.points.length === 0 ? (
-        <p className="text-sm text-slate-500">No hay valores para graficar con esta combinación.</p>
-      ) : asTable ? (
-        <div className="max-h-72 overflow-auto">
-          <table className="w-full text-sm">
-            <thead className="text-left text-xs text-slate-500">
-              <tr>
-                <th className="pb-2 font-medium">{chart.dimensionLabel}</th>
-                <th className="pb-2 text-right font-medium">{chart.valueLabel}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {chart.points.map((p, i) => (
-                <tr key={i}>
-                  <td className="py-1.5">{p.label}</td>
-                  <td className="py-1.5 text-right tabular-nums">{formatValue(p.value, chart.money)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : chart.shape === 'tiempo' ? (
-        <TimeChart chart={chart} />
-      ) : (
-        <RankingChart chart={chart} />
-      )}
-    </>
-  );
-  return bare ? <div className="flex flex-col">{body}</div> : <Card className="flex flex-col p-5">{body}</Card>;
-}
-
-/** Tooltip de los gráficos (Recharts le pasa active, payload y label). */
-function ChartTooltip({ active, payload, label, chart }: Partial<TooltipContentProps<number, string>> & { chart: ChartData }) {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="rounded-lg border border-black/10 bg-white px-3 py-2 text-xs shadow-sm">
-      <div className="text-slate-600">{label}</div>
-      <div className="font-semibold text-slate-900">
-        {formatValue(Number(payload[0]!.value), chart.money)} <span className="font-normal text-slate-600">· {chart.valueLabel}</span>
-      </div>
-    </div>
-  );
-}
-
-/** Eje con números cortos: "1,2 M", "350 k". */
-const shortNumber = (money: boolean) => (n: number) => {
-  const abs = Math.abs(n);
-  const text =
-    abs >= 1e6
-      ? `${(n / 1e6).toLocaleString('es-AR', { maximumFractionDigits: 1 })} M`
-      : abs >= 1e3
-        ? `${(n / 1e3).toLocaleString('es-AR', { maximumFractionDigits: 1 })} k`
-        : n.toLocaleString('es-AR');
-  return money ? `$ ${text}` : text;
-};
-
-/** Evolución: una sola serie → un color, sin leyenda (el título la nombra). Columnas si son pocos períodos, línea si son muchos. */
-function TimeChart({ chart }: { chart: ChartData }) {
-  const axis = {
-    x: <XAxis dataKey="label" tick={AXIS_TICK} tickLine={false} axisLine={{ stroke: 'var(--axis)' }} interval="preserveStartEnd" minTickGap={12} />,
-    y: <YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} width={chart.money ? 64 : 48} tickFormatter={shortNumber(chart.money)} />,
-  };
-  return (
-    <div className="h-64">
-      <ResponsiveContainer width="100%" height="100%">
-        {chart.points.length <= MAX_COLUMNS ? (
-          <BarChart data={chart.points} margin={{ top: 8, right: 8, bottom: 0, left: 0 }} barCategoryGap="30%">
-            <CartesianGrid vertical={false} stroke="var(--grid)" />
-            {axis.x}
-            {axis.y}
-            <Tooltip content={<ChartTooltip chart={chart} />} cursor={CURSOR} />
-            <Bar dataKey="value" fill="var(--series-1)" radius={[4, 4, 0, 0]} maxBarSize={48} isAnimationActive={animate()} />
-          </BarChart>
-        ) : (
-          <LineChart data={chart.points} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-            <CartesianGrid vertical={false} stroke="var(--grid)" />
-            {axis.x}
-            {axis.y}
-            <Tooltip content={<ChartTooltip chart={chart} />} cursor={{ stroke: 'var(--axis)' }} />
-            <Line
-              dataKey="value"
-              stroke="var(--series-1)"
-              strokeWidth={2}
-              dot={false}
-              isAnimationActive={animate()}
-              activeDot={{ r: 4, strokeWidth: 2, stroke: 'var(--surface-1)' }}
-            />
-          </LineChart>
-        )}
-      </ResponsiveContainer>
-    </div>
-  );
-}
-
-/** Ranking horizontal: nombres largos legibles y el valor al final de cada barra. */
-function RankingChart({ chart }: { chart: ChartData }) {
-  const height = Math.max(120, chart.points.length * 36 + 16);
-  const labelWidth = Math.min(170, Math.max(56, ...chart.points.map((d) => d.label.length * 7 + 12)));
-  return (
-    <div style={{ height }}>
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={chart.points} layout="vertical" margin={{ top: 0, right: chart.money ? 84 : 56, bottom: 0, left: 0 }} barCategoryGap={8}>
-          <XAxis type="number" hide />
-          <YAxis
-            type="category"
-            dataKey="label"
-            tick={{ ...AXIS_TICK, fill: 'var(--ink-secondary)' }}
-            tickLine={false}
-            axisLine={{ stroke: 'var(--axis)' }}
-            width={labelWidth}
-          />
-          <Tooltip content={<ChartTooltip chart={chart} />} cursor={CURSOR} />
-          <Bar dataKey="value" fill="var(--series-1)" radius={[0, 4, 4, 0]} maxBarSize={18} isAnimationActive={animate()}>
-            <LabelList
-              dataKey="value"
-              position="right"
-              formatter={(v) => shortNumber(chart.money)(Number(v))}
-              style={{ fill: 'var(--ink-secondary)', fontSize: 12 }}
-            />
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
   );
 }
 

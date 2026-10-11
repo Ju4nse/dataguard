@@ -71,6 +71,8 @@ La app del empleado funciona **sin** API ni base: el procesamiento es 100% en el
 
 Después de proteger una planilla (CSV, Excel o JSON en forma de tabla), **Ver gráficos** muestra un resumen (total, promedio, máximo y mínimo de la columna de plata, y cuánto subió o bajó entre el primer y el último período) y los gráficos que conviene ver: la evolución por día, mes o año si hay una columna de fechas, y rankings por las columnas que se repiten (Cliente, Provincia, Producto). **Armá tu gráfico** permite elegir cómo agrupar y qué medir (cantidad de filas, total o promedio de una columna numérica).
 
+**Comparar** pone dos períodos uno al lado del otro (un mes contra otro, en total o desglosado por una categoría) o dos valores de una categoría (una provincia contra otra, con su evolución si hay fechas), con la diferencia en %. Cada gráfico se puede **descargar como imagen** (PNG, armada en el navegador con su título y leyenda) y tiene su vista de tabla. Los **Word con tablas** también se grafican: las tablas se sacan del documento (`apps/web/src/lib/docTables.ts`) y su versión "con seudónimos" usa los mismos seudónimos que el texto (de un PDF no, porque sus tablas no se pueden reconstruir de forma confiable).
+
 Se calcula en el navegador, sin IA y sin mandar nada (`apps/web/src/lib/charts.ts`): reconoce números con formato argentino ("$ 1.250.000", "1.250,50") y fechas día/mes/año, y deja afuera los identificadores (DNI, CUIT, teléfono) y el texto libre. Por defecto muestra los datos reales (solo los ve quien usa la app); **Con seudónimos** usa la versión protegida, para compartir una captura. Cada gráfico tiene su vista de tabla y la librería (Recharts) se carga recién al abrir este paso.
 
 ## IA local (GLiNER)

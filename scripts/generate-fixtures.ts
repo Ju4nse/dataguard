@@ -193,4 +193,38 @@ writeFileSync(
   ),
 );
 
-console.log('Generados en fixtures/: clientes_demo.xlsx/.csv, prompt_con_datos.txt, contrato.txt/.docx/.pdf, clientes.json, pedido.json');
+// ---------- Word con una tabla (para graficar las tablas de un documento) ----------
+// Al final: usa el generador aleatorio, así no cambia nada de lo generado antes.
+const { Table: DocxTable, TableRow, TableCell, WidthType } = await import('docx');
+const ventas = Array.from({ length: 30 }, (_, i) => {
+  const fecha = new Date(2025, Math.floor(i / 5), 1 + Math.floor(rand() * 27));
+  return [
+    fecha.toLocaleDateString('es-AR'),
+    persona(),
+    pick(PROVINCIAS),
+    pick(PRODUCTOS),
+    `$ ${(20_000 + Math.floor(rand() * 280_000)).toLocaleString('es-AR')}`,
+  ];
+});
+const cell = (text: string, bold = false) => new TableCell({ children: [new Paragraph({ children: [new TextRun({ text, bold })] })] });
+const informe = new Document({
+  sections: [
+    {
+      children: [
+        new Paragraph({ children: [new TextRun({ text: 'INFORME DE VENTAS - PRIMER SEMESTRE 2025', bold: true })] }),
+        new Paragraph(`Preparado por ${firmante} para la gerencia de ${c1.nombre}. Detalle de las operaciones del semestre:`),
+        new DocxTable({
+          width: { size: 100, type: WidthType.PERCENTAGE },
+          rows: [
+            new TableRow({ children: ['Fecha', 'Vendedor', 'Provincia', 'Producto', 'Monto'].map((h) => cell(h, true)) }),
+            ...ventas.map((r) => new TableRow({ children: r.map((v) => cell(v)) })),
+          ],
+        }),
+        new Paragraph('Consultas: ventas@empresa.com.ar'),
+      ],
+    },
+  ],
+});
+writeFileSync('fixtures/informe_ventas.docx', await Packer.toBuffer(informe));
+
+console.log('Generados en fixtures/: clientes_demo.xlsx/.csv, prompt_con_datos.txt, contrato.txt/.docx/.pdf, clientes.json, pedido.json, informe_ventas.docx');
