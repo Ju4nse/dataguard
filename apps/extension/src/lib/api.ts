@@ -1,5 +1,5 @@
 import { ApiError } from '@securedata/shared/http';
-import type { Decision, Detection } from './messages';
+import type { Decision, Detection, Message } from './messages';
 import type { Policy } from './protect';
 import { getSettings, saveSettings, type SessionInfo } from './storage';
 
@@ -58,6 +58,13 @@ export async function refreshSession(): Promise<SessionInfo | null> {
 }
 
 /** Registra un aviso de la extensión: sitio, decisión, tipos y cantidades. Nunca el texto del prompt. */
-export async function sendEvent(sitio: string, decision: Decision, detecciones: Detection[]): Promise<void> {
-  await call('/eventos', { origen: 'extension', tipoEntrada: 'prompt', sitio, decision, detecciones });
+export async function sendEvent(sitio: string, decision: Decision, detecciones: Detection[], archivo?: Message['archivo']): Promise<void> {
+  await call('/eventos', {
+    origen: 'extension',
+    tipoEntrada: archivo?.entrada ?? 'prompt',
+    ...(archivo ? { tipoArchivo: archivo.formato, filas: archivo.filas } : {}),
+    sitio,
+    decision,
+    detecciones,
+  });
 }

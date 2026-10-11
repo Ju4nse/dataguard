@@ -1,5 +1,5 @@
 import type { EquivalenceRow } from '@securedata/detector';
-import { DETECTION_LABELS } from '@securedata/shared';
+import { DETECTION_LABELS, type DetectionType } from '@securedata/shared';
 import type { PromptAnalysis } from '../lib/protect';
 import { STYLES } from './styles';
 
@@ -144,6 +144,117 @@ export function showCopyFallback(protectedText: string): Promise<void> {
   return new Promise((resolve) => dialog.addEventListener('close', () => (dialog.remove(), resolve())));
 }
 
+// ---------- Aviso antes de subir un archivo ----------
+
+export type FileChoice = 'subir-protegido' | 'subir-original' | 'descargar' | 'cancelar';
+
+export interface FileAskOptions {
+  site: string;
+  files: {
+    name: string;
+    summary: { type: DetectionType; count: number }[];
+    /** Nombre con el que se sube la versión protegida, si cambia (Word y PDF van como .txt). */
+    protectedName: string;
+  }[];
+  /** Archivos que no se pudieron leer, con el motivo. */
+  unreadable: { name: string; reason: string }[];
+  /** Comienzo de la versión protegida del primer archivo, para mostrar cómo queda. */
+  preview: string;
+  pseudonyms: string[];
+  enforced: boolean;
+  organizacion: string | null;
+}
+
+/** Aviso al adjuntar archivos con datos sensibles (o que no se pudieron revisar). Esc o clic afuera: cancelar. */
+export function askAboutFiles(o: FileAskOptions): Promise<FileChoice> {
+  const total = o.files.reduce((n, f) => n + f.summary.reduce((m, s) => m + s.count, 0), 0);
+  const many = o.files.length + o.unreadable.length > 1;
+  const title =
+    o.files.length === 0
+      ? many
+        ? 'No pude revisar los archivos'
+        : 'No pude revisar el archivo'
+      : total === 1
+        ? `${many ? 'Los archivos tienen' : 'El archivo tiene'} un dato sensible`
+        : `${many ? 'Los archivos tienen' : 'El archivo tiene'} ${total} datos sensibles`;
+  const fileList = h(
+    'ul',
+    { class: 'files' },
+    ...o.files.map((f) =>
+      h(
+        'li',
+        {},
+        h('p', { class: 'file-name' }, f.name, f.protectedName !== f.name && h('span', { class: 'muted' }, ` → se sube como ${f.protectedName}`)),
+        h(
+          'ul',
+          { class: 'types' },
+          ...f.summary.map((s) => h('li', {}, h('span', { class: 'type' }, DETECTION_LABELS[s.type]), h('span', { class: 'count' }, `×${s.count}`))),
+        ),
+      ),
+    ),
+    ...o.unreadable.map((u) => h('li', {}, h('p', { class: 'file-name' }, u.name), h('p', { class: 'muted' }, `No se pudo revisar: ${u.reason}.`))),
+  );
+  const canProtect = o.files.length > 0;
+  const primary = canProtect
+    ? h('button', { class: 'btn primary', value: 'subir-protegido' }, many ? 'Subir protegidos' : 'Subir protegido')
+    : h('button', { class: 'btn primary', value: 'subir-original' }, 'Subir igual');
+  const dialog = h(
+    'dialog',
+    { class: 'ask', 'aria-labelledby': 'dg-title' },
+    h(
+      'form',
+      { method: 'dialog' },
+      h('header', {}, shield(), h('h2', { id: 'dg-title' }, title)),
+      h(
+        'p',
+        { class: 'lead' },
+        canProtect
+          ? `Antes de subirlo a ${o.site}, DataGuard reemplaza esos datos por seudónimos. Todavía no se subió nada.`
+          : `DataGuard no pudo leerlo, así que no sabe si tiene datos sensibles. Todavía no se subió nada.`,
+      ),
+      fileList,
+      canProtect && h('p', { class: 'label' }, 'Así queda'),
+      canProtect && h('pre', { class: 'preview' }, ...highlighted(o.preview, o.pseudonyms)),
+      o.enforced && h('p', { class: 'policy' }, `La política de ${o.organizacion ?? 'tu empresa'} pide proteger estos datos antes de usarlos con una IA.`),
+      h(
+        'footer',
+        {},
+        canProtect && h('button', { class: 'btn link', value: 'descargar' }, 'Descargar protegido'),
+        h('span', { class: 'spacer' }),
+        h('button', { class: 'btn', value: 'cancelar' }, 'Cancelar'),
+        canProtect && !o.enforced && h('button', { class: 'btn', value: 'subir-original' }, 'Subir el original'),
+        primary,
+      ),
+    ),
+  );
+  shadow().append(dialog);
+  dialog.showModal();
+  primary.focus();
+  return new Promise((resolve) => {
+    // Se responde apenas se elige (no al evento "close", que Chrome puede demorar en una pestaña sin dibujar).
+    let done = false;
+    const finish = (choice: string) => {
+      if (done) return;
+      done = true;
+      if (dialog.open) dialog.close();
+      dialog.remove();
+      resolve((choice || 'cancelar') as FileChoice);
+    };
+    dialog.querySelector('form')!.addEventListener('submit', (e) => {
+      e.preventDefault();
+      finish(e.submitter instanceof HTMLButtonElement ? e.submitter.value : 'cancelar');
+    });
+    dialog.addEventListener('cancel', (e) => {
+      e.preventDefault(); // Esc
+      finish('cancelar');
+    });
+    dialog.addEventListener('click', (e) => {
+      if (e.target === dialog) finish('cancelar'); // clic en el fondo
+    });
+    dialog.addEventListener('close', () => finish(dialog.returnValue));
+  });
+}
+
 // ---------- Indicador y seudónimos de la pestaña ----------
 
 let pill: HTMLButtonElement | null = null;
@@ -177,11 +288,18 @@ export function setPendingCount(count: number): void {
   pillText.textContent = count === 0 ? idleText : count === 1 ? '1 dato sensible: se protege al enviar' : `${count} datos sensibles: se protegen al enviar`;
 }
 
-/** Al enviar, mientras la IA local termina de revisar el prompt. */
-export function setChecking(): void {
+/** Al enviar, mientras la IA local termina de revisar el prompt (o mientras se revisa un archivo adjunto). */
+export function setChecking(text = 'Revisando con la IA local…'): void {
   if (!pill || !pillText) return;
   pill.classList.remove('warn');
-  pillText.textContent = 'Revisando con la IA local…';
+  pillText.textContent = text;
+}
+
+/** Vuelve el indicador a su estado normal (después de revisar un archivo). */
+export function setIdle(): void {
+  if (!pill || !pillText) return;
+  pill.classList.remove('warn');
+  pillText.textContent = idleText;
 }
 
 function togglePanel() {

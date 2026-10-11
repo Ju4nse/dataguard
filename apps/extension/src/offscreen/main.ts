@@ -5,7 +5,9 @@
  */
 import type { ModelSpan } from '@securedata/ml';
 import type { AiDetectResponse, OffscreenEvent, OffscreenRequest } from '../lib/ai';
+import type { OffscreenFileRequest } from '../lib/files';
 import type { WorkerRequest, WorkerResponse } from './ai.worker';
+import { buildExcel, readFile } from './files';
 
 const worker = new Worker(new URL('./ai.worker.ts', import.meta.url), { type: 'module' });
 let nextId = 1;
@@ -50,8 +52,14 @@ worker.onerror = (e) => {
 
 const send = (req: WorkerRequest) => worker.postMessage(req);
 
-chrome.runtime.onMessage.addListener((message: OffscreenRequest, sender, sendResponse) => {
-  if (sender.id !== chrome.runtime.id || message?.destino !== 'ia') return;
+chrome.runtime.onMessage.addListener((message: OffscreenRequest | OffscreenFileRequest, sender, sendResponse) => {
+  if (sender.id !== chrome.runtime.id) return;
+  if (message?.destino === 'archivo') {
+    const run = message.tipo === 'leer' ? readFile(message.nombre, message.datos) : buildExcel(message.hojas);
+    void run.then(sendResponse);
+    return true;
+  }
+  if (message?.destino !== 'ia') return;
   if (message.tipo === 'cargar') {
     send({ type: 'cargar' });
     return;

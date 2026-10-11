@@ -173,8 +173,16 @@ export function anonymizeValue(type: DetectionType, v: CellValue): string {
 /**
  * @param cellSpans lo que encontró la IA local en las celdas de texto libre (columna → fila → fragmentos).
  */
-export function applyDecisions(table: Table, decisions: Record<number, ColumnDecision>, cellSpans?: Map<number, Map<number, Span[]>>): TransformResult {
-  const registry = new PseudonymRegistry();
+/**
+ * @param registry seudónimos a usar (por defecto, uno nuevo para este archivo). La extensión pasa el de la
+ * pestaña: "Persona_01" en el archivo es la misma persona que en el prompt.
+ */
+export function applyDecisions(
+  table: Table,
+  decisions: Record<number, ColumnDecision>,
+  cellSpans?: Map<number, Map<number, Span[]>>,
+  registry: PseudonymRegistry = new PseudonymRegistry(),
+): TransformResult {
   const counts: Partial<Record<DetectionType, number>> = {};
   const bump = (t: DetectionType) => (counts[t] = (counts[t] ?? 0) + 1);
 

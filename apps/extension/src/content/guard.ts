@@ -1,6 +1,6 @@
 /**
- * Revisa el prompt al enviarlo y, si tiene datos sensibles, frena el envío y ofrece reemplazarlos por
- * seudónimos. Todo pasa en la computadora: al panel solo le llegan tipos y cantidades, y con la IA
+ * Revisa el prompt al enviarlo (y los archivos al adjuntarlos) y, si tienen datos sensibles, frena el envío
+ * y ofrece reemplazarlos por seudónimos. Todo pasa en la computadora: al panel solo le llegan tipos y cantidades, y con la IA
  * local activa el texto va al modelo dentro de la extensión, nunca a la red.
  */
 import { PseudonymRegistry } from '@securedata/detector';
@@ -9,6 +9,7 @@ import { analyzePrompt, protectPrompt, toDetections, type PromptAnalysis } from 
 import { getSettings, onSettingsChanged, type Settings } from '../lib/storage';
 import { createAiClient } from './ai';
 import { readText, writeText } from './editor';
+import { guardFiles } from './files';
 import { clickableFrom, composerFrom, findComposer, findSendButton, isDisabled, isSendButton, type Composer, type Site } from './sites';
 import { askUser, mountIndicator, setAiActive, setChecking, setPendingCount, showCopyFallback, type Choice } from './ui';
 
@@ -40,6 +41,15 @@ export async function guard(site: Site) {
 
   mountIndicator({ rows: () => registry.entries(), forget: () => (registry = new PseudonymRegistry()) });
   setAiActive(ai.active());
+
+  // Archivos adjuntos (clip, arrastrar o pegar): mismos seudónimos y misma política que los prompts.
+  guardFiles({
+    siteName: site.name,
+    policy,
+    registry: () => registry,
+    organizacion: () => settings.session?.organizacion ?? null,
+    aiSpans: async (text) => (await ai.request(text, AI_SEND_TIMEOUT_MS)) ?? [],
+  });
 
   /**
    * Envía lo que hay en el cuadro con el botón del sitio. Lo ya protegido pasa otra vez por la revisión

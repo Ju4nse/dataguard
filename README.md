@@ -130,6 +130,8 @@ La API corre en modo producción (cookie segura, secreto propio), escucha solo e
 
 Mientras se escribe, un indicador abajo a la derecha avisa cuántos datos sensibles hay. Al tocarlo muestra los seudónimos de la pestaña (`Persona_01` → nombre real) para leer la respuesta de la IA. Los seudónimos viven solo en la memoria de la pestaña: son los mismos en toda la conversación y se borran al cerrarla. **Nunca se guardan prompts**: con sesión, al panel llegan solo el sitio, la decisión (enmascarado / ignorado / cancelado) y los tipos con sus cantidades (`origen: extension`, `tipoEntrada: prompt`).
 
+**Archivos adjuntos:** también revisa lo que se adjunta con el clip, arrastrándolo o pegándolo (`apps/extension/src/content/files.ts`). CSV, TSV, TXT, Markdown y JSON se leen en la página; Excel, Word y PDF, en el documento oculto de la extensión (`src/offscreen/files.ts`), para no cargar esas librerías en el chat. Si hay datos sensibles, el sitio todavía no recibió nada: el aviso muestra qué encontró y cómo queda, y ofrece **subir la versión protegida** (con los mismos seudónimos de la pestaña), subir el original (salvo que la política lo exija), descargar la versión protegida o cancelar. Word y PDF se suben como texto (`.txt`); Excel vuelve como Excel. Las imágenes, el audio y los comprimidos pasan sin cambios (no hay OCR). Al panel llega `tipoEntrada: tabla` o `documento`, la extensión del archivo y la cantidad de filas, nunca el nombre ni el contenido.
+
 **Probarla:**
 
 1. `npm run build -w @securedata/extension` (o `npm run dev:extension`, que recompila al guardar).

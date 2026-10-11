@@ -3,9 +3,10 @@
  * Chrome lo apaga cuando no hay actividad, así que no guarda estado en variables: todo va a chrome.storage.
  */
 import { DETECTION_TYPES } from '@securedata/shared';
-import { handleAiMessage, onIdleAlarm, resumeAi } from './background-ai';
+import { ensureOffscreen, handleAiMessage, onIdleAlarm, resumeAi, touch } from './background-ai';
 import { siteFor } from './content/sites';
 import type { AiRequest, OffscreenEvent } from './lib/ai';
+import type { FileRequest, OffscreenFileRequest } from './lib/files';
 import { refreshSession, sendEvent } from './lib/api';
 import type { Detection, Message } from './lib/messages';
 import { getSettings } from './lib/storage';
@@ -46,21 +47,47 @@ function cleanDetections(list: unknown): Detection[] | null {
   return out;
 }
 
+/** Del archivo solo viajan el tipo de entrada, la extensión y la cantidad de filas (null: dato inválido). */
+function cleanFile(a: Message['archivo']): Message['archivo'] | null {
+  if (a === undefined) return undefined;
+  if ((a.entrada !== 'tabla' && a.entrada !== 'documento') || !/^[a-z0-9]{1,8}$/.test(a.formato)) return null;
+  if (a.filas !== undefined && (!Number.isInteger(a.filas) || a.filas < 0)) return null;
+  return { entrada: a.entrada, formato: a.formato, filas: a.filas };
+}
+
+/** Archivos adjuntos: el documento oculto lee Excel, Word y PDF, y arma el Excel protegido. Los bytes no salen de la extensión. */
+async function handleFile(message: FileRequest): Promise<unknown> {
+  await ensureOffscreen();
+  await touch();
+  const req: OffscreenFileRequest =
+    message.tipo === 'archivo-leer'
+      ? { destino: 'archivo', tipo: 'leer', nombre: message.nombre, datos: message.datos }
+      : { destino: 'archivo', tipo: 'excel', hojas: message.hojas };
+  return (await chrome.runtime.sendMessage(req)) ?? { ok: false, error: 'el lector de archivos no respondió' };
+}
+
 async function recordEvent(message: Message, senderUrl: string | undefined) {
   const { session } = await getSettings();
   if (!session || !senderUrl) return; // sin sesión la extensión protege igual, pero no registra nada
   const sitio = new URL(senderUrl).hostname.replace(/^www\./, '');
   const detecciones = cleanDetections(message.detecciones);
   if (!siteFor(sitio) || !DECISIONS.has(message.decision) || !detecciones?.length) return;
+  const archivo = cleanFile(message.archivo);
+  if (archivo === null) return;
   try {
-    await sendEvent(sitio, message.decision, detecciones);
+    await sendEvent(sitio, message.decision, detecciones, archivo);
   } catch {
     // Un evento perdido no frena al usuario: la protección ya se aplicó en la página.
   }
 }
 
-chrome.runtime.onMessage.addListener((message: Message | AiRequest | OffscreenEvent, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message: Message | AiRequest | OffscreenEvent | FileRequest, sender, sendResponse) => {
   if (sender.id !== chrome.runtime.id) return;
   if (message?.tipo === 'evento') void recordEvent(message, sender.url);
-  else if (typeof message?.tipo === 'string' && message.tipo.startsWith('ia-')) return handleAiMessage(message as AiRequest | OffscreenEvent, sendResponse);
+  else if (message?.tipo === 'archivo-leer' || message?.tipo === 'archivo-excel') {
+    // Solo desde los scripts de contenido (las pestañas), no desde el propio documento oculto.
+    if (!sender.tab) return;
+    handleFile(message).then(sendResponse, (e: unknown) => sendResponse({ ok: false, error: e instanceof Error ? e.message : String(e) }));
+    return true;
+  } else if (typeof message?.tipo === 'string' && message.tipo.startsWith('ia-')) return handleAiMessage(message as AiRequest | OffscreenEvent, sendResponse);
 });

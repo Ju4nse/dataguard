@@ -20,13 +20,13 @@ async function hasOffscreen(): Promise<boolean> {
   return contexts.length > 0;
 }
 
-async function ensureOffscreen(): Promise<void> {
+export async function ensureOffscreen(): Promise<void> {
   if (await hasOffscreen()) return;
   creating ??= chrome.offscreen
     .createDocument({
       url: OFFSCREEN_URL,
       reasons: [chrome.offscreen.Reason.WORKERS],
-      justification: 'Corre el modelo de IA local que detecta datos personales en los prompts.',
+      justification: 'Corre el modelo de IA local que detecta datos personales en los prompts y lee los archivos adjuntos (Excel, Word, PDF) para revisarlos.',
     })
     .finally(() => (creating = null));
   await creating;
@@ -37,7 +37,8 @@ async function closeOffscreen() {
 }
 
 const toOffscreen = (req: OffscreenRequest) => chrome.runtime.sendMessage(req);
-const touch = () => chrome.alarms.create(IDLE_ALARM, { delayInMinutes: IDLE_MINUTES });
+/** Posterga el cierre del documento oculto por inactividad. */
+export const touch = () => chrome.alarms.create(IDLE_ALARM, { delayInMinutes: IDLE_MINUTES });
 
 async function setStatus(status: AiStatus) {
   await saveSettings({ aiStatus: status });

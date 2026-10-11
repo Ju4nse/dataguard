@@ -65,6 +65,11 @@ h2 { margin: 0; font-size: 17px; font-weight: 700; color: var(--ink); }
 .count { color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .ai { padding: 0 6px; border-radius: 6px; background: var(--mark); color: var(--mark-ink); font-size: 11px; font-weight: 700; }
 .examples { margin-left: auto; color: var(--ink-2); font-family: ui-monospace, monospace; font-size: 12px; text-align: right; overflow-wrap: anywhere; }
+.files { list-style: none; margin: 0 0 14px; padding: 0; max-height: 220px; overflow: auto; }
+.files > li + li { margin-top: 10px; }
+.files .types { margin: 0; }
+.file-name { margin: 0 0 6px; font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
+.file-name .muted { font-weight: 400; }
 .label { margin: 0 0 6px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-2); }
 .preview {
   margin: 0 0 14px;
