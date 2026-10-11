@@ -96,6 +96,12 @@ export function Dashboard({ me, onLogout }: { me: Me; onLogout: () => void }) {
         </div>
       </header>
 
+      {me.demo && (
+        <p className="border-b border-brand-200 bg-brand-50 px-4 py-2 text-center text-sm text-slate-800" role="status">
+          <strong className="font-semibold">Demo con datos ficticios.</strong> Simula un año de uso de Empresa Demo SA; en una instalación real, el panel
+          muestra los datos de tu empresa.
+        </p>
+      )}
       {me.mfaDesactivado && (
         <p className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm text-amber-900" role="status">
           <strong className="font-semibold">Segundo factor desactivado (modo demo).</strong> Volvé a activarlo antes de usar el panel con datos reales.

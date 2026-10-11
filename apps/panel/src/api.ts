@@ -1,7 +1,16 @@
 import type { DetectionType } from '@securedata/shared';
-import { api, ApiError } from '@securedata/shared/http';
+import { api as serverApi, ApiError } from '@securedata/shared/http';
 
-export { api, ApiError };
+export { ApiError };
+
+/** Demo pública (GitHub Pages, VITE_STATIC_DEMO=1): datos ficticios en el navegador, sin servidor. */
+export const STATIC_DEMO = import.meta.env.VITE_STATIC_DEMO === '1';
+
+/** API del panel. En la demo se carga aparte (import dinámico): el panel real no incluye ese código. */
+export async function api<T>(path: string, body?: unknown): Promise<T> {
+  if (STATIC_DEMO) return (await import('./demo')).demoApi<T>(path, body);
+  return serverApi<T>(path, body);
+}
 
 export interface Me {
   usuario: {
@@ -18,6 +27,8 @@ export interface Me {
   mfa: 'ok' | 'configurar';
   /** El servidor corre con el segundo factor desactivado (modo demo). */
   mfaDesactivado?: boolean;
+  /** Demo pública con datos ficticios (sin servidor). */
+  demo?: boolean;
 }
 
 export interface Resumen {

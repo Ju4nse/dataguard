@@ -107,6 +107,8 @@ El modelo se puede ajustar a textos como los de DataGuard sin que pese más (cam
 
 ## Panel online (Tailscale)
 
+**Demo pública:** en GitHub Pages el panel se publica en [`/dataguard/panel/`](https://ju4nse.github.io/dataguard/panel/) con datos ficticios generados en el navegador (`apps/panel/src/demo.ts`, mismo cálculo que `app.panel_resumen`). Se entra con `seguridad@demo.test` / `demo1234`, no se conecta a ninguna base y anda aunque esta PC esté apagada. Para ver los datos reales, Tailscale:
+
 El panel del responsable se puede abrir desde tus otros dispositivos (celular, notebook) a través de [Tailscale](https://tailscale.com): una red privada entre tus dispositivos. La base sigue en esta PC y nada queda expuesto a internet.
 
 1. Instalá Tailscale en esta PC y entrá con tu cuenta (gratis). Instalalo también en cada dispositivo desde el que quieras ver el panel, con la misma cuenta.

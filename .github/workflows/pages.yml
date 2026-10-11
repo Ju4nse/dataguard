@@ -35,6 +35,13 @@ jobs:
         env:
           BASE_PATH: /${{ github.event.repository.name }}/
           VITE_STATIC_DEMO: '1'
+      - name: Demo del panel (datos ficticios, sin servidor) en /panel/
+        run: |
+          npm run build -w @securedata/panel
+          cp -r apps/panel/dist apps/web/dist/panel
+        env:
+          BASE_PATH: /${{ github.event.repository.name }}/panel/
+          VITE_STATIC_DEMO: '1'
 
       # Modelo de IA: se cuantiza una vez y queda en caché mientras no cambie el script ni la revisión.
       - name: Caché del modelo de IA

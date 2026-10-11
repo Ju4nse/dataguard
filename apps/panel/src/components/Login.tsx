@@ -1,6 +1,6 @@
 import QRCode from 'qrcode';
 import { useEffect, useState, type FormEvent } from 'react';
-import { api, ApiError } from '../api';
+import { api, ApiError, STATIC_DEMO } from '../api';
 import { Button, DarkGlow, ErrorText, Input, Logo, ShieldIcon } from './ui';
 
 const message = (e: unknown) => (e instanceof ApiError ? e.message : 'No se pudo conectar con el servidor');
@@ -53,7 +53,16 @@ export function Shell({ title, subtitle, children }: { title: string; subtitle: 
             <p className="text-slate-600">{subtitle}</p>
           </div>
           {children}
-          <p className="text-sm text-slate-600">Acceso exclusivo para responsables de seguridad. ¿Sos empleado? Usá la app para proteger tus archivos.</p>
+          <p className="text-sm text-slate-600">
+            Acceso exclusivo para responsables de seguridad. ¿Sos empleado?{' '}
+            {STATIC_DEMO ? (
+              <a href="../" className="font-medium text-brand-700 underline-offset-2 hover:underline">
+                Usá la app para proteger tus archivos.
+              </a>
+            ) : (
+              'Usá la app para proteger tus archivos.'
+            )}
+          </p>
         </div>
       </main>
     </div>
@@ -103,7 +112,25 @@ export function Login({ onDone }: { onDone: () => void }) {
       title={step === 'password' ? 'Ingresar' : 'Segundo factor'}
       subtitle={step === 'password' ? 'Usá el usuario que te dio el administrador.' : 'Ingresá el código de 6 dígitos de tu app autenticadora.'}
     >
-      {demoMode && step === 'password' && (
+      {STATIC_DEMO && step === 'password' && (
+        <div className="space-y-2 rounded-lg bg-brand-50 px-3 py-2.5 text-sm text-slate-800 ring-1 ring-inset ring-brand-200">
+          <p>
+            <strong className="font-semibold">Demo con datos ficticios.</strong> No se conecta a ninguna base: los números se generan en tu navegador. Entrá con{' '}
+            <code className="font-mono">seguridad@demo.test</code> y la contraseña <code className="font-mono">demo1234</code>.
+          </p>
+          <button
+            type="button"
+            className="min-h-10 font-semibold text-brand-700 underline-offset-2 hover:underline"
+            onClick={() => {
+              setEmail('seguridad@demo.test');
+              setPassword('demo1234');
+            }}
+          >
+            Completar con la cuenta demo
+          </button>
+        </div>
+      )}
+      {demoMode && !STATIC_DEMO && step === 'password' && (
         <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-inset ring-amber-200">
           <strong className="font-semibold">Modo demo, sin segundo factor.</strong> Entrá con <code className="font-mono">seguridad@demo.test</code> y la
           contraseña. Los usuarios que todavía no configuraron el segundo factor (como gerente) igual piden el QR.

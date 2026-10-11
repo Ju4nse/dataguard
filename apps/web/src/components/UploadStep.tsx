@@ -1,6 +1,6 @@
 import { useRef, useState, type DragEvent, type FormEvent } from 'react';
 import { useChat } from '../chatStore';
-import { PANEL_URL } from '../lib/config';
+import { PANEL_URL, STATIC_DEMO } from '../lib/config';
 import { ACCEPTED_EXTENSIONS, MAX_SIZE_MB } from '../lib/files';
 import { useStore } from '../store';
 import { AiToggle } from './AiToggle';
@@ -371,17 +371,10 @@ export function UploadStep() {
                 segundo factor y auditoría de cada consulta.
               </p>
             </div>
-            {PANEL_URL ? (
-              <ButtonLink href={PANEL_URL} variant="secondary" className="relative shrink-0">
-                <Icon name="chart" className="h-4 w-4" />
-                Ir al panel para empresas
-              </ButtonLink>
-            ) : (
-              // Demo pública: el panel necesita el servidor de la empresa.
-              <p className="relative max-w-xs shrink-0 text-sm text-slate-300">
-                El panel corre en el servidor de cada empresa; no está incluido en esta demo pública.
-              </p>
-            )}
+            <ButtonLink href={PANEL_URL} variant="secondary" className="relative shrink-0">
+              <Icon name="chart" className="h-4 w-4" />
+              {STATIC_DEMO ? 'Ver el panel de demo' : 'Ir al panel para empresas'}
+            </ButtonLink>
           </Reveal>
 
           <aside className="mt-8 flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">

@@ -4,6 +4,8 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  // En GitHub Pages la demo del panel vive en /<repo>/panel/ (ver .github/workflows/pages.yml).
+  base: process.env.BASE_PATH ?? '/',
   server: {
     port: 5180,
     strictPort: true,
