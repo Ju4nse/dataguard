@@ -24,6 +24,10 @@ describe('analyzePrompt', () => {
     expect(text).toContain('Persona_01');
     // Al enviarlo se revisa de nuevo: lo protegido no tiene que volver a frenar el envío.
     expect(analyzePrompt(text, {}, registry)).toBeNull();
+    // Tampoco con la IA local, que lee "Persona_01" como un nombre (antes pasaba a Persona_02).
+    const start = text.indexOf('Persona_01');
+    const aiSpan = { type: 'NOMBRE_PERSONA' as const, start, end: start + 'Persona_01'.length, value: 'Persona_01', confidence: 'alta' as const };
+    expect(analyzePrompt(text, {}, registry, [aiSpan])).toBeNull();
   });
 
   it('la política manda: lo que permite no se avisa ni se reemplaza, lo que exige no se puede saltear', () => {

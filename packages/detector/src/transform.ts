@@ -1,6 +1,7 @@
 import type { DetectionType } from '@securedata/shared';
 import { PSEUDONYM_PREFIXES } from '@securedata/shared';
 import { combineModelSpans } from './combine';
+import { isAlreadyProtected } from './protected';
 import { replaceSpans, scanText } from './scanText';
 import { findTerms, fold, mergeSpans, type CustomTerm } from './terms';
 import type { CellValue, ColumnDecision, EquivalenceRow, Span, Table, TransformResult } from './types';
@@ -92,6 +93,8 @@ export class PseudonymRegistry {
   private nameWords = new Map<string, Map<string, EquivalenceRow | null>>();
 
   get(prefix: string, type: DetectionType | null, raw: string): string {
+    // Ya es un seudónimo (o un marcador): queda igual, nunca "Persona_01" → "Persona_02".
+    if (isAlreadyProtected(raw)) return raw;
     let group = this.groups.get(prefix);
     if (!group) {
       group = new Map();
@@ -220,7 +223,7 @@ export function applyDecisions(table: Table, decisions: Record<number, ColumnDec
           );
         }
 
-        if (!d.type) return cell;
+        if (!d.type || isAlreadyProtected(s)) return cell;
         bump(d.type);
         if (d.action === 'anonimizar') return anonymizeValue(d.type, cell);
         const prefix = d.prefix?.trim() || PSEUDONYM_PREFIXES[d.type];

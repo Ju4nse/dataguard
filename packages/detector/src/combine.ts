@@ -1,6 +1,7 @@
 import type { Confidence, DetectionType } from '@securedata/shared';
 import { promoteBusinessNames } from './patterns/business';
 import { isFirstName } from './patterns/names';
+import { isAlreadyProtected, isProtectedSpan } from './protected';
 import { fold } from './terms';
 import type { Span } from './types';
 
@@ -145,7 +146,10 @@ export function combineModelSpans(rules: Span[], model: Span[], text?: string): 
   let accepted = [...rules];
   // "Ferretería Don Tito": el modelo también puede leer "Don Tito" como persona.
   const candidates = text ? promoteBusinessNames(text, model) : model;
-  for (const m of [...candidates].filter((x) => !implausible(x)).sort((a, b) => RANK[b.confidence] - RANK[a.confidence])) {
+  // El modelo lee "Persona_01" como un nombre: lo que ya está protegido no se vuelve a proteger.
+  for (const m of [...candidates]
+    .filter((x) => !implausible(x) && !(text ? isProtectedSpan(text, x.start, x.end) : isAlreadyProtected(x.value)))
+    .sort((a, b) => RANK[b.confidence] - RANK[a.confidence])) {
     const overlapping = accepted.filter((a) => m.start < a.end && a.start < m.end);
     const fromModel: Span = { ...m, source: 'ia' };
     if (overlapping.length === 0) {

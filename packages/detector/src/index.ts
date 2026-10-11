@@ -5,6 +5,7 @@ export { applyDecisions, anonymizeValue, ANONYMIZED_TOKENS, PseudonymRegistry } 
 export { analyzeDocument, transformDocument, documentActionFor, DEFAULT_DOCUMENT_ACTIONS } from './document';
 export type { Segment, TypeSummary, DocumentAnalysis, TypeDecision, DocumentTransformResult } from './document';
 export { combineModelSpans } from './combine';
+export { isAlreadyProtected, isProtectedSpan } from './protected';
 export { applyTableModel, planTableModel, type CellSpans, type ModelRequest } from './tableModel';
 export { restorePseudonyms, type RestoreResult, type RestoredPart } from './restore';
 export { findTerms, fold, mergeSpans, type CustomTerm } from './terms';

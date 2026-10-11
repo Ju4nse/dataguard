@@ -3,6 +3,7 @@ import { promoteBusinessNames } from './patterns/business';
 import { findLoneFirstNames, findNames } from './patterns/names';
 import { findSensitive } from './patterns/sensitive';
 import { NAME_PRIORITY, SENSITIVE_PRIORITY, TEXT_PATTERNS } from './patterns/text';
+import { isProtectedSpan } from './protected';
 import type { Span } from './types';
 
 const CONTEXT_WINDOW = 40;
@@ -63,7 +64,11 @@ export function scanText(text: string): Span[] {
   }
 
   addPersonalRecordData(text, accepted, loneNames);
-  return accepted.sort((a, b) => a.start - b.start).map(({ priority: _p, ...span }) => span);
+  // "Sr. Persona_01": lo que ya es un seudónimo o un marcador no se vuelve a proteger.
+  return accepted
+    .filter((s) => !isProtectedSpan(text, s.start, s.end))
+    .sort((a, b) => a.start - b.start)
+    .map(({ priority: _p, ...span }) => span);
 }
 
 /**
