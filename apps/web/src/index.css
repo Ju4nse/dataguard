@@ -11,6 +11,16 @@ body {
   @apply bg-slate-50 text-slate-900;
 }
 
+/* Tokens de gráficos: misma paleta que el panel (validada para daltonismo, skill dataviz). */
+:root {
+  --surface-1: #ffffff;
+  --ink-secondary: #475569;
+  --ink-muted: #64748b;
+  --grid: #e2e8f0;
+  --axis: #cbd5e1;
+  --series-1: #2a78d6;
+}
+
 /*
  * Aparición al hacer scroll (componente <Reveal>): animación atada a la posición del elemento en pantalla.
  * Solo si el navegador la soporta y el usuario no pidió menos movimiento; si no, el contenido se ve sin animación.

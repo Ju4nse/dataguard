@@ -29,7 +29,7 @@ import { sendEvent, type Session } from './lib/api';
 import { ACCEPTED_EXTENSIONS, extensionOf, MAX_SIZE_MB, parseFile, type FileFormat, type ParsedSheet } from './lib/files';
 
 /** traducir: pasar la respuesta de la IA externa a los datos reales con la tabla de equivalencias. */
-export type Step = 'subir' | 'revisar' | 'resultado' | 'traducir' | 'chat';
+export type Step = 'subir' | 'revisar' | 'resultado' | 'traducir' | 'chat' | 'graficos';
 /** tabla: CSV/Excel/JSON tabular, por columna. documento: PDF/Word/TXT/JSON, por tipo de dato. */
 export type Mode = 'tabla' | 'documento';
 
@@ -86,6 +86,8 @@ interface State {
   selectSheet: (index: number) => Promise<void>;
   /** Abre el traductor de respuestas (paso "traducir"). */
   openTranslator: () => void;
+  /** Gráficos de la planilla (después de protegerla). */
+  openCharts: () => void;
   setDecision: (column: number, patch: Partial<ColumnDecision>) => void;
   apply: () => void;
   addTerm: (value: string, type: DetectionType) => void;
@@ -392,10 +394,14 @@ export const useStore = create<State>((set, get) => ({
 
   openTranslator: () => set({ step: 'traducir' }),
 
+  openCharts: () => set({ step: 'graficos' }),
+
   goToStep: (step) => {
     const { result, docResult } = get();
     if (step === 'subir') get().reset();
     else if (step === 'traducir' || step === 'chat') set({ step });
+    // Los gráficos son de planillas: con un documento se vuelve a su resultado.
+    else if (step === 'graficos' && !result) set({ step: docResult ? 'resultado' : 'subir' });
     else if (result || docResult) set({ step });
     else get().reset();
   },

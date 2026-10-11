@@ -20,7 +20,7 @@ function describeActions(counts: { eliminar: number; anonimizar: number; seudoni
 }
 
 export function ResultStep() {
-  const { result, decisions, findings, fileName, format, delimiter, sheets, sheetIndex, selectSheet, recordUsage, aiProgress } = useStore();
+  const { result, decisions, findings, fileName, format, delimiter, sheets, sheetIndex, selectSheet, recordUsage, aiProgress, openCharts } = useStore();
   if (!result) return null;
   const { table, equivalences, transformedCounts } = result;
 
@@ -52,6 +52,10 @@ export function ResultStep() {
             >
               <Icon name="download" className="h-4 w-4" />
               Descargar {formatLabel} protegido
+            </Button>
+            <Button variant="secondary" onClick={openCharts} disabled={aiProgress !== null}>
+              <Icon name="chart" className="h-4 w-4" />
+              Ver gráficos
             </Button>
             {sheets.length > 1 && (
               <select

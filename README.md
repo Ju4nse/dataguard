@@ -67,6 +67,12 @@ La app del empleado funciona **sin** API ni base: el procesamiento es 100% en el
 
 **Traducir la respuesta de la IA:** el usuario pega lo que le respondió ChatGPT, Claude o Copilot y la app lo devuelve con los datos reales en lugar de `Persona_01`, `Empresa_03`… (resaltados), sin buscarlos a mano en la tabla. Está en la pantalla de resultado (con la tabla del archivo recién protegido) y desde el inicio, cargando un `_equivalencias.csv` descargado antes. Tolera cómo las IA reescriben los seudónimos (`Persona 1`, `persona_01`, `**Persona_01**`), avisa los que no están en la tabla (inventados) y los datos anonimizados que no se pueden recuperar (`[DNI]`, `***@gmail.com`). Todo en el navegador (`packages/detector/src/restore.ts`).
 
+## Gráficos de planillas
+
+Después de proteger una planilla (CSV, Excel o JSON en forma de tabla), **Ver gráficos** muestra un resumen (total, promedio, máximo y mínimo de la columna de plata, y cuánto subió o bajó entre el primer y el último período) y los gráficos que conviene ver: la evolución por día, mes o año si hay una columna de fechas, y rankings por las columnas que se repiten (Cliente, Provincia, Producto). **Armá tu gráfico** permite elegir cómo agrupar y qué medir (cantidad de filas, total o promedio de una columna numérica).
+
+Se calcula en el navegador, sin IA y sin mandar nada (`apps/web/src/lib/charts.ts`): reconoce números con formato argentino ("$ 1.250.000", "1.250,50") y fechas día/mes/año, y deja afuera los identificadores (DNI, CUIT, teléfono) y el texto libre. Por defecto muestra los datos reales (solo los ve quien usa la app); **Con seudónimos** usa la versión protegida, para compartir una captura. Cada gráfico tiene su vista de tabla y la librería (Recharts) se carga recién al abrir este paso.
+
 ## IA local (GLiNER)
 
 `packages/ml` corre [`gliner_multi_pii-v1`](https://huggingface.co/onnx-community/gliner_multi_pii-v1) (multilingüe, entrenado para datos personales, Apache-2.0) con `onnxruntime-web` dentro de un Web Worker. La descarga, el caché y la ejecución están en `packages/ml/src/browser.ts` y los usan **la app web y la extensión**: las dos corren el mismo modelo con la misma configuración. El pre y post-procesamiento de GLiNER está implementado en `packages/ml/src/gliner.ts` (no usamos el paquete `gliner` de npm: depende de versiones viejas y su separador de palabras corta las tildes).

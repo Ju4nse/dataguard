@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Account } from './components/Account';
 import { DocumentResultStep } from './components/DocumentResultStep';
 import { DocumentReviewStep } from './components/DocumentReviewStep';
@@ -11,6 +11,9 @@ import { Container, Icon } from './components/ui';
 import { BRAND } from './lib/brand';
 import { PANEL_URL, STATIC_DEMO } from './lib/config';
 import { useStore, type Step } from './store';
+
+// Los gráficos (y su librería) se cargan recién cuando se abren: la página principal no pesa más.
+const ChartsStep = lazy(() => import('./components/ChartsStep'));
 
 const NAV = [
   { href: '#como-funciona', label: 'Cómo funciona' },
@@ -166,6 +169,11 @@ export default function App() {
             {step === 'resultado' && (mode === 'tabla' ? <ResultStep /> : <DocumentResultStep />)}
             {step === 'traducir' && <TranslateStep />}
             {step === 'chat' && <ChatStep />}
+            {step === 'graficos' && (
+              <Suspense fallback={<p className="text-sm text-slate-600">Cargando los gráficos…</p>}>
+                <ChartsStep />
+              </Suspense>
+            )}
           </Container>
         )}
       </main>
