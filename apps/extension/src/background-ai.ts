@@ -15,13 +15,36 @@ const MAX_CHARS = 20_000;
 
 let creating: Promise<void> | null = null;
 
+/**
+ * Firefox no tiene documentos ocultos (chrome.offscreen), pero su fondo es una página con DOM: el mismo
+ * documento se carga en un iframe de esa página y recibe los mensajes igual.
+ */
+const FRAME_ID = 'documento-oculto';
+const hasOffscreenApi = typeof chrome.offscreen !== 'undefined';
+
+async function openFrame(): Promise<void> {
+  const frame = document.createElement('iframe');
+  frame.id = FRAME_ID;
+  frame.src = chrome.runtime.getURL(OFFSCREEN_URL);
+  await new Promise<void>((resolve, reject) => {
+    frame.onload = () => resolve();
+    frame.onerror = () => reject(new Error('No se pudo abrir el documento oculto'));
+    document.body.append(frame);
+  });
+}
+
 async function hasOffscreen(): Promise<boolean> {
+  if (!hasOffscreenApi) return document.getElementById(FRAME_ID) !== null;
   const contexts = await chrome.runtime.getContexts({ contextTypes: [chrome.runtime.ContextType.OFFSCREEN_DOCUMENT] });
   return contexts.length > 0;
 }
 
 export async function ensureOffscreen(): Promise<void> {
   if (await hasOffscreen()) return;
+  if (!hasOffscreenApi) {
+    creating ??= openFrame().finally(() => (creating = null));
+    return creating;
+  }
   creating ??= chrome.offscreen
     .createDocument({
       url: OFFSCREEN_URL,
@@ -33,6 +56,7 @@ export async function ensureOffscreen(): Promise<void> {
 }
 
 async function closeOffscreen() {
+  if (!hasOffscreenApi) return document.getElementById(FRAME_ID)?.remove();
   if (await hasOffscreen()) await chrome.offscreen.closeDocument();
 }
 

@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { ApiError, fetchSession, login, logout, verify2fa } from '../lib/api';
 import { useStore } from '../store';
 import { Button, Icon, inputClass } from './ui';
@@ -91,7 +92,8 @@ function LoginDialog({ onClose }: { onClose: () => void }) {
     }
   };
 
-  return (
+  // Portal al body: el encabezado tiene backdrop-blur, que vuelve "fixed" relativo a él y el diálogo quedaba arriba.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4 backdrop-blur-sm" onClick={onClose}>
       <form
         onSubmit={submit}
@@ -149,6 +151,7 @@ function LoginDialog({ onClose }: { onClose: () => void }) {
           {busy ? 'Verificando…' : step === 'password' ? 'Ingresar' : 'Verificar'}
         </Button>
       </form>
-    </div>
+    </div>,
+    document.body,
   );
 }

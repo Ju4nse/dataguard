@@ -82,7 +82,11 @@ export function Login({ onDone }: { onDone: () => void }) {
 
   useEffect(() => {
     void api<{ mfaDesactivado?: boolean }>('/salud')
-      .then((r) => setDemoMode(!!r.mfaDesactivado))
+      .then((r) => {
+        setDemoMode(!!r.mfaDesactivado);
+        // Sin segundo factor (desarrollo/demo) se completa la cuenta del responsable de prueba.
+        if (r.mfaDesactivado) setEmail((e) => e || 'seguridad@demo.test');
+      })
       .catch(() => {});
   }, []);
 

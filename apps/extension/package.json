@@ -7,7 +7,9 @@
     "dev": "tsx build.ts --watch",
     "build": "tsc -p tsconfig.json --noEmit && tsx build.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "icons": "tsx scripts/icons.ts"
+    "icons": "tsx scripts/icons.ts",
+    "build:firefox": "tsc -p tsconfig.json --noEmit && tsx build.ts --firefox",
+    "dev:firefox": "tsx build.ts --watch --firefox"
   },
   "dependencies": {
     "@securedata/detector": "*",
