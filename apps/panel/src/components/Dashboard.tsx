@@ -1,13 +1,14 @@
 import { DETECTION_LABELS, DETECTION_SHORT_LABELS } from '@securedata/shared';
 import { useEffect, useMemo, useState } from 'react';
 import { api, ApiError, type Me, type Resumen } from '../api';
+import { Account, Admin } from './Admin';
 import { ActionsBar, ChartCard, fmt, MonthlyColumns, RankingBars } from './charts';
 import { Employees } from './Employees';
 import { Policy } from './Policy';
 import { RiskEvents } from './RiskEvents';
 import { Button, Card, DarkGlow, ErrorText, Logo, ShieldIcon, useCountUp } from './ui';
 
-type Tab = 'reporte' | 'riesgo' | 'empleados' | 'politica';
+type Tab = 'reporte' | 'riesgo' | 'empleados' | 'politica' | 'configuracion' | 'cuenta';
 
 const TABS: { id: Tab; label: string; title: string; description: string }[] = [
   {
@@ -24,6 +25,13 @@ const TABS: { id: Tab; label: string; title: string; description: string }[] = [
   },
   { id: 'empleados', label: 'Empleados', title: 'Empleados', description: 'Alta, área y baja de los empleados de tu empresa.' },
   { id: 'politica', label: 'Política', title: 'Política de la empresa', description: 'Qué hacer con cada tipo de dato.' },
+  {
+    id: 'configuracion',
+    label: 'Configuración',
+    title: 'Configuración',
+    description: 'Privacidad del panel, áreas y supervisores. Solo para admins.',
+  },
+  { id: 'cuenta', label: 'Mi cuenta', title: 'Mi cuenta', description: 'Tu contraseña para entrar al panel.' },
 ];
 
 const PERIODS = [
@@ -75,6 +83,94 @@ function Kpi({ value, label, hint, risk = false }: { value: number; label: strin
   );
 }
 
+interface DetalleUsuario {
+  usuario: string;
+  area: string | null;
+  eventos: string;
+  detecciones: string;
+  avisos_ignorados: string;
+}
+
+/**
+ * Detalle por empleado: solo si el admin lo habilitó, y se carga recién al pedirlo (cada consulta
+ * queda en la auditoría con quién la hizo).
+ */
+function EmployeeDetail({ desde, hasta }: { desde: string; hasta: string }) {
+  const [rows, setRows] = useState<DetalleUsuario[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const load = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      setRows(await api<DetalleUsuario[]>(`/panel/usuarios?desde=${desde}&hasta=${hasta}`));
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'No se pudo cargar el detalle');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card className="overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
+        <div>
+          <h2 className="text-base font-semibold text-[var(--ink-primary)]">Detalle por empleado</h2>
+          <p className="text-sm text-[var(--ink-muted)]">Habilitado por el admin de tu empresa. Cada consulta queda registrada en la auditoría.</p>
+        </div>
+        {!rows && (
+          <Button variant="secondary" disabled={busy} onClick={() => void load()}>
+            {busy ? 'Cargando…' : 'Ver detalle'}
+          </Button>
+        )}
+      </div>
+      {error && (
+        <div className="p-5">
+          <ErrorText>{error}</ErrorText>
+        </div>
+      )}
+      {rows && rows.length === 0 && <p className="px-5 py-6 text-sm text-[var(--ink-muted)]">Sin actividad en el período.</p>}
+      {rows && rows.length > 0 && (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[36rem] text-left text-sm">
+            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-[var(--ink-muted)]">
+              <tr>
+                <th scope="col" className="px-5 py-3 font-semibold">
+                  Empleado
+                </th>
+                <th scope="col" className="px-3 py-3 font-semibold">
+                  Área
+                </th>
+                <th scope="col" className="px-3 py-3 text-right font-semibold">
+                  Cargas
+                </th>
+                <th scope="col" className="px-3 py-3 text-right font-semibold">
+                  Detecciones
+                </th>
+                <th scope="col" className="px-5 py-3 text-right font-semibold">
+                  Avisos ignorados
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {rows.map((r) => (
+                <tr key={`${r.usuario}:${r.area}`}>
+                  <td className="px-5 py-3 font-medium text-[var(--ink-primary)]">{r.usuario}</td>
+                  <td className="px-3 py-3">{r.area ?? 'Sin área'}</td>
+                  <td className="px-3 py-3 text-right tabular-nums">{fmt(Number(r.eventos))}</td>
+                  <td className="px-3 py-3 text-right tabular-nums">{fmt(Number(r.detecciones))}</td>
+                  <td className="px-5 py-3 text-right tabular-nums">{fmt(Number(r.avisos_ignorados))}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
+  );
+}
+
 export function Dashboard({ me, onLogout }: { me: Me; onLogout: () => void }) {
   const [tab, setTab] = useState<Tab>('reporte');
   // Acá y no en Policy: así se conserva al cambiar de pestaña.
@@ -84,7 +180,9 @@ export function Dashboard({ me, onLogout }: { me: Me; onLogout: () => void }) {
     const hasta = new Date();
     return { desde: isoDate(new Date(hasta.getTime() - days * 86_400_000)), hasta: isoDate(hasta) };
   }, [days]);
-  const current = TABS.find((x) => x.id === tab)!;
+  // La configuración es solo para admins (la base también lo exige).
+  const tabs = TABS.filter((x) => x.id !== 'configuracion' || me.usuario.rol === 'admin');
+  const current = tabs.find((x) => x.id === tab)!;
   const [data, setData] = useState<Resumen | null>(null);
   /** Período (en días) que ya respondió la API: mientras no coincida con el elegido, está cargando. */
   const [loadedDays, setLoadedDays] = useState<number | null>(null);
@@ -139,7 +237,7 @@ export function Dashboard({ me, onLogout }: { me: Me; onLogout: () => void }) {
       <div className="border-b border-slate-200 bg-white">
         <nav aria-label="Secciones del panel" className="mx-auto max-w-6xl overflow-x-auto px-4 sm:px-6">
           <div className="flex gap-1 border-b border-slate-100 pt-2">
-            {TABS.map((x) => (
+            {tabs.map((x) => (
               <button
                 key={x.id}
                 type="button"
@@ -186,6 +284,8 @@ export function Dashboard({ me, onLogout }: { me: Me; onLogout: () => void }) {
         {tab === 'riesgo' && <RiskEvents desde={range.desde} hasta={range.hasta} onSessionLost={onLogout} />}
         {tab === 'empleados' && <Employees onSessionLost={onLogout} />}
         {tab === 'politica' && <Policy politica={politica} onChange={setPolitica} />}
+        {tab === 'configuracion' && <Admin onSessionLost={onLogout} />}
+        {tab === 'cuenta' && <Account />}
 
         {tab === 'reporte' && error && <ErrorText>{error}</ErrorText>}
 
@@ -254,6 +354,8 @@ export function Dashboard({ me, onLogout }: { me: Me; onLogout: () => void }) {
                 )}
               </ChartCard>
             </div>
+
+            {me.usuario.detalle_por_empleado && <EmployeeDetail key={`${range.desde}:${range.hasta}`} desde={range.desde} hasta={range.hasta} />}
           </div>
         )}
       </main>

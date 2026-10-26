@@ -366,10 +366,75 @@ async function main() {
     assert(despues.rows[0]?.incidente_estado === 'abierto', JSON.stringify(despues.rows));
   });
 
+  await test('un empleado ve su historial con detecciones, y solo el suyo', async () => {
+    const ev = await as(ID.empleado, REGISTRAR, [
+      'web',
+      'tabla',
+      JSON.stringify([{ tipo: 'DNI', accion: 'seudonimizar', cantidad: 4 }]),
+      'csv',
+      10,
+      null,
+      null,
+    ]);
+    const id = ev.rows[0]!.id;
+    const propios = await as(ID.empleado, `SELECT id, detecciones FROM app.mis_eventos(20)`);
+    const fila = propios.rows.find((x) => x.id === id);
+    assert(fila?.detecciones[0]?.tipo === 'DNI' && fila.detecciones[0].cantidad === 4, JSON.stringify(fila));
+    const ajenos = await as(ID.responsable, `SELECT id FROM app.mis_eventos(200)`, [], 'aal2');
+    assert(!ajenos.rows.some((x) => x.id === id), 'el responsable no debería ver el evento del empleado en su historial');
+    await fails(as(null, `SELECT * FROM app.mis_eventos(20)`), /sin sesión/);
+  });
+
+  const emailSupervisor = `supervisor-${Date.now()}@prueba.test`;
+  const supervisor = { id: '', temporal: '' };
+
+  await test('solo el admin ve la configuración y crea áreas y supervisores con contraseña temporal', async () => {
+    await fails(as(ID.responsable, `SELECT app.admin_configuracion()`, [], 'aal2'), /rol de admin/);
+    await fails(as(ID.admin, `SELECT app.admin_configuracion()`), /segundo factor/);
+    const area = await as(ID.admin, `SELECT app.admin_crear_area($1) AS id`, [`Prueba ${Date.now()}`], 'aal2');
+    await fails(as(ID.responsable, `SELECT * FROM app.admin_crear_usuario($1, 'X', 'responsable', NULL)`, [emailSupervisor], 'aal2'), /rol de admin/);
+    await fails(as(ID.admin, `SELECT * FROM app.admin_crear_usuario($1, 'X', 'empleado', NULL)`, [emailSupervisor], 'aal2'), /desde Empleados/);
+    const r = await as(
+      ID.admin,
+      `SELECT * FROM app.admin_crear_usuario($1, 'Supervisor Prueba', 'responsable', $2)`,
+      [emailSupervisor, area.rows[0]!.id],
+      'aal2',
+    );
+    supervisor.id = r.rows[0]!.id;
+    supervisor.temporal = r.rows[0]!.password_temporal;
+    const login = await as(null, `SELECT * FROM app.autenticar($1, $2)`, [emailSupervisor, supervisor.temporal]);
+    assert(login.rows[0]?.debe_cambiar_password === true && login.rows[0].debe_configurar_2fa === true, JSON.stringify(login.rows));
+    const conf = (await as(ID.admin, `SELECT app.admin_configuracion() AS c`, [], 'aal2')).rows[0]!.c;
+    assert(
+      conf.areas.some((a: { id: string }) => a.id === area.rows[0]!.id),
+      'la configuración lista el área nueva',
+    );
+    assert(
+      conf.supervisores.some((x: { id: string }) => x.id === supervisor.id),
+      'la configuración lista al supervisor nuevo',
+    );
+    assert(!conf.supervisores.some((x: { email: string }) => x.email === 'empleado1@demo.test'), 'la lista de supervisores no tiene empleados');
+  });
+
+  await test('el admin reinicia el acceso de un supervisor (contraseña y segundo factor) y lo desactiva', async () => {
+    await owner.query(`UPDATE app.usuarios SET mfa_activo = true, totp_secreto = 'x' WHERE id = $1`, [supervisor.id]);
+    await fails(as(ID.admin, `SELECT app.admin_reiniciar_acceso($1)`, [ID.admin], 'aal2'), /tu propio acceso/);
+    await fails(as(ID.admin, `SELECT app.admin_reiniciar_acceso($1)`, [ID.empleado], 'aal2'), /supervisor inexistente/);
+    await fails(as(ID.responsable, `SELECT app.admin_reiniciar_acceso($1)`, [supervisor.id], 'aal2'), /rol de admin/);
+    const t = (await as(ID.admin, `SELECT app.admin_reiniciar_acceso($1) AS t`, [supervisor.id], 'aal2')).rows[0]!.t;
+    const login = await as(null, `SELECT * FROM app.autenticar($1, $2)`, [emailSupervisor, t]);
+    assert(login.rows[0]?.requiere_2fa === false && login.rows[0].debe_configurar_2fa === true, JSON.stringify(login.rows));
+    await fails(as(ID.admin, `SELECT app.admin_actualizar_supervisor($1, false)`, [ID.admin], 'aal2'), /tu propio usuario/);
+    await as(ID.admin, `SELECT app.admin_actualizar_supervisor($1, false)`, [supervisor.id], 'aal2');
+    const baja = await as(null, `SELECT * FROM app.autenticar($1, $2)`, [emailSupervisor, t]);
+    assert(baja.rows.length === 0, 'un supervisor desactivado no debería entrar');
+  });
+
   // Limpieza: los eventos de la demo tienen fechas pasadas, así que lo posterior a `inicio` de los
   // usuarios de prueba es de esta corrida.
   await owner.query(`DELETE FROM app.auditoria WHERE usuario_id IN (SELECT id FROM app.usuarios WHERE email LIKE '%@prueba.test')`);
   await owner.query(`DELETE FROM app.usuarios WHERE email LIKE '%@prueba.test'`);
+  await owner.query(`DELETE FROM app.areas WHERE nombre LIKE 'Prueba %'`);
   const ids = Object.values(ID);
   await owner.query('DELETE FROM app.incidentes WHERE creado_en >= $1 AND creado_por = ANY($2::uuid[])', [inicio, ids]);
   await owner.query('DELETE FROM app.eventos WHERE creado_en >= $1 AND usuario_id = ANY($2::uuid[])', [inicio, ids]);

@@ -7,14 +7,24 @@ export const selectClass =
 
 const errorMessage = (e: unknown) => (e instanceof ApiError ? e.message : 'No se pudo conectar con el servidor');
 
-/** Contraseña temporal recién generada: se muestra una sola vez, para pasársela al empleado. */
-function TemporaryPassword({ nombre, password, onClose }: { nombre: string; password: string; onClose: () => void }) {
+/** Contraseña temporal recién generada: se muestra una sola vez, para pasársela a la persona. */
+export function TemporaryPassword({
+  nombre,
+  password,
+  where = 'en la app web o en la extensión',
+  onClose,
+}: {
+  nombre: string;
+  password: string;
+  where?: string;
+  onClose: () => void;
+}) {
   const [copied, setCopied] = useState(false);
   return (
     <div className="space-y-3 rounded-xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm" role="status">
       <p className="text-sm text-slate-800">
-        Pasale esta contraseña temporal a <strong className="font-semibold">{nombre}</strong>. La va a cambiar la primera vez que entre (en la app web o en la
-        extensión). <strong className="font-semibold">No se vuelve a mostrar.</strong>
+        Pasale esta contraseña temporal a <strong className="font-semibold">{nombre}</strong>. La va a cambiar la primera vez que entre ({where}).{' '}
+        <strong className="font-semibold">No se vuelve a mostrar.</strong>
       </p>
       <div className="flex flex-wrap items-center gap-2">
         <code className="rounded-lg bg-white px-3 py-2 font-mono text-lg tracking-wider text-slate-900 ring-1 ring-emerald-200">{password}</code>

@@ -27,6 +27,20 @@ export const verify2fa = (codigo: string) => api<{ estado: LoginState }>('/auth/
 export const changePassword = (actual: string, nueva: string) => api<{ estado: LoginState }>('/auth/password', { actual, nueva });
 export const logout = () => api('/auth/logout', {});
 
+/** Un evento propio, tal como lo guardó la base: solo metadatos. */
+export interface MyEvent {
+  id: number;
+  creado_en: string;
+  origen: 'web' | 'extension';
+  tipo_entrada: 'tabla' | 'documento' | 'prompt';
+  tipo_archivo: string | null;
+  filas: number | null;
+  sitio: string | null;
+  decision_usuario: 'enmascarado' | 'ignorado' | 'cancelado' | null;
+  detecciones: { tipo: DetectionType; accion: Action; cantidad: number }[];
+}
+export const fetchMyEvents = () => api<MyEvent[]>('/mis-eventos');
+
 /** Envía SOLO metadatos: tipos y cantidades. Nunca contenido, nombre de archivo ni nombres de columnas. */
 export async function sendEvent(e: {
   tipoEntrada: 'tabla' | 'documento' | 'prompt';

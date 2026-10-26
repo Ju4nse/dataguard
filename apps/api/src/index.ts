@@ -127,9 +127,10 @@ app.post('/auth/password', async (c) => {
   }
 });
 
-// Alta del segundo factor: devuelve el secreto UNA vez para cargarlo en la app autenticadora.
+// Alta del segundo factor: devuelve el secreto UNA vez para cargarlo en la app autenticadora. Va antes que el
+// cambio de la contraseña temporal (ver estadoSesion), así que se permite con la temporal todavía puesta.
 app.post('/auth/2fa/iniciar', async (c) => {
-  const s = await requireSession(c, { allowConfigurar: true });
+  const s = await requireSession(c, { allowConfigurar: true, allowCambiarPassword: true });
   if (s instanceof Response) return s;
   try {
     const r = await withSession(dbSession(s), (db) =>
@@ -145,7 +146,7 @@ app.post('/auth/2fa/iniciar', async (c) => {
 });
 
 app.post('/auth/2fa/confirmar', async (c) => {
-  const s = await requireSession(c, { allowConfigurar: true });
+  const s = await requireSession(c, { allowConfigurar: true, allowCambiarPassword: true });
   if (s instanceof Response) return s;
   const body = CodeBody.safeParse(await c.req.json().catch(() => null));
   if (!body.success) return c.json({ error: 'El código tiene 6 dígitos' }, 400);
@@ -173,7 +174,8 @@ app.get('/me', async (c) => {
   try {
     const data = await withSession(dbSession(s), async (db) => {
       const u = await db.query(
-        `SELECT u.id, u.nombre, u.email, u.rol, u.mfa_activo, o.nombre AS organizacion, a.nombre AS area
+        `SELECT u.id, u.nombre, u.email, u.rol, u.mfa_activo, o.nombre AS organizacion, a.nombre AS area,
+                o.mostrar_detalle_usuario AS detalle_por_empleado
          FROM app.usuarios u JOIN app.organizaciones o ON o.id = u.organizacion_id LEFT JOIN app.areas a ON a.id = u.area_id
          WHERE u.id = app.uid()`,
       );
@@ -242,6 +244,20 @@ app.post('/eventos', async (c) => {
     return c.json({ id: Number(r.rows[0].id) }, 201);
   } catch (err) {
     return fail(c, err);
+  }
+});
+
+// Historial propio: lo que la app y la extensión registraron de este usuario (solo metadatos).
+app.get('/mis-eventos', async (c) => {
+  const s = await requireSession(c);
+  if (s instanceof Response) return s;
+  try {
+    const r = await withSession(dbSession(s), (db) =>
+      db.query(`SELECT id, creado_en, origen, tipo_entrada, tipo_archivo, filas, sitio, decision_usuario, detecciones FROM app.mis_eventos(50)`),
+    );
+    return c.json(r.rows.map((x) => ({ ...x, id: Number(x.id) })));
+  } catch (e) {
+    return fail(c, e);
   }
 });
 
@@ -414,6 +430,100 @@ app.post('/panel/incidentes/:id', async (c) => {
   try {
     await withSession(dbSession(s), (db) => db.query(`SELECT app.incidente_actualizar($1, $2::app.estado_incidente)`, [id.data, body.data.estado]));
     return c.json({ estado: 'ok' });
+  } catch (e) {
+    return fail(c, e);
+  }
+});
+
+// ---------- Admin: áreas, supervisores y privacidad del panel ----------
+// Los permisos (rol admin + segundo factor, misma empresa) los verifica la base.
+const NuevaArea = z.strictObject({ nombre: z.string().trim().min(1).max(100) });
+const NuevoSupervisor = z.strictObject({
+  email: z.string().email().max(200),
+  nombre: z.string().trim().min(1).max(200),
+  rol: z.enum(['responsable', 'admin']),
+  areaId: z.guid().nullable(),
+});
+const CambioSupervisor = z.strictObject({ activo: z.boolean() });
+const Configuracion = z.strictObject({ mostrarDetalleUsuario: z.boolean(), minimoPorGrupo: z.number().int().min(1).max(100) });
+
+app.get('/admin/configuracion', async (c) => {
+  const s = await requireSession(c);
+  if (s instanceof Response) return s;
+  try {
+    const r = await withSession(dbSession(s), (db) => db.query(`SELECT app.admin_configuracion() AS c`));
+    return c.json(r.rows[0].c);
+  } catch (e) {
+    return fail(c, e);
+  }
+});
+
+app.post('/admin/configuracion', async (c) => {
+  const s = await requireSession(c);
+  if (s instanceof Response) return s;
+  const body = Configuracion.safeParse(await c.req.json().catch(() => null));
+  if (!body.success) return c.json({ error: 'El mínimo por grupo va de 1 a 100' }, 400);
+  try {
+    await withSession(dbSession(s), (db) => db.query(`SELECT app.admin_configurar($1, $2)`, [body.data.mostrarDetalleUsuario, body.data.minimoPorGrupo]));
+    return c.json({ estado: 'ok' });
+  } catch (e) {
+    return fail(c, e);
+  }
+});
+
+app.post('/admin/areas', async (c) => {
+  const s = await requireSession(c);
+  if (s instanceof Response) return s;
+  const body = NuevaArea.safeParse(await c.req.json().catch(() => null));
+  if (!body.success) return c.json({ error: 'Escribí el nombre del área' }, 400);
+  try {
+    const r = await withSession(dbSession(s), (db) => db.query(`SELECT app.admin_crear_area($1) AS id`, [body.data.nombre]));
+    return c.json({ id: r.rows[0].id }, 201);
+  } catch (e) {
+    if ((e as PgError).code === '23505') return c.json({ error: 'Ya existe un área con ese nombre' }, 409);
+    return fail(c, e);
+  }
+});
+
+app.post('/admin/supervisores', async (c) => {
+  const s = await requireSession(c);
+  if (s instanceof Response) return s;
+  const body = NuevoSupervisor.safeParse(await c.req.json().catch(() => null));
+  if (!body.success) return c.json({ error: 'Revisá el nombre y el email' }, 400);
+  try {
+    const r = await withSession(dbSession(s), (db) =>
+      db.query(`SELECT * FROM app.admin_crear_usuario($1, $2, $3::app.rol, $4)`, [body.data.email, body.data.nombre, body.data.rol, body.data.areaId]),
+    );
+    return c.json({ id: r.rows[0].id, passwordTemporal: r.rows[0].password_temporal }, 201);
+  } catch (e) {
+    if ((e as PgError).code === '23505') return c.json({ error: 'Ya existe un usuario con ese email' }, 409);
+    return fail(c, e);
+  }
+});
+
+app.post('/admin/supervisores/:id', async (c) => {
+  const s = await requireSession(c);
+  if (s instanceof Response) return s;
+  const id = IdParam.safeParse(c.req.param('id'));
+  const body = CambioSupervisor.safeParse(await c.req.json().catch(() => null));
+  if (!id.success || !body.success) return c.json({ error: 'Datos inválidos' }, 400);
+  try {
+    await withSession(dbSession(s), (db) => db.query(`SELECT app.admin_actualizar_supervisor($1, $2)`, [id.data, body.data.activo]));
+    return c.json({ estado: 'ok' });
+  } catch (e) {
+    return fail(c, e);
+  }
+});
+
+// Contraseña temporal nueva y segundo factor borrado (perdió la contraseña o el celular).
+app.post('/admin/supervisores/:id/acceso', async (c) => {
+  const s = await requireSession(c);
+  if (s instanceof Response) return s;
+  const id = IdParam.safeParse(c.req.param('id'));
+  if (!id.success) return c.json({ error: 'Datos inválidos' }, 400);
+  try {
+    const r = await withSession(dbSession(s), (db) => db.query(`SELECT app.admin_reiniciar_acceso($1) AS t`, [id.data]));
+    return c.json({ passwordTemporal: r.rows[0].t });
   } catch (e) {
     return fail(c, e);
   }

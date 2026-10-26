@@ -100,7 +100,9 @@ async function reset(client: pg.Client) {
   const withDemo = !process.argv.includes('--sin-demo');
   if (!process.argv.includes('--confirmar')) {
     console.log(`Esto BORRA los esquemas app y migraciones de ${host}${pathname} (todos los eventos, usuarios y auditoría)`);
-    console.log(`y los vuelve a crear ${withDemo ? 'con' : 'sin'} los datos de demo. Para hacerlo: npm run db:reset -- --confirmar${withDemo ? '' : ' --sin-demo'}`);
+    console.log(
+      `y los vuelve a crear ${withDemo ? 'con' : 'sin'} los datos de demo. Para hacerlo: npm run db:reset -- --confirmar${withDemo ? '' : ' --sin-demo'}`,
+    );
     process.exit(1);
   }
   await client.query('DROP SCHEMA IF EXISTS app CASCADE; DROP SCHEMA IF EXISTS migraciones CASCADE;');
@@ -121,13 +123,13 @@ async function createCompany(client: pg.Client) {
   let temporal = '';
   await inTransaction(client, async () => {
     const org = await client.query<{ id: string }>('INSERT INTO app.organizaciones (nombre) VALUES ($1) RETURNING id', [nombre.trim()]);
-    temporal = (await client.query<{ t: string }>('SELECT app.password_temporal() AS t')).rows[0].t;
+    temporal = (await client.query<{ t: string }>('SELECT app.password_temporal() AS t')).rows[0]!.t;
     const u = await client.query<{ id: string }>(
       `INSERT INTO app.usuarios (organizacion_id, email, nombre, rol, password_hash, debe_cambiar_password)
        VALUES ($1, lower(trim($2)), trim($3), 'admin', extensions.crypt($4, extensions.gen_salt('bf', 10)), true) RETURNING id`,
-      [org.rows[0].id, email, nombreAdmin, temporal],
+      [org.rows[0]!.id, email, nombreAdmin, temporal],
     );
-    await client.query(`INSERT INTO app.auditoria (usuario_id, accion) VALUES ($1, 'alta_empresa')`, [u.rows[0].id]);
+    await client.query(`INSERT INTO app.auditoria (usuario_id, accion) VALUES ($1, 'alta_empresa')`, [u.rows[0]!.id]);
   });
   console.log(`✔ Empresa "${nombre.trim()}" creada con su admin ${email.toLowerCase()}`);
   console.log(`  Contraseña temporal: ${temporal}`);

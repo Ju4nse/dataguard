@@ -7,7 +7,7 @@
  */
 import type { DetectionType } from '@securedata/shared';
 import { ApiError } from '@securedata/shared/http';
-import type { Area, Empleado, EventoRiesgo, Me, Resumen } from './api';
+import type { Area, Configuracion, Empleado, EventoRiesgo, Me, Resumen } from './api';
 
 export const DEMO_PASSWORD = 'demo1234';
 const MIN_GROUP = 5;
@@ -209,6 +209,30 @@ function me(): Me {
   };
 }
 
+/** Configuración del admin: las áreas de la demo y sus supervisores (las cuentas de arriba, menos el empleado). */
+function configuracion(): Configuracion {
+  const yo = me().usuario.email;
+  return {
+    organizacion: 'Empresa Demo SA',
+    mostrar_detalle_usuario: false,
+    minimo_por_grupo: MIN_GROUP,
+    areas: AREAS.map(([, personas], i) => ({ ...DEMO_AREAS[i]!, personas })),
+    supervisores: Object.entries(ACCOUNTS)
+      .filter(([, a]) => a.rol !== 'empleado')
+      .map(([email, a]) => ({
+        id: `demo-${a.rol}`,
+        nombre: a.nombre,
+        email,
+        rol: a.rol as 'responsable' | 'admin',
+        area_id: null,
+        activo: true,
+        mfa_activo: true,
+        pendiente_de_ingreso: false,
+        yo: email === yo,
+      })),
+  };
+}
+
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const READ_ONLY = 'La demo es de solo lectura: en una instalación real este cambio se guarda.';
 
@@ -254,6 +278,10 @@ export async function demoApi<T>(path: string, body?: unknown): Promise<T> {
         return { empleados: empleados(), areas: DEMO_AREAS } as T;
       }
       throw new ApiError(403, READ_ONLY);
+    case '/admin/configuracion':
+      if (body !== undefined) throw new ApiError(403, READ_ONLY);
+      if (me().usuario.rol !== 'admin') throw new ApiError(403, 'se requiere rol de admin');
+      return configuracion() as T;
     default:
       // Altas, cambios de política, incidentes…: la demo no guarda nada.
       if (body !== undefined) throw new ApiError(403, READ_ONLY);

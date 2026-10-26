@@ -21,6 +21,8 @@ export interface Me {
     mfa_activo: boolean;
     organizacion: string;
     area: string | null;
+    /** La empresa (su admin) habilitó el detalle por empleado en el panel. */
+    detalle_por_empleado?: boolean;
   };
   politica: Partial<Record<DetectionType, Action>>;
   aal: 'aal1' | 'aal2';
@@ -83,4 +85,27 @@ export interface EventoRiesgo {
   detecciones: number;
   incidente_id: number | null;
   incidente_estado: EstadoIncidente | null;
+}
+
+/** Supervisor (responsable o admin) de la empresa, en la configuración del admin. */
+export interface Supervisor {
+  id: string;
+  nombre: string;
+  email: string;
+  rol: 'responsable' | 'admin';
+  area_id: string | null;
+  activo: boolean;
+  mfa_activo: boolean;
+  /** Todavía no entró a cambiar la contraseña temporal. */
+  pendiente_de_ingreso: boolean;
+  /** Es el usuario de la sesión (no se puede desactivar ni reiniciar a sí mismo). */
+  yo: boolean;
+}
+
+export interface Configuracion {
+  organizacion: string;
+  mostrar_detalle_usuario: boolean;
+  minimo_por_grupo: number;
+  areas: (Area & { personas: number })[];
+  supervisores: Supervisor[];
 }

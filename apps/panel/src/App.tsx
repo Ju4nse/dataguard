@@ -1,16 +1,23 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api, type Me } from './api';
 import { Dashboard } from './components/Dashboard';
-import { Enroll2FA, Login, Shell } from './components/Login';
+import { ChangeTemporaryPassword, Enroll2FA, Login, Shell } from './components/Login';
 import { Button } from './components/ui';
 
-type View = { kind: 'cargando' } | { kind: 'login' } | { kind: 'configurar2fa' } | { kind: 'sinAcceso'; me: Me } | { kind: 'panel'; me: Me };
+type View =
+  | { kind: 'cargando' }
+  | { kind: 'login' }
+  | { kind: 'configurar2fa' }
+  | { kind: 'cambiarPassword' }
+  | { kind: 'sinAcceso'; me: Me }
+  | { kind: 'panel'; me: Me };
 
-/** Qué pantalla corresponde según la sesión. */
+/** Qué pantalla corresponde según la sesión: primero el segundo factor, después la contraseña temporal. */
 async function loadView(): Promise<View> {
   try {
     const me = await api<Me>('/me');
     if (me.mfa === 'configurar') return { kind: 'configurar2fa' };
+    if (me.cambiarPassword) return { kind: 'cambiarPassword' };
     if (me.usuario.rol === 'empleado') return { kind: 'sinAcceso', me };
     return { kind: 'panel', me };
   } catch {
@@ -40,6 +47,8 @@ export default function App() {
       return <Login onDone={refresh} />;
     case 'configurar2fa':
       return <Enroll2FA onDone={refresh} onLogout={logout} />;
+    case 'cambiarPassword':
+      return <ChangeTemporaryPassword onDone={refresh} onLogout={logout} />;
     case 'sinAcceso':
       return (
         <Shell title={`Hola, ${view.me.usuario.nombre}`} subtitle="Este panel es solo para responsables de seguridad. Tu cuenta es de empleado.">

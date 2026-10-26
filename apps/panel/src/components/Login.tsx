@@ -168,6 +168,82 @@ export function Login({ onDone }: { onDone: () => void }) {
   );
 }
 
+/** Cambio de contraseña: obligatorio después de entrar con una temporal, y disponible en "Mi cuenta". */
+export function ChangePasswordForm({ temporal = false, onDone }: { temporal?: boolean; onDone: () => void }) {
+  const [actual, setActual] = useState('');
+  const [nueva, setNueva] = useState('');
+  const [repetida, setRepetida] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (nueva !== repetida) return setError('Las dos contraseñas no coinciden');
+    setBusy(true);
+    try {
+      await api('/auth/password', { actual, nueva });
+      setActual('');
+      setNueva('');
+      setRepetida('');
+      onDone();
+    } catch (err) {
+      setError(message(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <form onSubmit={submit} className="space-y-4">
+      <Input
+        label={temporal ? 'Contraseña temporal' : 'Contraseña actual'}
+        type="password"
+        autoComplete="current-password"
+        required
+        value={actual}
+        onChange={(e) => setActual(e.target.value)}
+      />
+      <Input
+        label="Contraseña nueva (10 caracteres o más)"
+        type="password"
+        autoComplete="new-password"
+        minLength={10}
+        required
+        value={nueva}
+        onChange={(e) => setNueva(e.target.value)}
+      />
+      <Input
+        label="Repetila"
+        type="password"
+        autoComplete="new-password"
+        minLength={10}
+        required
+        value={repetida}
+        onChange={(e) => setRepetida(e.target.value)}
+      />
+      {error && <ErrorText>{error}</ErrorText>}
+      <Button type="submit" disabled={busy} className="w-full">
+        {busy ? 'Guardando…' : temporal ? 'Guardar y entrar' : 'Cambiar contraseña'}
+      </Button>
+    </form>
+  );
+}
+
+/** Entró con una contraseña temporal (alta o reinicio del admin): tiene que elegir una propia. */
+export function ChangeTemporaryPassword({ onDone, onLogout }: { onDone: () => void; onLogout: () => void }) {
+  return (
+    <Shell title="Elegí tu contraseña" subtitle="Entraste con una contraseña temporal. Elegí una nueva que solo sepas vos.">
+      <div className="space-y-4">
+        <ChangePasswordForm temporal onDone={onDone} />
+        <Button type="button" variant="ghost" className="w-full" onClick={onLogout}>
+          Salir
+        </Button>
+      </div>
+    </Shell>
+  );
+}
+
 /** Alta obligatoria del segundo factor para responsables que todavía no lo tienen. */
 export function Enroll2FA({ onDone, onLogout }: { onDone: () => void; onLogout: () => void }) {
   const [setup, setSetup] = useState<{ secreto: string; qr: string } | null>(null);
