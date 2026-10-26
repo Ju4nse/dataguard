@@ -7,7 +7,7 @@ import { secureHeaders } from 'hono/secure-headers';
 import { z } from 'zod';
 import { config } from './config';
 import { pool, withSession, type DbSession } from './db';
-import { base32, clientIp, createRateLimiter, csrfGuard } from './security';
+import { base32, clientIp, createRateLimiter, csrfGuard, firefoxExtensionCorp } from './security';
 import { clearSession, getSession, setSession, type Session } from './session';
 
 /**
@@ -16,6 +16,7 @@ import { clearSession, getSession, setSession, type Session } from './session';
  */
 const app = new Hono().basePath('/api');
 
+app.use('*', firefoxExtensionCorp);
 app.use('*', secureHeaders());
 app.use('*', csrfGuard);
 // Log mínimo: método, ruta y estado. Nunca cuerpos ni parámetros.

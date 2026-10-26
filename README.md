@@ -42,7 +42,7 @@ La app del empleado funciona **sin** API ni base: el procesamiento es 100% en el
 | `empleado@demo.test` | empleado | app web con la política de la empresa |
 | `seguridad@demo.test` | supervisor con 2FA | panel; el código sale de `npm run db:totp -- seguridad@demo.test` |
 | `gerente@demo.test` | supervisor sin 2FA | alta del segundo factor con QR |
-| `admin@demo.test` | admin con 2FA | lo mismo que un supervisor (la configuración propia del admin todavía es solo por SQL) |
+| `admin@demo.test` | admin con 2FA | lo mismo que un supervisor, más la pestaña **Configuración** |
 
 > En desarrollo las tres apps comparten la cookie de sesión porque los navegadores no separan cookies por puerto en `localhost`. En producción van en dominios distintos.
 
@@ -86,6 +86,16 @@ El **supervisor** (rol `responsable` en la base, o `admin`) entra al panel con c
 - **Empleados:** los da de alta con nombre, email y área. DataGuard genera una **contraseña temporal** que se muestra una sola vez para pasársela al empleado. El empleado entra con ella en la app web o en la extensión y tiene que elegir una propia (10 caracteres o más) antes de poder usar nada. Desde ahí también se le cambia el área, se le genera una contraseña temporal nueva si se la olvidó, o se lo desactiva (no puede entrar más, pero lo que hizo sigue en los totales).
 - **Política:** qué hacer con cada tipo de dato (eliminar, anonimizar, seudonimizar o dejarlo). La app web y la extensión la aplican solas la próxima vez que se conectan.
 - **Eventos de riesgo:** los avisos de la extensión que se ignoraron (datos mandados sin proteger a una IA externa), para **abrir un incidente** y seguir su estado (abierto, en revisión, confirmado, descartado). Para que no se sepa quién fue, se muestra solo la fecha (sin hora), el área (las de menos de 5 personas como "Otras áreas"), el sitio y los tipos de dato, nunca el empleado.
+
+- **Mi cuenta:** cambiar la contraseña propia.
+
+El **admin** tiene además la pestaña **Configuración**:
+
+- **Privacidad del panel:** el mínimo de personas por grupo (las áreas más chicas se agrupan en "Otras áreas") y si se permite el **detalle por empleado**. Si se permite, el reporte muestra un botón "Ver detalle" con cargas, detecciones y avisos ignorados de cada persona; cada consulta queda en la auditoría.
+- **Áreas:** crearlas (con cuántas personas activas tiene cada una).
+- **Supervisores:** darlos de alta (supervisor o admin) con contraseña temporal, desactivarlos y **reiniciarles el acceso** si perdieron la contraseña o el celular (contraseña temporal nueva y segundo factor nuevo). Un supervisor nuevo entra al panel, configura el segundo factor y elige su contraseña.
+
+El **empleado**, en la app web, tiene **Mi cuenta**: su historial (los últimos 50 eventos, con lo mismo que recibe la empresa) y el cambio de contraseña.
 
 Lo que llega de cada empleado son solo metadatos: tipos de dato y cantidades, la acción aplicada, el tipo de archivo y, en la extensión, el sitio y qué hizo ante el aviso. Nunca el contenido.
 
@@ -160,7 +170,7 @@ Mientras se escribe, un indicador abajo a la derecha avisa cuántos datos sensib
 2. En Chrome, abrí `chrome://extensions`, activá **Modo de desarrollador** → **Cargar descomprimida** → elegí `apps/extension/dist`. Después de cada cambio, tocá ↻ en la tarjeta de la extensión y recargá ChatGPT o Claude.
 3. Opcional, para aplicar la política y registrar eventos: `npm run dev:api` (con el `.env` de Supabase completo), y en el popup de la extensión entrá con un usuario de demo (ej. `empleado@demo.test`). Para otro servidor (como el del panel online), cambiá la dirección en **Servidor**: la extensión pide permiso para ese sitio.
 
-El `key` del manifest fija el ID de la extensión (`kinpmadcicacoodohlbipajehcgmfcim`), y la API acepta pedidos desde ese origen. Cuando se publique en la Chrome Web Store, el ID cambia: hay que ponerlo en la variable `EXTENSION_ID` de la API. Si ChatGPT o Claude cambian su HTML y la extensión deja de frenar el envío, los selectores están en `apps/extension/src/content/sites.ts`. 
+El `key` del manifest fija el ID de la extensión (`kinpmadcicacoodohlbipajehcgmfcim`), y la API acepta pedidos desde ese origen. Cuando se publique en la Chrome Web Store, el ID cambia: hay que ponerlo en la variable `EXTENSION_ID` de la API. En **Firefox** (`npm run build:firefox -w @securedata/extension`, se carga en `about:debugging`) el origen es `moz-extension://<uuid>` y el uuid cambia en cada instalación, así que la API acepta cualquier origen `moz-extension://` (una página web no puede mandarlo; `FIREFOX_EXTENSION=0` lo apaga). Si ChatGPT o Claude cambian su HTML y la extensión deja de frenar el envío, los selectores están en `apps/extension/src/content/sites.ts`. 
 
 **IA local en la extensión:** se activa desde el popup (descarga única del mismo modelo que la web). Corre en un documento oculto de la extensión (`apps/extension/src/offscreen`), en un solo hilo: un prompt tarda alrededor de medio segundo. El texto se analiza mientras se escribe; al enviar, si la IA todavía no lo revisó, se espera hasta 12 segundos (el indicador dice "Revisando con la IA local…") y después siguen solo las reglas. El texto va del script de contenido al modelo dentro de la extensión, nunca a la red. Sin usarla durante 10 minutos se libera la memoria del modelo (más de 1 GB); queda guardado y vuelve a cargarse en unos segundos.
 
@@ -182,7 +192,9 @@ El `key` del manifest fija el ID de la extensión (`kinpmadcicacoodohlbipajehcgm
 | `npm run db:migrate` | Aplica en la base las migraciones nuevas de `db/migraciones` |
 | `npm run db:seed` | Carga los datos de demo (`db/demo.sql`), una sola vez |
 | `npm run db:reset -- --confirmar` | **Borra** todo (esquemas `app` y `migraciones`) y lo recrea con la demo |
-| `npm run db:test` | Verifica estructura, permisos y autenticación de la base (36 pruebas; borra lo que crea) |
+| `npm run db:reset -- --confirmar --sin-demo` | Lo mismo, pero sin la demo (para una empresa real) |
+| `npm run db:empresa -- "Empresa" admin@empresa.com "Nombre"` | Da de alta una empresa con su admin; muestra la contraseña temporal una sola vez |
+| `npm run db:test` | Verifica estructura, permisos y autenticación de la base (39 pruebas; borra lo que crea) |
 | `npm run db:totp -- <email>` | Código 2FA actual de un usuario de demo (para probar sin celular) |
 | `npm run dev:api` / `dev:panel` | API y panel en modo desarrollo |
 | `npm run dev:extension` | Compila la extensión en `apps/extension/dist` y recompila al guardar |
@@ -215,7 +227,7 @@ Se usa Supabase **solo como Postgres**: la API se conecta con `pg` y el rol `sec
 
 **Cambios en el esquema:** van en un archivo nuevo en `db/migraciones` (ej. `05_incidentes_api.sql`) y se aplican con `npm run db:migrate`. Las migraciones ya aplicadas no se editan: el script lo detecta (guarda el sha256 en `migraciones.aplicadas`) y frena.
 
-**Datos de demo:** la demo (`demo1234`, secreto TOTP conocido) queda en una base en internet, pero con esos usuarios solo se entra a través de la API, que escucha en `127.0.0.1` (o por Tailscale). La base en sí se protege con las contraseñas de `.env`. Antes de cargar una empresa real, empezá de una base sin la demo.
+**Datos de demo:** la demo (`demo1234`, secreto TOTP conocido) queda en una base en internet, pero con esos usuarios solo se entra a través de la API, que escucha en `127.0.0.1` (o por Tailscale). La base en sí se protege con las contraseñas de `.env`. Antes de cargar una empresa real, empezá de una base sin la demo: `npm run db:reset -- --confirmar --sin-demo` y después `npm run db:empresa -- "Empresa" admin@empresa.com "Nombre del admin"`. El admin entra al panel con la contraseña temporal, configura el segundo factor, elige su contraseña y desde **Configuración** crea las áreas y los supervisores.
 
 **Plan gratis:** el proyecto se pausa después de 7 días sin uso (se reactiva desde el panel de Supabase) y no tiene restauración a un punto en el tiempo.
 

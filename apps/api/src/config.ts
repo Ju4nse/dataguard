@@ -36,6 +36,12 @@ export const config = {
     `chrome-extension://${process.env.EXTENSION_ID ?? 'kinpmadcicacoodohlbipajehcgmfcim'}`,
   ],
   /**
+   * La extensión en Firefox: su origen es moz-extension://<uuid> y el uuid lo sortea Firefox en cada
+   * instalación (no es el id del manifiesto), así que no se puede fijar uno. Se acepta cualquiera: una
+   * página web no puede mandar ese Origin, solo otra extensión instalada. FIREFOX_EXTENSION=0 lo apaga.
+   */
+  allowFirefoxExtension: process.env.FIREFOX_EXTENSION !== '0',
+  /**
    * Confiar en X-Forwarded-For (la IP real del cliente) solo detrás de un proxy propio. Sin proxy,
    * cualquiera podría inventar ese encabezado para esquivar el límite de intentos.
    */

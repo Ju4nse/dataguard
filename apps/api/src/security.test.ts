@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { base32, createRateLimiter } from './security';
+import { base32, createRateLimiter, isAllowedOrigin } from './security';
 
 describe('límite de intentos', () => {
   it('deja pasar hasta el máximo y frena el resto', () => {
@@ -13,6 +13,21 @@ describe('límite de intentos', () => {
     for (let i = 0; i < 100; i++) allow(`clave-${i}`);
     expect(allow('clave-nueva')).toBe(false);
     expect(allow('clave-3')).toBe(true); // las que ya estaban siguen contando
+  });
+});
+
+describe('orígenes permitidos', () => {
+  it('acepta la app, la extensión de Chrome y cualquier instalación de la de Firefox', () => {
+    expect(isAllowedOrigin('http://localhost:5173')).toBe(true);
+    expect(isAllowedOrigin('chrome-extension://kinpmadcicacoodohlbipajehcgmfcim')).toBe(true);
+    expect(isAllowedOrigin('moz-extension://11111111-2222-4333-8444-555555555555')).toBe(true);
+  });
+
+  it('rechaza sitios web, otras extensiones de Chrome y orígenes de Firefox mal formados', () => {
+    expect(isAllowedOrigin('https://malicioso.example')).toBe(false);
+    expect(isAllowedOrigin('chrome-extension://otraextensionotraextensionotraex')).toBe(false);
+    expect(isAllowedOrigin('moz-extension://no-es-un-uuid')).toBe(false);
+    expect(isAllowedOrigin('moz-extension://11111111-2222-4333-8444-555555555555.malicioso.example')).toBe(false);
   });
 });
 

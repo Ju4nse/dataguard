@@ -33,6 +33,23 @@ export function clientIp(c: Context): string {
   return c.req.header('x-forwarded-for')?.split(',')[0]?.trim() || 'desconocida';
 }
 
+const FIREFOX_EXTENSION_ORIGIN = /^moz-extension:\/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+const isFirefoxExtension = (origin: string | undefined) => !!origin && config.allowFirefoxExtension && FIREFOX_EXTENSION_ORIGIN.test(origin);
+
+export const isAllowedOrigin = (origin: string) => config.allowedOrigins.includes(origin) || isFirefoxExtension(origin);
+
+/**
+ * Las respuestas llevan Cross-Origin-Resource-Policy: same-origin (secureHeaders). Chrome no lo aplica a
+ * una extensión con permiso sobre el servidor; Firefox puede aplicarlo y bloquear las respuestas, así que
+ * solo para la extensión de Firefox se cambia a "cross-origin" (cualquier otro origen sigue igual).
+ * Se registra ANTES que secureHeaders, que escribe sus encabezados al volver de next(): así este corre último.
+ */
+export const firefoxExtensionCorp: MiddlewareHandler = async (c, next) => {
+  await next();
+  if (isFirefoxExtension(c.req.header('origin'))) c.res.headers.set('Cross-Origin-Resource-Policy', 'cross-origin');
+};
+
 /**
  * Protección CSRF para requests que modifican datos: solo JSON y solo desde orígenes conocidos.
  * (La cookie de sesión además es SameSite=Strict, y un JSON entre orígenes exige preflight de CORS,
@@ -44,7 +61,7 @@ export const csrfGuard: MiddlewareHandler = async (c, next) => {
       return c.json({ error: 'Se espera Content-Type: application/json' }, 415);
     }
     const origin = c.req.header('origin');
-    if (origin && !config.allowedOrigins.includes(origin)) {
+    if (origin && !isAllowedOrigin(origin)) {
       return c.json({ error: 'Origen no permitido' }, 403);
     }
   }
