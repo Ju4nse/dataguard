@@ -1,3 +1,7 @@
+import { loadEnv, requireDbUrl } from './pgConfig';
+
+loadEnv();
+
 const isProduction = process.env.NODE_ENV === 'production';
 
 /**
@@ -16,7 +20,10 @@ export const config = {
   port: Number(process.env.API_PORT ?? 8787),
   /** Solo localhost: la publicación hacia la red la hace un proxy (tailscale serve), nunca la API directo. */
   host: process.env.API_HOST ?? '127.0.0.1',
-  databaseUrl: process.env.DATABASE_URL_API ?? 'postgres://securedata_api:api_dev@localhost:5433/securedata',
+  /** Rol securedata_api, por el pooler de Supabase en modo transacción (ver .env.example). Se lee al crear el pool. */
+  get databaseUrl() {
+    return requireDbUrl('DATABASE_URL_API');
+  },
   sessionSecret: new TextEncoder().encode(process.env.SESSION_SECRET ?? DEV_SECRET),
   sessionHours: 8,
   /**

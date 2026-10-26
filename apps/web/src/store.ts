@@ -31,6 +31,9 @@ import { protectTable } from './lib/docTables';
 import { sendEvent, type Session } from './lib/api';
 import { ACCEPTED_EXTENSIONS, extensionOf, MAX_SIZE_MB, parseFile, type FileFormat, type ParsedSheet } from './lib/files';
 
+/** Los gráficos están apagados: el código sigue, pero la página no ofrece abrirlos. Poné true para volver a mostrarlos. */
+export const CHARTS_ENABLED = false;
+
 /** traducir: pasar la respuesta de la IA externa a los datos reales con la tabla de equivalencias. */
 export type Step = 'subir' | 'revisar' | 'resultado' | 'traducir' | 'chat' | 'graficos';
 /** tabla: CSV/Excel/JSON tabular, por columna. documento: PDF/Word/TXT/JSON, por tipo de dato. */
@@ -406,14 +409,16 @@ export const useStore = create<State>((set, get) => ({
 
   openTranslator: () => set({ step: 'traducir' }),
 
-  openCharts: () => set({ step: 'graficos' }),
+  openCharts: () => {
+    if (CHARTS_ENABLED) set({ step: 'graficos' });
+  },
 
   goToStep: (step) => {
     const { result, docResult } = get();
     if (step === 'subir') get().reset();
     else if (step === 'traducir' || step === 'chat') set({ step });
     // Gráficos: de una planilla o de las tablas de un documento (si no tiene, se vuelve a su resultado).
-    else if (step === 'graficos' && !result && !(docResult && get().docTables.length)) set({ step: docResult ? 'resultado' : 'subir' });
+    else if (step === 'graficos' && (!CHARTS_ENABLED || (!result && !(docResult && get().docTables.length)))) set({ step: docResult ? 'resultado' : 'subir' });
     else if (result || docResult) set({ step });
     else get().reset();
   },

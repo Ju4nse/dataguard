@@ -1,8 +1,30 @@
 import { DETECTION_LABELS, DETECTION_SHORT_LABELS } from '@securedata/shared';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { api, ApiError, type Me, type Resumen } from '../api';
 import { ActionsBar, ChartCard, fmt, MonthlyColumns, RankingBars } from './charts';
+import { Employees } from './Employees';
+import { Policy } from './Policy';
+import { RiskEvents } from './RiskEvents';
 import { Button, Card, DarkGlow, ErrorText, Logo, ShieldIcon, useCountUp } from './ui';
+
+type Tab = 'reporte' | 'riesgo' | 'empleados' | 'politica';
+
+const TABS: { id: Tab; label: string; title: string; description: string }[] = [
+  {
+    id: 'reporte',
+    label: 'Reporte',
+    title: 'Reporte de seguridad',
+    description: 'Estadísticas de detección y concientización. No registra información personal de los empleados.',
+  },
+  {
+    id: 'riesgo',
+    label: 'Eventos de riesgo',
+    title: 'Eventos de riesgo',
+    description: 'Datos enviados sin proteger, para abrir incidentes. Sin identificar a quién fue.',
+  },
+  { id: 'empleados', label: 'Empleados', title: 'Empleados', description: 'Alta, área y baja de los empleados de tu empresa.' },
+  { id: 'politica', label: 'Política', title: 'Política de la empresa', description: 'Qué hacer con cada tipo de dato.' },
+];
 
 const PERIODS = [
   { days: 30, label: '30 días' },
@@ -54,7 +76,15 @@ function Kpi({ value, label, hint, risk = false }: { value: number; label: strin
 }
 
 export function Dashboard({ me, onLogout }: { me: Me; onLogout: () => void }) {
+  const [tab, setTab] = useState<Tab>('reporte');
+  // Acá y no en Policy: así se conserva al cambiar de pestaña.
+  const [politica, setPolitica] = useState(me.politica);
   const [days, setDays] = useState(90);
+  const range = useMemo(() => {
+    const hasta = new Date();
+    return { desde: isoDate(new Date(hasta.getTime() - days * 86_400_000)), hasta: isoDate(hasta) };
+  }, [days]);
+  const current = TABS.find((x) => x.id === tab)!;
   const [data, setData] = useState<Resumen | null>(null);
   /** Período (en días) que ya respondió la API: mientras no coincida con el elegido, está cargando. */
   const [loadedDays, setLoadedDays] = useState<number | null>(null);
@@ -62,9 +92,7 @@ export function Dashboard({ me, onLogout }: { me: Me; onLogout: () => void }) {
   const loading = loadedDays !== days;
 
   useEffect(() => {
-    const hasta = new Date();
-    const desde = new Date(hasta.getTime() - days * 86_400_000);
-    api<Resumen>(`/panel/resumen?desde=${isoDate(desde)}&hasta=${isoDate(hasta)}`)
+    api<Resumen>(`/panel/resumen?desde=${range.desde}&hasta=${range.hasta}`)
       .then((r) => {
         setData(r);
         setError(null);
@@ -74,7 +102,7 @@ export function Dashboard({ me, onLogout }: { me: Me; onLogout: () => void }) {
         else setError(e instanceof ApiError ? e.message : 'No se pudo cargar el panel');
       })
       .finally(() => setLoadedDays(days));
-  }, [days, onLogout]);
+  }, [days, range, onLogout]);
 
   const t = data?.totales;
 
@@ -109,38 +137,59 @@ export function Dashboard({ me, onLogout }: { me: Me; onLogout: () => void }) {
       )}
 
       <div className="border-b border-slate-200 bg-white">
+        <nav aria-label="Secciones del panel" className="mx-auto max-w-6xl overflow-x-auto px-4 sm:px-6">
+          <div className="flex gap-1 border-b border-slate-100 pt-2">
+            {TABS.map((x) => (
+              <button
+                key={x.id}
+                type="button"
+                onClick={() => setTab(x.id)}
+                aria-current={tab === x.id ? 'page' : undefined}
+                className={`min-h-11 whitespace-nowrap border-b-2 px-3 text-sm font-semibold transition-colors ${tab === x.id ? 'border-brand-700 text-slate-900' : 'border-transparent text-[var(--ink-secondary)] hover:text-slate-900'}`}
+              >
+                {x.label}
+              </button>
+            ))}
+          </div>
+        </nav>
         <div className="mx-auto flex max-w-6xl flex-wrap items-end justify-between gap-4 px-4 py-6 sm:px-6">
           <div className="space-y-1">
-            <h1 className="text-2xl font-bold tracking-tight">Reporte de seguridad</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{current.title}</h1>
             <p className="flex items-start gap-1.5 text-sm text-[var(--ink-secondary)]">
               <ShieldIcon className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
-              Estadísticas de detección y concientización. No registra información personal de los empleados.
+              {current.description}
             </p>
           </div>
-          {/* Un solo filtro, arriba de todo lo que afecta. */}
-          <div className="flex items-center gap-2" role="group" aria-label="Período">
-            <span className="text-sm text-[var(--ink-secondary)]">Últimos</span>
-            <div className="flex rounded-lg bg-slate-100 p-1">
-              {PERIODS.map((p) => (
-                <button
-                  key={p.days}
-                  type="button"
-                  onClick={() => setDays(p.days)}
-                  aria-pressed={days === p.days}
-                  className={`min-h-10 rounded-md px-3 text-sm font-medium transition-colors sm:min-h-9 ${days === p.days ? 'bg-white text-slate-900 shadow-sm' : 'text-[var(--ink-secondary)] hover:text-slate-900'}`}
-                >
-                  {p.label}
-                </button>
-              ))}
+          {/* Un solo filtro, arriba de todo lo que afecta (solo en las secciones con fechas). */}
+          {(tab === 'reporte' || tab === 'riesgo') && (
+            <div className="flex items-center gap-2" role="group" aria-label="Período">
+              <span className="text-sm text-[var(--ink-secondary)]">Últimos</span>
+              <div className="flex rounded-lg bg-slate-100 p-1">
+                {PERIODS.map((p) => (
+                  <button
+                    key={p.days}
+                    type="button"
+                    onClick={() => setDays(p.days)}
+                    aria-pressed={days === p.days}
+                    className={`min-h-10 rounded-md px-3 text-sm font-medium transition-colors sm:min-h-9 ${days === p.days ? 'bg-white text-slate-900 shadow-sm' : 'text-[var(--ink-secondary)] hover:text-slate-900'}`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6">
-        {error && <ErrorText>{error}</ErrorText>}
+        {tab === 'riesgo' && <RiskEvents desde={range.desde} hasta={range.hasta} onSessionLost={onLogout} />}
+        {tab === 'empleados' && <Employees onSessionLost={onLogout} />}
+        {tab === 'politica' && <Policy politica={politica} onChange={setPolitica} />}
 
-        {data && t && (
+        {tab === 'reporte' && error && <ErrorText>{error}</ErrorText>}
+
+        {tab === 'reporte' && data && t && (
           // Al cambiar el período se mantiene lo anterior atenuado (sin saltos de diseño).
           <div className={`space-y-6 transition-opacity ${loading ? 'opacity-50' : ''}`}>
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">

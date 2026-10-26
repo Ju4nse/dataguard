@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { ApiError, fetchSession, login, logout, verify2fa } from '../lib/api';
+import { ApiError, changePassword, fetchSession, login, logout, verify2fa } from '../lib/api';
 import { useStore } from '../store';
 import { Button, Icon, inputClass } from './ui';
 
@@ -57,10 +57,12 @@ function Field({ label, ...props }: React.InputHTMLAttributes<HTMLInputElement> 
 
 function LoginDialog({ onClose }: { onClose: () => void }) {
   const setSession = useStore((s) => s.setSession);
-  const [step, setStep] = useState<'password' | 'codigo'>('password');
+  const [step, setStep] = useState<'password' | 'codigo' | 'cambiar'>('password');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [codigo, setCodigo] = useState('');
+  const [nueva, setNueva] = useState('');
+  const [repetida, setRepetida] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -77,10 +79,19 @@ function LoginDialog({ onClose }: { onClose: () => void }) {
     try {
       if (step === 'password') {
         const r = await login(email, password);
+        // La temporal se guarda (solo en memoria) para no pedirla dos veces al cambiarla.
+        if (r.estado === 'cambiar_password') return setStep('cambiar');
         setPassword('');
         if (r.estado === 'pendiente') return setStep('codigo');
+      } else if (step === 'codigo') {
+        const r = await verify2fa(codigo);
+        if (r.estado === 'cambiar_password') return setStep('cambiar');
       } else {
-        await verify2fa(codigo);
+        if (nueva !== repetida) return setError('Las dos contraseñas no coinciden');
+        await changePassword(password, nueva);
+        setPassword('');
+        setNueva('');
+        setRepetida('');
       }
       const s = await fetchSession();
       if (s) setSession(s);
@@ -116,18 +127,42 @@ function LoginDialog({ onClose }: { onClose: () => void }) {
             <Icon name={step === 'password' ? 'building' : 'lock'} />
           </span>
           <h2 id="login-title" className="text-lg font-bold text-slate-900">
-            {step === 'password' ? 'Ingresar con mi empresa' : 'Segundo factor'}
+            {step === 'password' ? 'Ingresar con mi empresa' : step === 'codigo' ? 'Segundo factor' : 'Elegí tu contraseña'}
           </h2>
           <p className="text-sm text-slate-600">
             {step === 'password'
               ? 'Se aplica la política de seguridad de tu empresa. Tu empresa solo recibe estadísticas, nunca el contenido de tus archivos.'
-              : 'Ingresá el código de 6 dígitos de tu app autenticadora.'}
+              : step === 'codigo'
+                ? 'Ingresá el código de 6 dígitos de tu app autenticadora.'
+                : 'Entraste con una contraseña temporal. Elegí una nueva, de al menos 10 caracteres, que solo sepas vos.'}
           </p>
         </div>
         {step === 'password' ? (
           <div className="space-y-4">
             <Field label="Email" type="email" autoComplete="username" required autoFocus value={email} onChange={(e) => setEmail(e.target.value)} />
             <Field label="Contraseña" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+          </div>
+        ) : step === 'cambiar' ? (
+          <div className="space-y-4">
+            <Field
+              label="Contraseña nueva"
+              type="password"
+              autoComplete="new-password"
+              minLength={10}
+              required
+              autoFocus
+              value={nueva}
+              onChange={(e) => setNueva(e.target.value)}
+            />
+            <Field
+              label="Repetila"
+              type="password"
+              autoComplete="new-password"
+              minLength={10}
+              required
+              value={repetida}
+              onChange={(e) => setRepetida(e.target.value)}
+            />
           </div>
         ) : (
           <Field
@@ -148,7 +183,7 @@ function LoginDialog({ onClose }: { onClose: () => void }) {
           </p>
         )}
         <Button type="submit" disabled={busy} className="w-full">
-          {busy ? 'Verificando…' : step === 'password' ? 'Ingresar' : 'Verificar'}
+          {busy ? 'Verificando…' : step === 'password' ? 'Ingresar' : step === 'codigo' ? 'Verificar' : 'Guardar y entrar'}
         </Button>
       </form>
     </div>,

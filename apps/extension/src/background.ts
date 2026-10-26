@@ -10,6 +10,7 @@ import type { FileRequest, OffscreenFileRequest } from './lib/files';
 import { refreshSession, sendEvent } from './lib/api';
 import type { Detection, Message } from './lib/messages';
 import { getSettings } from './lib/storage';
+import { isTabPaused, setTabPaused, type TabStateRequest } from './lib/tabs';
 
 const REFRESH_ALARM = 'refrescar-sesion';
 const ACTIONS = new Set(['eliminar', 'anonimizar', 'seudonimizar', 'mantener']);
@@ -81,9 +82,19 @@ async function recordEvent(message: Message, senderUrl: string | undefined) {
   }
 }
 
-chrome.runtime.onMessage.addListener((message: Message | AiRequest | OffscreenEvent | FileRequest, sender, sendResponse) => {
+// Una pestaña cerrada ya no está pausada (los números de pestaña se reutilizan).
+chrome.tabs.onRemoved.addListener((tabId) => void setTabPaused(tabId, false));
+
+chrome.runtime.onMessage.addListener((message: Message | AiRequest | OffscreenEvent | FileRequest | TabStateRequest, sender, sendResponse) => {
   if (sender.id !== chrome.runtime.id) return;
   if (message?.tipo === 'evento') void recordEvent(message, sender.url);
+  else if (message?.tipo === 'pestana-estado') {
+    // Los scripts de contenido no pueden leer chrome.storage.session: se lo responde el service worker.
+    const tabId = sender.tab?.id;
+    if (tabId === undefined) return;
+    isTabPaused(tabId).then(sendResponse, () => sendResponse(false));
+    return true;
+  }
   else if (message?.tipo === 'archivo-leer' || message?.tipo === 'archivo-excel') {
     // Solo desde los scripts de contenido (las pestañas), no desde el propio documento oculto.
     if (!sender.tab) return;

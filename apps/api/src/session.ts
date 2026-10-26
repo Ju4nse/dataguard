@@ -16,6 +16,8 @@ export interface Session {
   userId: string;
   aal: 'aal1' | 'aal2';
   mfa: MfaState;
+  /** Entró con una contraseña temporal: hasta cambiarla no puede usar nada más. */
+  cambiarPassword?: boolean;
 }
 
 /**
@@ -31,7 +33,7 @@ function forgetExpired() {
 }
 
 export async function setSession(c: Context, s: Session) {
-  const token = await new SignJWT({ aal: s.aal, mfa: s.mfa })
+  const token = await new SignJWT({ aal: s.aal, mfa: s.mfa, ...(s.cambiarPassword ? { pwd: true } : {}) })
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(s.userId)
     .setJti(crypto.randomUUID())
@@ -65,7 +67,7 @@ export async function getSession(c: Context): Promise<Session | null> {
   const payload = await readToken(c);
   if (!payload) return null;
   const mfa: MfaState = payload.mfa === 'pendiente' || payload.mfa === 'configurar' ? payload.mfa : 'ok';
-  return { userId: payload.sub!, aal: payload.aal === 'aal2' ? 'aal2' : 'aal1', mfa };
+  return { userId: payload.sub!, aal: payload.aal === 'aal2' ? 'aal2' : 'aal1', mfa, cambiarPassword: payload.pwd === true };
 }
 
 async function revokeCurrent(c: Context) {

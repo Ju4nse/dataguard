@@ -7,6 +7,20 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    # El CI no usa Supabase (no hay credenciales en GitHub): un Postgres propio prueba que el SQL corre igual.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: ci_postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready --health-interval 2s --health-timeout 3s --health-retries 30
+    env:
+      DATABASE_URL: postgres://postgres:ci_postgres@localhost:5432/postgres
+      DATABASE_URL_API: postgres://securedata_api:ci_api_password_0123456789@localhost:5432/postgres
+      SECUREDATA_API_PASSWORD: ci_api_password_0123456789
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -20,6 +34,7 @@ jobs:
       - run: npm test
       - run: npm run e2e
       - run: npm run build
-      # Base de datos: levanta Postgres con el esquema y prueba permisos.
-      - run: npm run db:up
+      # Base de datos: esquema, datos de demo y prueba de permisos.
+      - run: npm run db:migrate
+      - run: npm run db:seed
       - run: npm run db:test

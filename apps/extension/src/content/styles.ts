@@ -126,6 +126,8 @@ footer { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .pill .shield { color: var(--brand); width: 16px; height: 16px; }
 .pill.warn { background: var(--warn-bg); color: var(--warn-ink); border-color: var(--warn-line); }
 .pill.warn .shield { color: var(--warn-ink); }
+.pill.off { opacity: .7; }
+.pill.off .shield { color: currentColor; }
 .panel {
   position: fixed;
   right: 16px;

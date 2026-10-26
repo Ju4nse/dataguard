@@ -4,8 +4,9 @@ import { DETECTION_LABELS, type DetectionType } from '@securedata/shared';
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { SITES } from '../content/sites';
 import type { AiRequest } from '../lib/ai';
-import { ApiError, login, logout, refreshSession, verify2fa } from '../lib/api';
+import { ApiError, changePassword, login, logout, refreshSession, verify2fa } from '../lib/api';
 import { DEFAULT_API_BASE, getSettings, onSettingsChanged, saveSettings, type Settings } from '../lib/storage';
+import { setTabPaused, type TabRequest, type TabStatus } from '../lib/tabs';
 
 const message = (e: unknown) => (e instanceof ApiError ? e.message : 'No se pudo conectar con el servidor de DataGuard');
 
@@ -117,10 +118,12 @@ function Connected({ settings }: { settings: Settings }) {
 }
 
 function LoginForm() {
-  const [step, setStep] = useState<'password' | 'codigo'>('password');
+  const [step, setStep] = useState<'password' | 'codigo' | 'cambiar'>('password');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [codigo, setCodigo] = useState('');
+  const [nueva, setNueva] = useState('');
+  const [repetida, setRepetida] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -131,13 +134,31 @@ function LoginForm() {
     try {
       if (step === 'password') {
         const r = await login(email, password);
+        // La temporal se guarda (solo en memoria del popup) para no pedirla dos veces al cambiarla.
+        if (r.estado === 'cambiar_password') {
+          setStep('cambiar');
+          return;
+        }
         setPassword('');
         if (r.estado === 'pendiente') {
           setStep('codigo');
           return;
         }
+      } else if (step === 'codigo') {
+        const r = await verify2fa(codigo);
+        if (r.estado === 'cambiar_password') {
+          setStep('cambiar');
+          return;
+        }
       } else {
-        await verify2fa(codigo);
+        if (nueva !== repetida) {
+          setError('Las dos contraseñas no coinciden');
+          return;
+        }
+        await changePassword(password, nueva);
+        setPassword('');
+        setNueva('');
+        setRepetida('');
       }
       await refreshSession();
     } catch (err) {
@@ -150,7 +171,7 @@ function LoginForm() {
   return (
     <Section title="Conectar con tu empresa">
       <p className="text-sm text-slate-600">
-        Opcional. Con tu usuario se aplica la política de tu empresa y el responsable ve cuántos datos se protegieron: solo tipos y cantidades, nunca tus
+        Opcional. Con tu usuario se aplica la política de tu empresa y tu supervisor ve cuántos datos se protegieron: solo tipos y cantidades, nunca tus
         prompts.
       </p>
       <form onSubmit={submit} className="space-y-3">
@@ -158,6 +179,29 @@ function LoginForm() {
           <>
             <Input label="Email" type="email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} />
             <Input label="Contraseña" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+          </>
+        ) : step === 'cambiar' ? (
+          <>
+            <p className="text-sm text-slate-600">Entraste con una contraseña temporal. Elegí una nueva, de al menos 10 caracteres.</p>
+            <Input
+              label="Contraseña nueva"
+              type="password"
+              autoComplete="new-password"
+              minLength={10}
+              required
+              autoFocus
+              value={nueva}
+              onChange={(e) => setNueva(e.target.value)}
+            />
+            <Input
+              label="Repetila"
+              type="password"
+              autoComplete="new-password"
+              minLength={10}
+              required
+              value={repetida}
+              onChange={(e) => setRepetida(e.target.value)}
+            />
           </>
         ) : (
           <Input
@@ -174,7 +218,7 @@ function LoginForm() {
         )}
         {error && <ErrorText>{error}</ErrorText>}
         <Button type="submit" disabled={busy} className="w-full">
-          {busy ? 'Conectando…' : step === 'password' ? 'Ingresar' : 'Verificar'}
+          {busy ? 'Conectando…' : step === 'password' ? 'Ingresar' : step === 'codigo' ? 'Verificar' : 'Guardar y entrar'}
         </Button>
       </form>
     </Section>
@@ -326,8 +370,43 @@ function AiSection({ settings }: { settings: Settings }) {
   );
 }
 
+/** Pestaña activa: si es un sitio protegido, su estado (null: otra página o no se pudo consultar). */
+function useCurrentTab() {
+  const [tab, setTab] = useState<{ id: number; status: TabStatus } | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const [active] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (active?.id === undefined) return;
+      try {
+        const req: TabRequest = { tipo: 'pestana-consultar' };
+        const status = (await chrome.tabs.sendMessage(active.id, req)) as TabStatus | undefined;
+        if (status) setTab({ id: active.id, status });
+      } catch {
+        // Sin script de contenido: no es un sitio protegido (o la pestaña se abrió antes de instalar la extensión).
+      }
+    })();
+  }, []);
+
+  const setPaused = async (pausada: boolean) => {
+    if (!tab) return;
+    await setTabPaused(tab.id, pausada);
+    const req: TabRequest = { tipo: 'pestana-pausar', pausada };
+    try {
+      const status = (await chrome.tabs.sendMessage(tab.id, req)) as TabStatus | undefined;
+      if (status) setTab({ id: tab.id, status });
+    } catch {
+      // La pestaña se cerró o recargó: al cargar de nuevo lee la pausa guardada.
+      setTab({ id: tab.id, status: { ...tab.status, pausada } });
+    }
+  };
+
+  return { status: tab?.status ?? null, setPaused };
+}
+
 export function Popup() {
   const [settings, setSettings] = useState<Settings | null>(null);
+  const tab = useCurrentTab();
 
   useEffect(() => {
     onSettingsChanged(setSettings);
@@ -351,13 +430,35 @@ export function Popup() {
         <span className="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-semibold text-slate-700">Extensión</span>
       </header>
 
-      <div className="flex gap-3 rounded-xl bg-emerald-50 p-4 text-sm text-emerald-900 ring-1 ring-inset ring-emerald-200">
-        <ShieldIcon className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
-        <p>
-          <strong className="font-semibold">Protegiendo {siteList}.</strong> Revisamos cada prompt en tu computadora y, si tiene datos sensibles, te avisamos
-          antes de enviarlo.
-        </p>
-      </div>
+      {tab.status?.pausada ? (
+        <div className="space-y-3 rounded-xl bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-inset ring-amber-200">
+          <div className="flex gap-3">
+            <ShieldIcon className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+            <p>
+              <strong className="font-semibold">Pausado en esta pestaña de {tab.status.sitio}.</strong> Lo que escribas o adjuntes acá se envía sin revisar. Las
+              demás pestañas siguen protegidas.
+            </p>
+          </div>
+          <Button className="w-full" onClick={() => void tab.setPaused(false)}>
+            Activar en esta pestaña
+          </Button>
+        </div>
+      ) : (
+        <div className="space-y-3 rounded-xl bg-emerald-50 p-4 text-sm text-emerald-900 ring-1 ring-inset ring-emerald-200">
+          <div className="flex gap-3">
+            <ShieldIcon className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
+            <p>
+              <strong className="font-semibold">Protegiendo {siteList}.</strong> Revisamos cada prompt en tu computadora y, si tiene datos sensibles, te
+              avisamos antes de enviarlo.
+            </p>
+          </div>
+          {tab.status && (
+            <Button variant="secondary" className="w-full" onClick={() => void tab.setPaused(true)}>
+              Pausar en esta pestaña
+            </Button>
+          )}
+        </div>
+      )}
 
       {settings && <AiSection settings={settings} />}
       {settings && (settings.session ? <Connected settings={settings} /> : <LoginForm />)}

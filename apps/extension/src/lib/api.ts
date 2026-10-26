@@ -27,8 +27,10 @@ async function call<T>(path: string, body?: unknown): Promise<T> {
   return data as T;
 }
 
-export const login = (email: string, password: string) => call<{ estado: 'ok' | 'pendiente' | 'configurar' }>('/auth/login', { email, password });
-export const verify2fa = (codigo: string) => call<{ estado: 'ok' }>('/auth/2fa', { codigo });
+type LoginState = 'ok' | 'pendiente' | 'configurar' | 'cambiar_password';
+export const login = (email: string, password: string) => call<{ estado: LoginState }>('/auth/login', { email, password });
+export const verify2fa = (codigo: string) => call<{ estado: LoginState }>('/auth/2fa', { codigo });
+export const changePassword = (actual: string, nueva: string) => call<{ estado: LoginState }>('/auth/password', { actual, nueva });
 
 export async function logout(): Promise<void> {
   try {
@@ -44,7 +46,12 @@ export async function logout(): Promise<void> {
  */
 export async function refreshSession(): Promise<SessionInfo | null> {
   try {
-    const me = await call<{ usuario: { nombre: string; organizacion: string }; politica: Policy | null }>('/me');
+    const me = await call<{ usuario: { nombre: string; organizacion: string }; politica: Policy | null; cambiarPassword?: boolean }>('/me');
+    // Con la contraseña temporal sin cambiar no puede registrar nada: es como no tener sesión.
+    if (me.cambiarPassword) {
+      await saveSettings({ session: null });
+      return null;
+    }
     const session = { nombre: me.usuario.nombre, organizacion: me.usuario.organizacion, politica: me.politica ?? {} };
     await saveSettings({ session });
     return session;

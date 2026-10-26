@@ -21,11 +21,13 @@ Limitaciones actuales: PDF escaneados (sin texto seleccionable) y `.doc` viejos 
 
 ## Empezar
 
-Requiere Node 22 o superior y Docker Desktop (para la base).
+Requiere Node 22 o superior y un proyecto de [Supabase](https://supabase.com) (la base; ver [Base de datos](#base-de-datos-supabase)).
 
 ```bash
 npm install
-npm run db:up       # Postgres en Docker con esquema y datos de demo
+cp .env.example .env  # completalo con los datos de tu proyecto de Supabase
+npm run db:migrate  # esquema (la primera vez y después de cada cambio en db/migraciones)
+npm run db:seed     # datos de demo, una sola vez
 npm run dev:api     # API en http://localhost:8787/api        (otra terminal)
 npm run dev         # app del empleado en http://localhost:5173 (otra terminal)
 npm run dev:panel   # panel del responsable en http://localhost:5180 (otra terminal)
@@ -38,9 +40,9 @@ La app del empleado funciona **sin** API ni base: el procesamiento es 100% en el
 | Usuario | Rol | Para probar |
 |---|---|---|
 | `empleado@demo.test` | empleado | app web con la política de la empresa |
-| `seguridad@demo.test` | responsable con 2FA | panel; el código sale de `npm run db:totp -- seguridad@demo.test` |
-| `gerente@demo.test` | responsable sin 2FA | alta del segundo factor con QR |
-| `admin@demo.test` | admin con 2FA | configuración de la empresa |
+| `seguridad@demo.test` | supervisor con 2FA | panel; el código sale de `npm run db:totp -- seguridad@demo.test` |
+| `gerente@demo.test` | supervisor sin 2FA | alta del segundo factor con QR |
+| `admin@demo.test` | admin con 2FA | lo mismo que un supervisor (la configuración propia del admin todavía es solo por SQL) |
 
 > En desarrollo las tres apps comparten la cookie de sesión porque los navegadores no separan cookies por puerto en `localhost`. En producción van en dominios distintos.
 
@@ -56,7 +58,7 @@ La app del empleado funciona **sin** API ni base: el procesamiento es 100% en el
               └──────────────┬──────────────────────┘
                      apps/api (Hono)  ── verifica la sesión y hace SET LOCAL app.user_id / app.aal
                              │
-                     Postgres (db/init) ── funciones + seguridad por filas: aplica todos los permisos
+                     Postgres en Supabase (db/migraciones) ── funciones + seguridad por filas: aplica todos los permisos
 ```
 
 **Protección automática:** al subir un archivo se protege solo con la política de la empresa (o las acciones recomendadas) y se va directo al resultado. Revisar es opcional. Ante la duda se seudonimiza: protege, conserva la utilidad para analizar y se revierte con la tabla de equivalencias.
@@ -69,11 +71,23 @@ La app del empleado funciona **sin** API ni base: el procesamiento es 100% en el
 
 ## Gráficos de planillas
 
+> **Desactivado por ahora:** la página no muestra los botones de gráficos. El código sigue en el repo; para volver a ofrecerlos, poné `CHARTS_ENABLED = true` en `apps/web/src/store.ts`.
+
 Después de proteger una planilla (CSV, Excel o JSON en forma de tabla), **Ver gráficos** muestra un resumen (total, promedio, máximo y mínimo de la columna de plata, y cuánto subió o bajó entre el primer y el último período) y los gráficos que conviene ver: la evolución por día, mes o año si hay una columna de fechas, y rankings por las columnas que se repiten (Cliente, Provincia, Producto). **Armá tu gráfico** permite elegir cómo agrupar y qué medir (cantidad de filas, total o promedio de una columna numérica).
 
 **Comparar** pone dos períodos uno al lado del otro (un mes contra otro, en total o desglosado por una categoría) o dos valores de una categoría (una provincia contra otra, con su evolución si hay fechas), con la diferencia en %. Cada gráfico se puede **descargar como imagen** (PNG, armada en el navegador con su título y leyenda) y tiene su vista de tabla. Los **Word con tablas** también se grafican: las tablas se sacan del documento (`apps/web/src/lib/docTables.ts`) y su versión "con seudónimos" usa los mismos seudónimos que el texto (de un PDF no, porque sus tablas no se pueden reconstruir de forma confiable).
 
 Se calcula en el navegador, sin IA y sin mandar nada (`apps/web/src/lib/charts.ts`): reconoce números con formato argentino ("$ 1.250.000", "1.250,50") y fechas día/mes/año, y deja afuera los identificadores (DNI, CUIT, teléfono) y el texto libre. Por defecto muestra los datos reales (solo los ve quien usa la app); **Con seudónimos** usa la versión protegida, para compartir una captura. Cada gráfico tiene su vista de tabla y la librería (Recharts) se carga recién al abrir este paso.
+
+## Supervisor y empleados
+
+El **supervisor** (rol `responsable` en la base, o `admin`) entra al panel con contraseña y segundo factor. Además del **Reporte** (totales por tipo de dato, por área y por mes), tiene:
+
+- **Empleados:** los da de alta con nombre, email y área. DataGuard genera una **contraseña temporal** que se muestra una sola vez para pasársela al empleado. El empleado entra con ella en la app web o en la extensión y tiene que elegir una propia (10 caracteres o más) antes de poder usar nada. Desde ahí también se le cambia el área, se le genera una contraseña temporal nueva si se la olvidó, o se lo desactiva (no puede entrar más, pero lo que hizo sigue en los totales).
+- **Política:** qué hacer con cada tipo de dato (eliminar, anonimizar, seudonimizar o dejarlo). La app web y la extensión la aplican solas la próxima vez que se conectan.
+- **Eventos de riesgo:** los avisos de la extensión que se ignoraron (datos mandados sin proteger a una IA externa), para **abrir un incidente** y seguir su estado (abierto, en revisión, confirmado, descartado). Para que no se sepa quién fue, se muestra solo la fecha (sin hora), el área (las de menos de 5 personas como "Otras áreas"), el sitio y los tipos de dato, nunca el empleado.
+
+Lo que llega de cada empleado son solo metadatos: tipos de dato y cantidades, la acción aplicada, el tipo de archivo y, en la extensión, el sitio y qué hizo ante el aviso. Nunca el contenido.
 
 ## IA local (GLiNER)
 
@@ -117,15 +131,15 @@ El modelo se puede ajustar a textos como los de DataGuard sin que pese más (cam
 
 **Demo pública:** en GitHub Pages el panel se publica en [`/dataguard/panel/`](https://ju4nse.github.io/dataguard/panel/) con datos ficticios generados en el navegador (`apps/panel/src/demo.ts`, mismo cálculo que `app.panel_resumen`). Se entra con `seguridad@demo.test` / `demo1234`, no se conecta a ninguna base y anda aunque esta PC esté apagada. Para ver los datos reales, Tailscale:
 
-El panel del responsable se puede abrir desde tus otros dispositivos (celular, notebook) a través de [Tailscale](https://tailscale.com): una red privada entre tus dispositivos. La base sigue en esta PC y nada queda expuesto a internet.
+El panel del responsable se puede abrir desde tus otros dispositivos (celular, notebook) a través de [Tailscale](https://tailscale.com): una red privada entre tus dispositivos. La API corre en esta PC y no queda expuesta a internet; la base está en Supabase.
 
 1. Instalá Tailscale en esta PC y entrá con tu cuenta (gratis). Instalalo también en cada dispositivo desde el que quieras ver el panel, con la misma cuenta.
 2. En la consola de Tailscale ([DNS](https://login.tailscale.com/admin/dns)) dejá activado **MagicDNS** y activá **HTTPS Certificates**.
-3. Corré `npm run panel:online`. Genera un secreto de sesión propio (`.env.panel`, fuera de git), levanta la base, compila el panel y lo publica con HTTPS en `https://<tu-pc>.<tu-red>.ts.net` mediante `tailscale serve`.
+3. Corré `npm run panel:online`. Genera un secreto de sesión propio (`.env.panel`, fuera de git), verifica la conexión con Supabase, compila el panel y lo publica con HTTPS en `https://<tu-pc>.<tu-red>.ts.net` mediante `tailscale serve`.
 
 **Sin segundo factor (solo desarrollo o demo):** `npm run panel:online -- --sin-2fa`. Los usuarios que ya tienen el segundo factor configurado (`seguridad@demo.test`) entran solo con la contraseña, y el panel muestra un aviso mientras esté así. No lo uses con datos reales.
 
-La API corre en modo producción (cookie segura, secreto propio), escucha solo en `127.0.0.1:8790` y sirve el panel en el mismo puerto; Tailscale hace de proxy. Si la PC se suspende, el panel no responde hasta que despierte (los datos no se pierden). Para que esté siempre disponible: que Windows no suspenda con el cargador enchufado y que Docker Desktop arranque al iniciar sesión (la base tiene `restart: unless-stopped`).
+La API corre en modo producción (cookie segura, secreto propio), escucha solo en `127.0.0.1:8790` y sirve el panel en el mismo puerto; Tailscale hace de proxy. Si la PC se suspende, el panel no responde hasta que despierte (los datos no se pierden). Para que esté siempre disponible: que Windows no suspenda con el cargador enchufado. La base está en Supabase, así que no depende de la PC.
 
 ## Extensión de navegador (ChatGPT y Claude)
 
@@ -144,7 +158,7 @@ Mientras se escribe, un indicador abajo a la derecha avisa cuántos datos sensib
 
 1. `npm run build -w @securedata/extension` (o `npm run dev:extension`, que recompila al guardar).
 2. En Chrome, abrí `chrome://extensions`, activá **Modo de desarrollador** → **Cargar descomprimida** → elegí `apps/extension/dist`. Después de cada cambio, tocá ↻ en la tarjeta de la extensión y recargá ChatGPT o Claude.
-3. Opcional, para aplicar la política y registrar eventos: `npm run db:up` y `npm run dev:api`, y en el popup de la extensión entrá con un usuario de demo (ej. `empleado@demo.test`). Para otro servidor (como el del panel online), cambiá la dirección en **Servidor**: la extensión pide permiso para ese sitio.
+3. Opcional, para aplicar la política y registrar eventos: `npm run dev:api` (con el `.env` de Supabase completo), y en el popup de la extensión entrá con un usuario de demo (ej. `empleado@demo.test`). Para otro servidor (como el del panel online), cambiá la dirección en **Servidor**: la extensión pide permiso para ese sitio.
 
 El `key` del manifest fija el ID de la extensión (`kinpmadcicacoodohlbipajehcgmfcim`), y la API acepta pedidos desde ese origen. Cuando se publique en la Chrome Web Store, el ID cambia: hay que ponerlo en la variable `EXTENSION_ID` de la API. Si ChatGPT o Claude cambian su HTML y la extensión deja de frenar el envío, los selectores están en `apps/extension/src/content/sites.ts`. 
 
@@ -165,13 +179,14 @@ El `key` del manifest fija el ID de la extensión (`kinpmadcicacoodohlbipajehcgm
 | `npm run eval:ia` | Compara reglas contra reglas + IA local, también como documento largo (necesita el modelo en `.cache/`); `-- --control` agrega el set de control |
 | `npm run calibrar:ia` | Barre los umbrales por etiqueta de la IA local sobre los sets de calibración |
 | `npm run entrenamiento:datos` | Genera ejemplos ficticios para entrenar la IA local (ver "Entrenar el modelo") |
-| `npm run db:up` / `db:down` | Levanta / apaga Postgres en Docker (puerto 5433) |
-| `npm run db:reset` | Borra la base y la recrea desde `db/init` (esquema + datos de demo) |
-| `npm run db:test` | Verifica estructura, permisos y autenticación de la base (26 pruebas) |
+| `npm run db:migrate` | Aplica en la base las migraciones nuevas de `db/migraciones` |
+| `npm run db:seed` | Carga los datos de demo (`db/demo.sql`), una sola vez |
+| `npm run db:reset -- --confirmar` | **Borra** todo (esquemas `app` y `migraciones`) y lo recrea con la demo |
+| `npm run db:test` | Verifica estructura, permisos y autenticación de la base (36 pruebas; borra lo que crea) |
 | `npm run db:totp -- <email>` | Código 2FA actual de un usuario de demo (para probar sin celular) |
 | `npm run dev:api` / `dev:panel` | API y panel en modo desarrollo |
 | `npm run dev:extension` | Compila la extensión en `apps/extension/dist` y recompila al guardar |
-| `npm run db:psql` | Consola SQL dentro del contenedor |
+| `npm run db:psql` | Consola SQL con `DATABASE_URL` (necesita `psql`; si no, el SQL Editor de Supabase) |
 | `npm run panel:online` | Publica el panel en tu red de Tailscale (ver arriba) |
 | `npm run lint` | ESLint en todo el monorepo |
 | `npm run format` / `format:check` | Prettier (escribe / solo verifica); el CI corre lint y format:check |
@@ -183,23 +198,37 @@ El `key` del manifest fija el ID de la extensión (`kinpmadcicacoodohlbipajehcgm
 - **Desarrollo**: casos usados para ajustar las reglas (tiene que dar 100%; lo verifica un test).
 - **Validación**: casos nuevos que no se usaron para ajustar; mide cómo generaliza. Si se ajusta una regla mirando un caso de validación, ese caso pasa a desarrollo y se escriben casos nuevos.
 
-## Base de datos (Postgres en Docker)
+## Base de datos (Supabase)
 
 Solo guarda **metadatos**: fecha, área, origen (web/extensión), tipo de archivo, cantidad de detecciones por tipo y acción. Nunca contenido, nombres de archivo ni de columnas.
 
-```bash
-cp .env.example .env
-npm run db:up
-npm run db:test
-```
+Se usa Supabase **solo como Postgres**: la API se conecta con `pg` y el rol `securedata_api`, y los permisos los aplica la base (funciones + seguridad por filas). No se usan supabase-js, la Data API ni Supabase Auth, así que las claves `anon` y `service_role` no hacen falta y no van en ningún lado.
 
-- `db/init/01_esquema.sql`: tablas (organizaciones, áreas, usuarios, eventos, detecciones, incidentes, auditoría).
-- `db/init/02_funciones.sql`: la única forma de escribir y de leer el panel. Cada función verifica rol y organización.
-- `db/init/03_seguridad.sql`: rol `securedata_api` sin escritura directa + seguridad por filas (cada uno ve solo lo suyo).
-- `db/init/04_datos_demo.sql`: dos empresas ficticias y 3 meses de eventos simulados.
-- `db/init/05_autenticacion_y_politicas.sql`: contraseñas con bcrypt, segundo factor TOTP verificado dentro de la base (la API nunca ve el secreto) y políticas de la empresa por tipo de dato.
+**Primera vez:**
 
-El navegador **nunca** se conecta directo a Postgres: una API verifica el login y en cada transacción hace `SET LOCAL app.user_id` (y `app.aal = 'aal2'` si pasó el segundo factor). El panel exige rol de responsable + segundo factor, no muestra áreas con menos de 5 personas y registra cada consulta en la auditoría.
+1. En Supabase, botón **Connect** → copiá las URLs del *Session pooler* (5432) y del *Transaction pooler* (6543) a `.env` siguiendo `.env.example`. La conexión directa (`db.<ref>.supabase.co`) es solo IPv6: usá el pooler. Generá una contraseña para `securedata_api` (20+ caracteres) y ponela en `DATABASE_URL_API` y en `SECUREDATA_API_PASSWORD`.
+2. `npm run db:migrate && npm run db:seed && npm run db:test`.
+3. En el panel de Supabase:
+   - **Data API** (Project Settings → Data API): desactivala. Si la dejás, que exponga solo `public` (está vacío): nunca agregues `app`.
+   - **SSL enforcement** (Database → Settings): activado. El código verifica el certificado; si falla con "self-signed certificate", descargá el certificado de esa misma pantalla y poné su ruta en `DATABASE_SSL_CA`.
+   - **Advisors → Security**: revisá que no haya alertas.
+
+**Cambios en el esquema:** van en un archivo nuevo en `db/migraciones` (ej. `05_incidentes_api.sql`) y se aplican con `npm run db:migrate`. Las migraciones ya aplicadas no se editan: el script lo detecta (guarda el sha256 en `migraciones.aplicadas`) y frena.
+
+**Datos de demo:** la demo (`demo1234`, secreto TOTP conocido) queda en una base en internet, pero con esos usuarios solo se entra a través de la API, que escucha en `127.0.0.1` (o por Tailscale). La base en sí se protege con las contraseñas de `.env`. Antes de cargar una empresa real, empezá de una base sin la demo.
+
+**Plan gratis:** el proyecto se pausa después de 7 días sin uso (se reactiva desde el panel de Supabase) y no tiene restauración a un punto en el tiempo.
+
+El CI no usa Supabase: levanta su propio Postgres y corre `db:migrate`, `db:seed` y `db:test`, así se prueba que el SQL funciona en un Postgres común.
+
+- `db/migraciones/01_esquema.sql`: extensiones (en el esquema `extensions`, como Supabase), zona horaria argentina y tablas (organizaciones, áreas, usuarios, eventos, detecciones, incidentes, auditoría).
+- `db/migraciones/02_funciones.sql`: la única forma de escribir y de leer el panel. Cada función verifica rol y organización.
+- `db/migraciones/03_seguridad.sql`: rol `securedata_api` sin escritura directa + seguridad por filas (cada uno ve solo lo suyo).
+- `db/migraciones/04_autenticacion_y_politicas.sql`: contraseñas con bcrypt, segundo factor TOTP verificado dentro de la base (la API nunca ve el secreto) y políticas de la empresa por tipo de dato.
+- `db/migraciones/05_supervisor.sql`: alta de empleados con contraseña temporal, cambio de contraseña, cambio de área y baja, política editable por el supervisor y eventos de riesgo para abrir incidentes.
+- `db/demo.sql`: dos empresas ficticias, usuarios de demo y 3 meses de eventos simulados.
+
+El navegador **nunca** se conecta directo a Postgres: una API verifica el login y en cada transacción hace `SET LOCAL app.user_id` (y `app.aal = 'aal2'` si pasó el segundo factor). El panel exige rol de supervisor (`responsable` en la base) + segundo factor, no muestra áreas con menos de 5 personas y registra cada consulta en la auditoría.
 
 ## Diseño
 
@@ -224,7 +253,8 @@ apps/
   panel/      panel del responsable (React + Recharts), acceso con 2FA
   api/        API (Hono): login, sesión, eventos y panel; los permisos los aplica Postgres
   extension/  extensión de Chrome para ChatGPT y Claude (avisa y seudonimiza antes de enviar)
-db/init/      esquema, funciones, seguridad, datos de demo, autenticación y políticas
+db/migraciones/  esquema, funciones, seguridad, autenticación y políticas (npm run db:migrate)
+db/demo.sql      datos de demo (npm run db:seed)
 fixtures/     archivos de prueba con datos FICTICIOS
 scripts/      generador de fixtures y verificación de fugas
 ```

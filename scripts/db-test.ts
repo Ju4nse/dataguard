@@ -1,15 +1,18 @@
 /**
- * Verifica la estructura y los permisos de la base local (Docker).
- * Uso: npm run db:up && npm run db:test
+ * Verifica la estructura y los permisos de la base (Supabase o el Postgres del CI).
+ * Uso: npm run db:migrate && npm run db:seed && npm run db:test
+ * Al terminar borra los eventos, incidentes y filas de auditoría que creó, para no ensuciar la demo.
  *
  * Se conecta como `securedata_api` (el rol que usará la API) y simula sesiones de distintos usuarios
  * con SET LOCAL app.user_id / app.aal, igual que lo hará la API después de verificar el login.
  */
 import pg from 'pg';
+import { loadEnv, pgConfig, requireDbUrl } from '../apps/api/src/pgConfig';
 import { DETECTION_TYPES } from '../packages/shared/src';
 
-const OWNER_URL = process.env.DATABASE_URL ?? 'postgres://securedata:securedata_dev@localhost:5433/securedata';
-const API_URL = process.env.DATABASE_URL_API ?? 'postgres://securedata_api:api_dev@localhost:5433/securedata';
+loadEnv();
+const OWNER_URL = requireDbUrl('DATABASE_URL');
+const API_URL = requireDbUrl('DATABASE_URL_API');
 
 const ID = {
   admin: 'aaaaaaaa-0000-0000-0000-0000000000a1',
@@ -22,8 +25,8 @@ const ID = {
   areaVentas: 'aaaaaaaa-0000-0000-0000-000000000011',
 };
 
-const api = new pg.Client({ connectionString: API_URL });
-const owner = new pg.Client({ connectionString: OWNER_URL });
+const api = new pg.Client(pgConfig(API_URL));
+const owner = new pg.Client(pgConfig(OWNER_URL));
 
 /** Ejecuta una consulta como si fuera el usuario indicado (lo que hará la API). */
 async function as<T extends pg.QueryResultRow = pg.QueryResultRow>(userId: string | null, sql: string, params: unknown[] = [], aal = 'aal1') {
@@ -73,9 +76,13 @@ async function main() {
     await api.connect();
     await owner.connect();
   } catch (e) {
-    console.error(`No se pudo conectar a la base (${e instanceof Error ? e.message : e}).\n¿Está corriendo? Probá: npm run db:up`);
+    console.error(
+      `No se pudo conectar a la base (${e instanceof Error ? e.message : e}).\nRevisá .env y que el proyecto de Supabase no esté pausado. ¿Corriste npm run db:migrate y db:seed?`,
+    );
     process.exit(2);
   }
+  // Desde acá, todo lo que creen las pruebas se borra al final.
+  const inicio = (await owner.query<{ t: Date }>('SELECT now() AS t')).rows[0]!.t;
 
   // ---------- Estructura ----------
   await test('los tipos de dato de la base coinciden con los del detector', async () => {
@@ -258,10 +265,115 @@ async function main() {
     await fails(as(ID.responsable, `SELECT totp_secreto FROM app.usuarios`, [], 'aal2'), /permission denied/);
   });
 
+  await test('login: el email no distingue mayúsculas', async () => {
+    const r = await as(null, `SELECT * FROM app.autenticar($1, $2)`, ['Empleado@Demo.TEST', 'demo1234']);
+    assert(r.rows[0]?.usuario_id === ID.empleado, `login con mayúsculas: ${JSON.stringify(r.rows)}`);
+  });
+
+  // ---------- Supabase ----------
+  await test('los roles de la Data API de Supabase (anon, authenticated) no tienen acceso al esquema app', async () => {
+    const r = await owner.query<{ rol: string; uso: boolean }>(
+      `SELECT rolname AS rol, has_schema_privilege(rolname, 'app', 'USAGE') AS uso FROM pg_roles WHERE rolname IN ('anon', 'authenticated')`,
+    );
+    const conAcceso = r.rows.filter((x) => x.uso).map((x) => x.rol);
+    assert(conAcceso.length === 0, `con acceso: ${conAcceso.join(', ')}`);
+  });
+
   await test('cualquier empleado puede leer la política de su empresa', async () => {
     const r = await as(ID.empleado, `SELECT app.mi_politica() AS p`);
     assert(r.rows[0]!.p.CREDENCIAL === 'eliminar', JSON.stringify(r.rows[0]!.p));
   });
+
+  // ---------- Supervisor y empleados ----------
+  const emailNuevo = `nuevo.${Date.now()}@prueba.test`;
+  let nuevo = { id: '', temporal: '' };
+
+  await test('un empleado NO puede dar de alta empleados ni ver la lista', async () => {
+    await fails(as(ID.empleado, `SELECT * FROM app.supervisor_crear_empleado($1, 'X', NULL)`, [emailNuevo]), /rol de responsable/);
+    await fails(as(ID.empleado, `SELECT * FROM app.supervisor_empleados()`), /rol de responsable/);
+  });
+
+  await test('el supervisor da de alta un empleado con contraseña temporal', async () => {
+    const r = await as(ID.responsable, `SELECT * FROM app.supervisor_crear_empleado($1, 'Nuevo Empleado', $2)`, [emailNuevo, ID.areaVentas], 'aal2');
+    nuevo = { id: r.rows[0]!.id, temporal: r.rows[0]!.password_temporal };
+    assert(/^[a-z2-9]{12}$/.test(nuevo.temporal), `temporal: ${nuevo.temporal}`);
+    const lista = await as(ID.responsable, `SELECT * FROM app.supervisor_empleados()`, [], 'aal2');
+    const fila = lista.rows.find((x) => x.id === nuevo.id);
+    assert(fila?.pendiente_de_ingreso === true && fila.area === 'Ventas', JSON.stringify(fila));
+    assert(!lista.rows.some((x) => x.id === ID.responsable), 'la lista solo tiene empleados');
+  });
+
+  await test('con la contraseña temporal entra, pero tiene que cambiarla', async () => {
+    const r = await as(null, `SELECT * FROM app.autenticar($1, $2)`, [emailNuevo, nuevo.temporal]);
+    assert(r.rows[0]?.debe_cambiar_password === true, JSON.stringify(r.rows));
+    await fails(as(nuevo.id, `SELECT app.cambiar_password($1, 'corta')`, [nuevo.temporal]), /entre 10 y 200/);
+    const mal = await as(nuevo.id, `SELECT app.cambiar_password('otra', 'una-clave-nueva-larga') AS ok`);
+    assert(mal.rows[0]!.ok === false, 'con la contraseña actual equivocada no debería cambiarla');
+    const ok = await as(nuevo.id, `SELECT app.cambiar_password($1, 'una-clave-nueva-larga') AS ok`, [nuevo.temporal]);
+    assert(ok.rows[0]!.ok === true, 'debería cambiarla');
+    const despues = await as(null, `SELECT * FROM app.autenticar($1, $2)`, [emailNuevo, 'una-clave-nueva-larga']);
+    assert(despues.rows[0]?.debe_cambiar_password === false, JSON.stringify(despues.rows));
+  });
+
+  await test('el supervisor reinicia la contraseña y desactiva al empleado (ya no entra)', async () => {
+    const t = await as(ID.responsable, `SELECT app.supervisor_reiniciar_password($1) AS t`, [nuevo.id], 'aal2');
+    const r = await as(null, `SELECT * FROM app.autenticar($1, $2)`, [emailNuevo, t.rows[0]!.t]);
+    assert(r.rows[0]?.debe_cambiar_password === true, 'después de reiniciar tiene que cambiarla de nuevo');
+    await as(ID.responsable, `SELECT app.supervisor_actualizar_empleado($1, NULL, false)`, [nuevo.id], 'aal2');
+    const baja = await as(null, `SELECT * FROM app.autenticar($1, $2)`, [emailNuevo, t.rows[0]!.t]);
+    assert(baja.rows.length === 0, 'un empleado desactivado no debería entrar');
+  });
+
+  await test('el supervisor no puede tocar empleados de otra empresa ni a otros supervisores', async () => {
+    await fails(as(ID.responsableOtra, `SELECT app.supervisor_actualizar_empleado($1, NULL, false)`, [ID.empleado], 'aal2'), /empleado inexistente/);
+    await fails(as(ID.responsable, `SELECT app.supervisor_actualizar_empleado($1, NULL, false)`, [ID.admin], 'aal2'), /empleado inexistente/);
+    await fails(as(ID.responsableOtra, `SELECT app.supervisor_reiniciar_password($1)`, [ID.empleado], 'aal2'), /empleado inexistente/);
+  });
+
+  await test('el supervisor define la política y la vuelve a la recomendada', async () => {
+    await fails(as(ID.empleado, `SELECT app.supervisor_definir_politica('EMAIL', 'eliminar')`), /rol de responsable/);
+    await as(ID.responsable, `SELECT app.supervisor_definir_politica('EMAIL', 'anonimizar')`, [], 'aal2');
+    const con = await as(ID.empleado, `SELECT app.mi_politica() AS p`);
+    await as(ID.responsable, `SELECT app.supervisor_definir_politica('EMAIL', NULL)`, [], 'aal2');
+    const sin = await as(ID.empleado, `SELECT app.mi_politica() AS p`);
+    assert(
+      con.rows[0]!.p.EMAIL === 'anonimizar' && sin.rows[0]!.p.EMAIL === undefined,
+      `${JSON.stringify(con.rows[0]!.p)} / ${JSON.stringify(sin.rows[0]!.p)}`,
+    );
+  });
+
+  await test('eventos de riesgo: sin el empleado, con fecha sin hora y áreas chicas agrupadas', async () => {
+    await fails(as(ID.empleado, `SELECT * FROM app.panel_eventos_riesgo($1, $2)`, [desde, hasta]), /rol de responsable/);
+    const r = await as(ID.responsable, `SELECT * FROM app.panel_eventos_riesgo($1, $2)`, [desde, hasta], 'aal2');
+    assert(r.rows.length > 0, 'la demo tiene avisos ignorados');
+    const cols = r.fields.map((f) => f.name);
+    assert(!cols.some((c) => /usuario|email|nombre/.test(c)), `columnas: ${cols.join(', ')}`);
+    const areas = new Set(r.rows.map((x) => x.area));
+    assert(!areas.has('Marketing') && !areas.has('Sistemas'), `áreas: ${[...areas].join(', ')}`);
+  });
+
+  await test('un incidente por evento de riesgo, y aparece en la lista', async () => {
+    const r = await as(ID.responsable, `SELECT evento_id FROM app.panel_eventos_riesgo($1, $2) WHERE incidente_id IS NULL LIMIT 1`, [desde, hasta], 'aal2');
+    const evento = r.rows[0]!.evento_id;
+    await as(ID.responsable, `SELECT app.incidente_crear($1)`, [evento], 'aal2');
+    await fails(as(ID.responsable, `SELECT app.incidente_crear($1)`, [evento], 'aal2'), /duplicate key/);
+    const despues = await as(
+      ID.responsable,
+      `SELECT incidente_estado FROM app.panel_eventos_riesgo($1, $2) WHERE evento_id = $3`,
+      [desde, hasta, evento],
+      'aal2',
+    );
+    assert(despues.rows[0]?.incidente_estado === 'abierto', JSON.stringify(despues.rows));
+  });
+
+  // Limpieza: los eventos de la demo tienen fechas pasadas, así que lo posterior a `inicio` de los
+  // usuarios de prueba es de esta corrida.
+  await owner.query(`DELETE FROM app.auditoria WHERE usuario_id IN (SELECT id FROM app.usuarios WHERE email LIKE '%@prueba.test')`);
+  await owner.query(`DELETE FROM app.usuarios WHERE email LIKE '%@prueba.test'`);
+  const ids = Object.values(ID);
+  await owner.query('DELETE FROM app.incidentes WHERE creado_en >= $1 AND creado_por = ANY($2::uuid[])', [inicio, ids]);
+  await owner.query('DELETE FROM app.eventos WHERE creado_en >= $1 AND usuario_id = ANY($2::uuid[])', [inicio, ids]);
+  await owner.query('DELETE FROM app.auditoria WHERE creado_en >= $1 AND usuario_id = ANY($2::uuid[])', [inicio, ids]);
 
   await api.end();
   await owner.end();

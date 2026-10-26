@@ -41,13 +41,17 @@ function fail(c: Context, e: unknown) {
 }
 
 /** Sesión completa (con segundo factor si corresponde). */
-async function requireSession(c: Context, opts: { allowConfigurar?: boolean } = {}): Promise<Session | Response> {
+async function requireSession(c: Context, opts: { allowConfigurar?: boolean; allowCambiarPassword?: boolean } = {}): Promise<Session | Response> {
   const s = await getSession(c);
   if (!s) return c.json({ error: 'No hay sesión' }, 401);
   if (s.mfa === 'pendiente') return c.json({ error: 'Falta el código del segundo factor' }, 401);
   if (s.mfa === 'configurar' && !opts.allowConfigurar) return c.json({ error: 'Primero configurá el segundo factor' }, 403);
+  if (s.cambiarPassword && !opts.allowCambiarPassword) return c.json({ error: 'Primero cambiá tu contraseña temporal' }, 403);
   return s;
 }
+
+/** Qué le falta a la sesión después de la contraseña / el código: primero el 2FA, después la contraseña temporal. */
+const estadoSesion = (s: Session) => (s.mfa !== 'ok' ? s.mfa : s.cambiarPassword ? 'cambiar_password' : 'ok');
 
 const dbSession = (s: Session): DbSession => ({ userId: s.userId, aal: s.aal });
 
@@ -71,13 +75,16 @@ app.post('/auth/login', async (c) => {
     const u = r.rows[0];
     if (!u) return c.json({ error: 'Email o contraseña incorrectos' }, 401);
     // Con el segundo factor desactivado (solo demo), quien ya lo tiene configurado entra directo.
+    const cambiarPassword = u.debe_cambiar_password === true;
     if (config.mfaDisabled && u.requiere_2fa) {
-      await setSession(c, { userId: u.usuario_id, aal: 'aal2', mfa: 'ok' });
-      return c.json({ estado: 'ok' });
+      const s: Session = { userId: u.usuario_id, aal: 'aal2', mfa: 'ok', cambiarPassword };
+      await setSession(c, s);
+      return c.json({ estado: estadoSesion(s) });
     }
     const mfa = u.requiere_2fa ? 'pendiente' : u.debe_configurar_2fa ? 'configurar' : 'ok';
-    await setSession(c, { userId: u.usuario_id, aal: 'aal1', mfa });
-    return c.json({ estado: mfa });
+    const s: Session = { userId: u.usuario_id, aal: 'aal1', mfa, cambiarPassword };
+    await setSession(c, s);
+    return c.json({ estado: estadoSesion(s) });
   } catch (e) {
     return fail(c, e);
   }
@@ -92,8 +99,29 @@ app.post('/auth/2fa', async (c) => {
   try {
     const r = await withSession(null, (db) => db.query(`SELECT app.verificar_totp($1, $2) AS ok`, [s.userId, body.data.codigo]));
     if (!r.rows[0].ok) return c.json({ error: 'Código incorrecto o vencido' }, 401);
-    await setSession(c, { userId: s.userId, aal: 'aal2', mfa: 'ok' });
-    return c.json({ estado: 'ok' });
+    const nueva: Session = { userId: s.userId, aal: 'aal2', mfa: 'ok', cambiarPassword: s.cambiarPassword };
+    await setSession(c, nueva);
+    return c.json({ estado: estadoSesion(nueva) });
+  } catch (e) {
+    return fail(c, e);
+  }
+});
+
+// Cambio de contraseña: obligatorio después de entrar con una temporal, y disponible siempre.
+const PasswordBody = z.object({ actual: z.string().min(1).max(200), nueva: z.string().min(10).max(200) });
+
+app.post('/auth/password', async (c) => {
+  const s = await requireSession(c, { allowConfigurar: true, allowCambiarPassword: true });
+  if (s instanceof Response) return s;
+  const body = PasswordBody.safeParse(await c.req.json().catch(() => null));
+  if (!body.success) return c.json({ error: 'La contraseña nueva tiene que tener al menos 10 caracteres' }, 400);
+  if (!codeLimiter(`pwd:${s.userId}`)) return c.json({ error: 'Demasiados intentos. Esperá un minuto.' }, 429);
+  try {
+    const r = await withSession(dbSession(s), (db) => db.query(`SELECT app.cambiar_password($1, $2) AS ok`, [body.data.actual, body.data.nueva]));
+    if (!r.rows[0].ok) return c.json({ error: 'La contraseña actual no es correcta' }, 401);
+    const nueva: Session = { ...s, cambiarPassword: false };
+    await setSession(c, nueva);
+    return c.json({ estado: estadoSesion(nueva) });
   } catch (e) {
     return fail(c, e);
   }
@@ -125,8 +153,9 @@ app.post('/auth/2fa/confirmar', async (c) => {
   try {
     const r = await withSession(dbSession(s), (db) => db.query(`SELECT app.totp_confirmar($1) AS ok`, [body.data.codigo]));
     if (!r.rows[0].ok) return c.json({ error: 'Código incorrecto o vencido' }, 401);
-    await setSession(c, { userId: s.userId, aal: 'aal2', mfa: 'ok' });
-    return c.json({ estado: 'ok' });
+    const nueva: Session = { userId: s.userId, aal: 'aal2', mfa: 'ok', cambiarPassword: s.cambiarPassword };
+    await setSession(c, nueva);
+    return c.json({ estado: estadoSesion(nueva) });
   } catch (e) {
     return fail(c, e);
   }
@@ -139,7 +168,7 @@ app.post('/auth/logout', async (c) => {
 
 // ---------- Usuario actual ----------
 app.get('/me', async (c) => {
-  const s = await requireSession(c, { allowConfigurar: true });
+  const s = await requireSession(c, { allowConfigurar: true, allowCambiarPassword: true });
   if (s instanceof Response) return s;
   try {
     const data = await withSession(dbSession(s), async (db) => {
@@ -149,7 +178,14 @@ app.get('/me', async (c) => {
          WHERE u.id = app.uid()`,
       );
       const p = await db.query(`SELECT app.mi_politica() AS politica`);
-      return { usuario: u.rows[0], politica: p.rows[0].politica, aal: s.aal, mfa: s.mfa, mfaDesactivado: config.mfaDisabled };
+      return {
+        usuario: u.rows[0],
+        politica: p.rows[0].politica,
+        aal: s.aal,
+        mfa: s.mfa,
+        cambiarPassword: s.cambiarPassword === true,
+        mfaDesactivado: config.mfaDisabled,
+      };
     });
     if (!data.usuario) return c.json({ error: 'Sesión inválida' }, 401);
     return c.json(data);
@@ -233,6 +269,151 @@ app.get('/panel/usuarios', async (c) => {
   try {
     const r = await withSession(dbSession(s), (db) => db.query(`SELECT * FROM app.panel_detalle_usuarios($1, $2)`, [q.data.desde, q.data.hasta]));
     return c.json(r.rows);
+  } catch (e) {
+    return fail(c, e);
+  }
+});
+
+// ---------- Supervisor: empleados, política e incidentes ----------
+// Los permisos (rol responsable/admin + segundo factor, misma empresa, solo empleados) los verifica la base.
+// guid y no uuid: zod exige UUID de versión válida y los IDs fijos de la demo no lo son.
+const IdParam = z.guid();
+const NuevoEmpleado = z.strictObject({
+  email: z.string().email().max(200),
+  nombre: z.string().trim().min(1).max(200),
+  areaId: z.guid().nullable(),
+});
+const CambioEmpleado = z.strictObject({ areaId: z.guid().nullable(), activo: z.boolean() });
+const CambioPolitica = z.strictObject({
+  tipo: z.enum(DETECTION_TYPES),
+  accion: z.enum(['eliminar', 'anonimizar', 'seudonimizar', 'mantener']).nullable(),
+});
+const NuevoIncidente = z.strictObject({ eventoId: z.number().int().positive() });
+const CambioIncidente = z.strictObject({ estado: z.enum(['abierto', 'en_revision', 'confirmado', 'descartado']) });
+
+app.get('/supervisor/empleados', async (c) => {
+  const s = await requireSession(c);
+  if (s instanceof Response) return s;
+  try {
+    const [empleados, areas] = await withSession(dbSession(s), (db) =>
+      Promise.all([db.query(`SELECT * FROM app.supervisor_empleados()`), db.query(`SELECT id, nombre FROM app.areas ORDER BY nombre`)]),
+    );
+    return c.json({ empleados: empleados.rows, areas: areas.rows });
+  } catch (e) {
+    return fail(c, e);
+  }
+});
+
+app.post('/supervisor/empleados', async (c) => {
+  const s = await requireSession(c);
+  if (s instanceof Response) return s;
+  const body = NuevoEmpleado.safeParse(await c.req.json().catch(() => null));
+  if (!body.success) return c.json({ error: 'Revisá el nombre y el email' }, 400);
+  try {
+    const r = await withSession(dbSession(s), (db) =>
+      db.query(`SELECT * FROM app.supervisor_crear_empleado($1, $2, $3)`, [body.data.email, body.data.nombre, body.data.areaId]),
+    );
+    return c.json({ id: r.rows[0].id, passwordTemporal: r.rows[0].password_temporal }, 201);
+  } catch (e) {
+    if ((e as PgError).code === '23505') return c.json({ error: 'Ya existe un usuario con ese email' }, 409);
+    return fail(c, e);
+  }
+});
+
+app.post('/supervisor/empleados/:id', async (c) => {
+  const s = await requireSession(c);
+  if (s instanceof Response) return s;
+  const id = IdParam.safeParse(c.req.param('id'));
+  const body = CambioEmpleado.safeParse(await c.req.json().catch(() => null));
+  if (!id.success || !body.success) return c.json({ error: 'Datos inválidos' }, 400);
+  try {
+    await withSession(dbSession(s), (db) => db.query(`SELECT app.supervisor_actualizar_empleado($1, $2, $3)`, [id.data, body.data.areaId, body.data.activo]));
+    return c.json({ estado: 'ok' });
+  } catch (e) {
+    return fail(c, e);
+  }
+});
+
+app.post('/supervisor/empleados/:id/password', async (c) => {
+  const s = await requireSession(c);
+  if (s instanceof Response) return s;
+  const id = IdParam.safeParse(c.req.param('id'));
+  if (!id.success) return c.json({ error: 'Datos inválidos' }, 400);
+  try {
+    const r = await withSession(dbSession(s), (db) => db.query(`SELECT app.supervisor_reiniciar_password($1) AS t`, [id.data]));
+    return c.json({ passwordTemporal: r.rows[0].t });
+  } catch (e) {
+    return fail(c, e);
+  }
+});
+
+app.post('/supervisor/politica', async (c) => {
+  const s = await requireSession(c);
+  if (s instanceof Response) return s;
+  const body = CambioPolitica.safeParse(await c.req.json().catch(() => null));
+  if (!body.success) return c.json({ error: 'Datos inválidos' }, 400);
+  try {
+    const politica = await withSession(dbSession(s), async (db) => {
+      await db.query(`SELECT app.supervisor_definir_politica($1::app.tipo_dato, $2::app.accion)`, [body.data.tipo, body.data.accion]);
+      return (await db.query(`SELECT app.mi_politica() AS p`)).rows[0].p;
+    });
+    return c.json({ politica });
+  } catch (e) {
+    return fail(c, e);
+  }
+});
+
+app.get('/panel/riesgo', async (c) => {
+  const s = await requireSession(c);
+  if (s instanceof Response) return s;
+  const q = RangeQuery.safeParse(c.req.query());
+  if (!q.success) return c.json({ error: 'Fechas inválidas (AAAA-MM-DD)' }, 400);
+  try {
+    const r = await withSession(dbSession(s), (db) =>
+      db.query(
+        // tipos::text[]: pg no convierte arrays de enums propios (llegarían como "{EMAIL,DNI}").
+        `SELECT evento_id, to_char(fecha, 'YYYY-MM-DD') AS fecha, area, sitio, tipo_entrada, tipos::text[] AS tipos, detecciones, incidente_id, incidente_estado
+         FROM app.panel_eventos_riesgo($1, $2)`,
+        [q.data.desde, q.data.hasta],
+      ),
+    );
+    // bigint llega como texto: los ids y cantidades caben de sobra en un number.
+    return c.json(
+      r.rows.map((x) => ({
+        ...x,
+        evento_id: Number(x.evento_id),
+        detecciones: Number(x.detecciones),
+        incidente_id: x.incidente_id === null ? null : Number(x.incidente_id),
+      })),
+    );
+  } catch (e) {
+    return fail(c, e);
+  }
+});
+
+app.post('/panel/incidentes', async (c) => {
+  const s = await requireSession(c);
+  if (s instanceof Response) return s;
+  const body = NuevoIncidente.safeParse(await c.req.json().catch(() => null));
+  if (!body.success) return c.json({ error: 'Datos inválidos' }, 400);
+  try {
+    const r = await withSession(dbSession(s), (db) => db.query(`SELECT app.incidente_crear($1) AS id`, [body.data.eventoId]));
+    return c.json({ id: Number(r.rows[0].id) }, 201);
+  } catch (e) {
+    if ((e as PgError).code === '23505') return c.json({ error: 'Ese evento ya tiene un incidente' }, 409);
+    return fail(c, e);
+  }
+});
+
+app.post('/panel/incidentes/:id', async (c) => {
+  const s = await requireSession(c);
+  if (s instanceof Response) return s;
+  const id = z.coerce.number().int().positive().safeParse(c.req.param('id'));
+  const body = CambioIncidente.safeParse(await c.req.json().catch(() => null));
+  if (!id.success || !body.success) return c.json({ error: 'Datos inválidos' }, 400);
+  try {
+    await withSession(dbSession(s), (db) => db.query(`SELECT app.incidente_actualizar($1, $2::app.estado_incidente)`, [id.data, body.data.estado]));
+    return c.json({ estado: 'ok' });
   } catch (e) {
     return fail(c, e);
   }

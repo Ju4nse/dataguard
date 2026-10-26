@@ -4,4 +4,5 @@ dist
 fixtures
 package-lock.json
 *.md
-db/init
+db/migraciones
+db/demo.sql

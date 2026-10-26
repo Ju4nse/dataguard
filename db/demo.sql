@@ -1,5 +1,5 @@
 -- =====================================================================
--- Datos de DEMO (ficticios). Solo para desarrollo local.
+-- Datos de DEMO (ficticios): npm run db:seed. No usar en una base con una empresa real.
 -- IDs fijos para usarlos en pruebas:
 --   Empresa Demo SA   aaaaaaaa-0000-0000-0000-000000000001
 --     admin           aaaaaaaa-0000-0000-0000-0000000000a1  (con 2FA)
@@ -84,3 +84,17 @@ BEGIN
     END LOOP;
   END LOOP;
 END $$;
+
+
+-- ---------------------------------------------------------------------
+-- Datos de DEMO: contraseña "demo1234" para todos. Secreto TOTP conocido para los que tienen 2FA,
+-- así se puede probar sin celular: npm run db:totp -- seguridad@demo.test
+-- ---------------------------------------------------------------------
+UPDATE app.usuarios SET password_hash = extensions.crypt('demo1234', extensions.gen_salt('bf', 8)) WHERE email LIKE '%.test';
+UPDATE app.usuarios SET totp_secreto = convert_to('securedata-demo-totp', 'UTF8') WHERE mfa_activo AND email LIKE '%.test';
+
+INSERT INTO app.politicas (organizacion_id, tipo, accion) VALUES
+  ('aaaaaaaa-0000-0000-0000-000000000001', 'CREDENCIAL', 'eliminar'),
+  ('aaaaaaaa-0000-0000-0000-000000000001', 'TARJETA', 'eliminar'),
+  ('aaaaaaaa-0000-0000-0000-000000000001', 'DATO_SENSIBLE', 'eliminar'),
+  ('aaaaaaaa-0000-0000-0000-000000000001', 'SALARIO', 'anonimizar');

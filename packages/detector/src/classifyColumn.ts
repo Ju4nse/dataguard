@@ -1,5 +1,5 @@
-import type { Action, Confidence, DetectionType } from '@securedata/shared';
-import { DETECTION_LABELS } from '@securedata/shared';
+import type { Confidence, DetectionType } from '@securedata/shared';
+import { DEFAULT_ACTIONS, DETECTION_LABELS } from '@securedata/shared';
 import { headerHint, isNegativeHeader } from './patterns/headers';
 import { mentionsSensitive } from './patterns/sensitive';
 import { isPersonNameValue, looksLikeCompany, looksLikePersonName, STRONG_TYPES, VALUE_MATCHERS } from './patterns/values';
@@ -10,26 +10,8 @@ import { cellToString, maskForDisplay } from './util';
 const SAMPLE_SIZE = 500;
 const MAX_EXAMPLES = 3;
 
-/** Acción sugerida por tipo cuando la detección es confiable. */
-export const DEFAULT_ACTIONS: Record<DetectionType, Action> = {
-  EMAIL: 'anonimizar',
-  TELEFONO: 'eliminar',
-  DNI: 'seudonimizar',
-  CUIT_CUIL: 'seudonimizar',
-  CBU_CVU: 'eliminar',
-  TARJETA: 'eliminar',
-  PATENTE: 'seudonimizar',
-  NOMBRE_PERSONA: 'seudonimizar',
-  RAZON_SOCIAL: 'seudonimizar',
-  DIRECCION: 'eliminar',
-  FECHA_NACIMIENTO: 'anonimizar',
-  EDAD: 'anonimizar',
-  PASAPORTE: 'seudonimizar',
-  SALARIO: 'anonimizar',
-  DATO_SENSIBLE: 'eliminar',
-  CREDENCIAL: 'eliminar',
-  IP: 'anonimizar',
-};
+// Acción sugerida por tipo cuando la detección es confiable (vive en shared: también la usa el panel).
+export { DEFAULT_ACTIONS };
 
 /** Tipos que solo se reconocen por el encabezado (no tienen formato fijo). */
 // prettier-ignore

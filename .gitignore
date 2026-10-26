@@ -15,3 +15,7 @@ equivalencias*.csv
 
 # Secreto de sesión del panel online (npm run panel:online)
 .env.panel
+
+# Videos: renders y capturas de control (pesados, se regeneran)
+videos/**/renders/
+videos/**/snapshots/

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { documentOutputExtension, downloadDocument } from '../lib/files';
-import { useStore } from '../store';
+import { CHARTS_ENABLED, useStore } from '../store';
 import { ResultSummary } from './ResultSummary';
 import { TranslateResponse } from './TranslateResponse';
 import { Button, Card, Icon } from './ui';
@@ -59,7 +59,7 @@ export function DocumentResultStep() {
               <Icon name="download" className="h-4 w-4" />
               Descargar .{ext}
             </Button>
-            {docTables.length > 0 && (
+            {CHARTS_ENABLED && docTables.length > 0 && (
               <Button variant="secondary" onClick={openCharts}>
                 <Icon name="chart" className="h-4 w-4" />
                 Graficar {docTables.length === 1 ? 'la tabla' : `las ${docTables.length} tablas`}
