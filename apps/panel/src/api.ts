@@ -51,6 +51,8 @@ async function remoteApi<T>(path: string, body?: unknown): Promise<T> {
   if (data.token) {
     storeToken(data.token);
     delete data.token;
+    // La extensión de DataGuard, si está instalada, toma esta sesión (apps/extension/src/content/dataguard.ts).
+    window.dispatchEvent(new Event('dataguard:sesion'));
   }
   return data as T;
 }

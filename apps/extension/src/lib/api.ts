@@ -10,13 +10,17 @@ export { ApiError };
  * sola: la extensión tiene permiso de host sobre el servidor, así que Chrome la trata como del mismo sitio.
  */
 async function call<T>(path: string, body?: unknown): Promise<T> {
-  const { apiBase } = await getSettings();
+  const { apiBase, token } = await getSettings();
+  const headers: Record<string, string> = {};
+  if (body !== undefined) headers['Content-Type'] = 'application/json';
+  // Sesión tomada del panel de DataGuard: va como Bearer (la cookie es de otra sesión, o no hay).
+  if (token) headers.Authorization = `Bearer ${token}`;
   let res: Response;
   try {
     res = await fetch(`${apiBase}/api${path}`, {
       method: body === undefined ? 'GET' : 'POST',
       credentials: 'include',
-      headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+      headers,
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {
@@ -36,7 +40,7 @@ export async function logout(): Promise<void> {
   try {
     await call('/auth/logout', {});
   } finally {
-    await saveSettings({ session: null });
+    await saveSettings({ session: null, token: null });
   }
 }
 
@@ -49,7 +53,7 @@ export async function refreshSession(): Promise<SessionInfo | null> {
     const me = await call<{ usuario: { nombre: string; organizacion: string }; politica: Policy | null; cambiarPassword?: boolean }>('/me');
     // Con la contraseña temporal sin cambiar no puede registrar nada: es como no tener sesión.
     if (me.cambiarPassword) {
-      await saveSettings({ session: null });
+      await saveSettings({ session: null, token: null });
       return null;
     }
     const session = { nombre: me.usuario.nombre, organizacion: me.usuario.organizacion, politica: me.politica ?? {} };
@@ -57,11 +61,22 @@ export async function refreshSession(): Promise<SessionInfo | null> {
     return session;
   } catch (e) {
     if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
-      await saveSettings({ session: null });
+      await saveSettings({ session: null, token: null });
       return null;
     }
     throw e;
   }
+}
+
+/**
+ * Conecta la extensión con la sesión que el usuario ya inició en el panel de DataGuard. Si la extensión
+ * ya tiene su propia sesión, no la pisa (por ejemplo, un supervisor que abre el panel en la PC de un empleado).
+ */
+export async function adoptPageSession(token: string): Promise<void> {
+  const { session, token: current } = await getSettings();
+  if (session || current === token) return;
+  await saveSettings({ token });
+  await refreshSession().catch(() => saveSettings({ token: null }));
 }
 
 /** Registra un aviso de la extensión: sitio, decisión, tipos y cantidades. Nunca el texto del prompt. */

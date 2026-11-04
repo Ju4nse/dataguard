@@ -20,3 +20,9 @@ export interface Message {
   /** Si fue un archivo adjunto: tabla o documento, y su extensión (sin el nombre). Sin esto, un prompt. */
   archivo?: { entrada: 'tabla' | 'documento'; formato: string; filas?: number };
 }
+
+/** Del script de contenido del panel de DataGuard: el token de la sesión iniciada en la página. */
+export interface PageSessionMessage {
+  tipo: 'sesion-pagina';
+  token: string;
+}

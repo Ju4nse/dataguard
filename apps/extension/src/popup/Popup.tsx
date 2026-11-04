@@ -5,13 +5,14 @@ import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { SITES } from '../content/sites';
 import type { AiRequest } from '../lib/ai';
 import { ApiError, changePassword, login, logout, refreshSession, verify2fa } from '../lib/api';
-import { DEFAULT_API_BASE, getSettings, onSettingsChanged, saveSettings, type Settings } from '../lib/storage';
+import { DATAGUARD_PAGE, DEFAULT_API_BASE, getSettings, onSettingsChanged, saveSettings, type Settings } from '../lib/storage';
 import { setTabPaused, type TabRequest, type TabStatus } from '../lib/tabs';
 
 const message = (e: unknown) => (e instanceof ApiError ? e.message : 'No se pudo conectar con el servidor de DataGuard');
 
 /** Servidores que la extensión ya puede usar sin pedir permiso (desarrollo local). */
-const BUILT_IN = new Set([DEFAULT_API_BASE, 'http://127.0.0.1:8787']);
+/** Orígenes con permiso de host en el manifest: no hace falta pedirlo. */
+const BUILT_IN = new Set([new URL(DEFAULT_API_BASE).origin, 'http://localhost:8787', 'http://127.0.0.1:8787']);
 
 function ShieldIcon({ className = 'h-5 w-5' }: { className?: string }) {
   return (
@@ -173,6 +174,13 @@ function LoginForm() {
       <p className="text-sm text-slate-600">
         Opcional. Con tu usuario se aplica la política de tu empresa y tu supervisor ve cuántos datos se protegieron: solo tipos y cantidades, nunca tus
         prompts.
+      </p>
+      <p className="text-sm text-slate-600">
+        Lo más fácil: ingresá en{' '}
+        <a href={`${DATAGUARD_PAGE}panel/`} target="_blank" rel="noreferrer" className="font-semibold text-brand-700 underline-offset-2 hover:underline">
+          la página de DataGuard
+        </a>{' '}
+        y la extensión se conecta sola. O ingresá acá:
       </p>
       <form onSubmit={submit} className="space-y-3">
         {step === 'password' ? (

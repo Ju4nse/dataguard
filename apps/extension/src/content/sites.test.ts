@@ -4,9 +4,13 @@ import { describe, expect, it } from 'vitest';
 import { siteFor, SITES } from './sites';
 
 const manifest = JSON.parse(readFileSync(resolve(import.meta.dirname, '../../public/manifest.json'), 'utf8')) as {
-  content_scripts: { matches: string[] }[];
+  content_scripts: { matches: string[]; js: string[] }[];
 };
-const matchHosts = manifest.content_scripts.flatMap((c) => c.matches).map((m) => new URL(m.replace('/*', '/')).hostname);
+// Solo el script que protege los prompts (el del panel de DataGuard, dataguard.js, es aparte).
+const matchHosts = manifest.content_scripts
+  .filter((c) => c.js.includes('content.js'))
+  .flatMap((c) => c.matches)
+  .map((m) => new URL(m.replace('/*', '/')).hostname);
 
 describe('sitios protegidos', () => {
   it('el manifest inyecta la extensión en todos los sitios de sites.ts, y solo en esos', () => {

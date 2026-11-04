@@ -2,7 +2,7 @@
  * Compila la extensión en dist/ (cargala en chrome://extensions → "Cargar descomprimida").
  * Son dos compilaciones porque Chrome pide formatos distintos:
  *   1. Popup, service worker y documento oculto de la IA local: módulos ES (el manifest declara "type": "module").
- *   2. Script de contenido: un solo archivo clásico (IIFE); los content scripts no pueden importar módulos.
+ *   2. Scripts de contenido: cada uno un archivo clásico (IIFE); los content scripts no pueden importar módulos.
  * Uso: npm run build -w @securedata/extension   ·   npm run dev -w @securedata/extension (recompila al guardar)
  */
 import { readFile, rm, writeFile } from 'node:fs/promises';
@@ -48,10 +48,20 @@ const contentScript: InlineConfig = {
   },
 };
 
+/** Script de contenido del panel de DataGuard: toma la sesión iniciada en la página (también IIFE). */
+const pageSessionScript: InlineConfig = {
+  ...contentScript,
+  build: {
+    ...contentScript.build,
+    lib: { entry: resolve(root, 'src/content/dataguard.ts'), formats: ['iife'], name: 'DataGuardSesion', fileName: () => 'dataguard.js' },
+  },
+};
+
 // dist/ se vacía una sola vez: en modo --watch cada recompilación vaciaría lo que generó la otra.
 await rm(resolve(root, outDir), { recursive: true, force: true });
 await build(extensionPages);
 await build(contentScript);
+await build(pageSessionScript);
 if (firefox) await adaptManifestForFirefox();
 
 /**

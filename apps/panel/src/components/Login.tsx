@@ -144,6 +144,7 @@ export function Login({ onDone }: { onDone: () => void }) {
             {[
               ['seguridad@demo.test', 'Empresa Demo SA'],
               ['supervisor@empresa-prueba.test', 'Empresa de Prueba'],
+              ['empleado@empresa-prueba.test', 'empleado (conecta la extensión)'],
             ].map(([account, label]) => (
               <button
                 key={account}

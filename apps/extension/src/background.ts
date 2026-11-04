@@ -7,9 +7,9 @@ import { ensureOffscreen, handleAiMessage, onIdleAlarm, resumeAi, touch } from '
 import { siteFor } from './content/sites';
 import type { AiRequest, OffscreenEvent } from './lib/ai';
 import type { FileRequest, OffscreenFileRequest } from './lib/files';
-import { refreshSession, sendEvent } from './lib/api';
-import type { Detection, Message } from './lib/messages';
-import { getSettings } from './lib/storage';
+import { adoptPageSession, refreshSession, sendEvent } from './lib/api';
+import type { Detection, Message, PageSessionMessage } from './lib/messages';
+import { DATAGUARD_PAGE, getSettings } from './lib/storage';
 import { isTabPaused, setTabPaused, type TabStateRequest } from './lib/tabs';
 
 const REFRESH_ALARM = 'refrescar-sesion';
@@ -85,19 +85,24 @@ async function recordEvent(message: Message, senderUrl: string | undefined) {
 // Una pestaña cerrada ya no está pausada (los números de pestaña se reutilizan).
 chrome.tabs.onRemoved.addListener((tabId) => void setTabPaused(tabId, false));
 
-chrome.runtime.onMessage.addListener((message: Message | AiRequest | OffscreenEvent | FileRequest | TabStateRequest, sender, sendResponse) => {
-  if (sender.id !== chrome.runtime.id) return;
-  if (message?.tipo === 'evento') void recordEvent(message, sender.url);
-  else if (message?.tipo === 'pestana-estado') {
-    // Los scripts de contenido no pueden leer chrome.storage.session: se lo responde el service worker.
-    const tabId = sender.tab?.id;
-    if (tabId === undefined) return;
-    isTabPaused(tabId).then(sendResponse, () => sendResponse(false));
-    return true;
-  } else if (message?.tipo === 'archivo-leer' || message?.tipo === 'archivo-excel') {
-    // Solo desde los scripts de contenido (las pestañas), no desde el propio documento oculto.
-    if (!sender.tab) return;
-    handleFile(message).then(sendResponse, (e: unknown) => sendResponse({ ok: false, error: e instanceof Error ? e.message : String(e) }));
-    return true;
-  } else if (typeof message?.tipo === 'string' && message.tipo.startsWith('ia-')) return handleAiMessage(message as AiRequest | OffscreenEvent, sendResponse);
-});
+chrome.runtime.onMessage.addListener(
+  (message: Message | PageSessionMessage | AiRequest | OffscreenEvent | FileRequest | TabStateRequest, sender, sendResponse) => {
+    if (sender.id !== chrome.runtime.id) return;
+    if (message?.tipo === 'evento') void recordEvent(message, sender.url);
+    else if (message?.tipo === 'sesion-pagina') {
+      // Solo desde el panel de DataGuard (el manifest ya limita el script a esa página).
+      if (sender.url?.startsWith(DATAGUARD_PAGE) && typeof message.token === 'string') void adoptPageSession(message.token);
+    } else if (message?.tipo === 'pestana-estado') {
+      // Los scripts de contenido no pueden leer chrome.storage.session: se lo responde el service worker.
+      const tabId = sender.tab?.id;
+      if (tabId === undefined) return;
+      isTabPaused(tabId).then(sendResponse, () => sendResponse(false));
+      return true;
+    } else if (message?.tipo === 'archivo-leer' || message?.tipo === 'archivo-excel') {
+      // Solo desde los scripts de contenido (las pestañas), no desde el propio documento oculto.
+      if (!sender.tab) return;
+      handleFile(message).then(sendResponse, (e: unknown) => sendResponse({ ok: false, error: e instanceof Error ? e.message : String(e) }));
+      return true;
+    } else if (typeof message?.tipo === 'string' && message.tipo.startsWith('ia-')) return handleAiMessage(message as AiRequest | OffscreenEvent, sendResponse);
+  },
+);

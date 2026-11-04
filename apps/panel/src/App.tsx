@@ -43,6 +43,10 @@ export default function App() {
     case 'sinAcceso':
       return (
         <Shell title={`Hola, ${view.me.usuario.nombre}`} subtitle="Este panel es solo para responsables de seguridad. Tu cuenta es de empleado.">
+          <p className="rounded-lg bg-emerald-50 px-3 py-2.5 text-sm text-emerald-900 ring-1 ring-inset ring-emerald-200">
+            <strong className="font-semibold">Si tenés la extensión de DataGuard, ya quedó conectada</strong> con tu cuenta de {view.me.usuario.organizacion}.
+            Podés cerrar esta pestaña. Si cerrás sesión acá, la extensión también se desconecta.
+          </p>
           <Button variant="secondary" className="w-full" onClick={logout}>
             Cerrar sesión
           </Button>

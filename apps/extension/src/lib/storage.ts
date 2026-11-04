@@ -12,15 +12,21 @@ export interface Settings {
   /** Dirección del servidor de DataGuard (la API), sin "/api" al final. */
   apiBase: string;
   session: SessionInfo | null;
+  /** Token tomado de la sesión del panel de DataGuard (ver content/dataguard.ts). Sin él, se usa la cookie. */
+  token: string | null;
   /** El usuario activó la IA local. */
   aiEnabled: boolean;
   /** Estado de la IA local (lo actualiza el service worker). */
   aiStatus: AiStatus;
 }
 
-export const DEFAULT_API_BASE = 'http://localhost:8787';
+/** Panel de DataGuard: de ahí la extensión toma la sesión (content/dataguard.ts). */
+export const DATAGUARD_PAGE = 'https://ju4nse.github.io/dataguard/';
 
-const DEFAULTS: Settings = { apiBase: DEFAULT_API_BASE, session: null, aiEnabled: false, aiStatus: AI_OFF };
+/** La API publicada en Supabase (npm run api:deploy). Para desarrollo: http://localhost:8787 en "Servidor". */
+export const DEFAULT_API_BASE = 'https://nxqzryeutttqbslvlrjg.supabase.co/functions/v1';
+
+const DEFAULTS: Settings = { apiBase: DEFAULT_API_BASE, session: null, token: null, aiEnabled: false, aiStatus: AI_OFF };
 
 /** Configuración guardada en chrome.storage.local. Nunca se guardan prompts ni seudónimos. */
 export async function getSettings(): Promise<Settings> {
