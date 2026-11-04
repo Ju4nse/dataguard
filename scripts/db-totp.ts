@@ -1,12 +1,15 @@
 /**
  * Muestra el código TOTP actual de un usuario de DEMO (para probar el login sin celular).
  * Uso: npm run db:totp -- seguridad@demo.test
- * Solo funciona contra la base local: se conecta como dueño del esquema.
+ * Se conecta como dueño del esquema (DATABASE_URL de .env).
  */
 import pg from 'pg';
+import { loadEnv, pgConfig, requireDbUrl } from '../apps/api/src/pgConfig';
+
+loadEnv();
 
 const email = process.argv[2] ?? 'seguridad@demo.test';
-const client = new pg.Client({ connectionString: process.env.DATABASE_URL ?? 'postgres://securedata:securedata_dev@localhost:5433/securedata' });
+const client = new pg.Client(pgConfig(requireDbUrl('DATABASE_URL')));
 await client.connect();
 const r = await client.query(
   `SELECT app.totp_codigo(totp_secreto, floor(extract(epoch FROM now()) / 30)::bigint) AS codigo,

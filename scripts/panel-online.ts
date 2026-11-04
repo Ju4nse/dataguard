@@ -1,16 +1,18 @@
 /**
  * Publica el panel del responsable en la red privada de Tailscale (solo tus dispositivos):
  *   1. Genera (una vez) un secreto de sesión propio en .env.panel (no se sube a git).
- *   2. Levanta Postgres y compila el panel.
+ *   2. Verifica que llega a la base (Supabase) y compila el panel.
  *   3. Arranca la API en modo producción, sirviendo el panel, solo en 127.0.0.1:8790.
  *   4. `tailscale serve` la publica con HTTPS en https://<tu-pc>.<tu-red>.ts.net
- * Uso: npm run panel:online              (Ctrl+C para cortar; la base sigue en Docker)
+ * Uso: npm run panel:online              (Ctrl+C para cortar; la base sigue en Supabase)
  *      npm run panel:online -- --sin-2fa  (solo demo: entrar sin el código del segundo factor)
  */
 import { execFileSync, execSync, spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import pg from 'pg';
+import { loadEnv, pgConfig, requireDbUrl } from '../apps/api/src/pgConfig';
 
 const ROOT = resolve(import.meta.dirname, '..');
 const ENV_FILE = join(ROOT, '.env.panel');
@@ -60,6 +62,21 @@ function sessionSecret(): string {
   return secret;
 }
 
+/** Prueba la conexión con el rol de la API antes de arrancar (ej. proyecto de Supabase pausado). */
+async function checkDatabase() {
+  const client = new pg.Client(pgConfig(requireDbUrl('DATABASE_URL_API')));
+  try {
+    await client.connect();
+    await client.query('SELECT 1');
+  } catch (e) {
+    throw new Error(
+      `No llego a la base (${e instanceof Error ? e.message : e}). Revisá DATABASE_URL_API en .env, que hayas corrido npm run db:migrate y que el proyecto de Supabase no esté pausado.`,
+    );
+  } finally {
+    await client.end().catch(() => {});
+  }
+}
+
 /** Corre un script de npm (comando fijo, sin datos del usuario: no hay nada que escapar). */
 function npmRun(script: string) {
   execSync(`npm run ${script}`, { cwd: ROOT, stdio: 'inherit' });
@@ -74,8 +91,10 @@ try {
 
   const secret = sessionSecret();
 
-  step('Base de datos (Docker)');
-  npmRun('db:up');
+  step('Base de datos (Supabase)');
+  loadEnv();
+  await checkDatabase();
+  console.log('  Conexión OK');
 
   step('Compilando el panel');
   npmRun('build -w @securedata/panel');

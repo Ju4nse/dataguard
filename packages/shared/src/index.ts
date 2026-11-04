@@ -95,6 +95,27 @@ export const ACTION_LABELS: Record<Action, string> = {
   mantener: 'Mantener',
 };
 
+/** Acción recomendada por DataGuard para cada tipo, cuando la empresa no definió otra en su política. */
+export const DEFAULT_ACTIONS: Record<DetectionType, Action> = {
+  EMAIL: 'anonimizar',
+  TELEFONO: 'eliminar',
+  DNI: 'seudonimizar',
+  CUIT_CUIL: 'seudonimizar',
+  CBU_CVU: 'eliminar',
+  TARJETA: 'eliminar',
+  PATENTE: 'seudonimizar',
+  NOMBRE_PERSONA: 'seudonimizar',
+  RAZON_SOCIAL: 'seudonimizar',
+  DIRECCION: 'eliminar',
+  FECHA_NACIMIENTO: 'anonimizar',
+  EDAD: 'anonimizar',
+  PASAPORTE: 'seudonimizar',
+  SALARIO: 'anonimizar',
+  DATO_SENSIBLE: 'eliminar',
+  CREDENCIAL: 'eliminar',
+  IP: 'anonimizar',
+};
+
 /**
  * Evento de metadatos que se envía al panel. NUNCA lleva contenido,
  * nombres de archivo ni nombres de columnas.

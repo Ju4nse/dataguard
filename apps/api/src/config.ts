@@ -1,3 +1,7 @@
+import { loadEnv, requireDbUrl } from './pgConfig';
+
+loadEnv();
+
 const isProduction = process.env.NODE_ENV === 'production';
 
 /**
@@ -16,7 +20,10 @@ export const config = {
   port: Number(process.env.API_PORT ?? 8787),
   /** Solo localhost: la publicación hacia la red la hace un proxy (tailscale serve), nunca la API directo. */
   host: process.env.API_HOST ?? '127.0.0.1',
-  databaseUrl: process.env.DATABASE_URL_API ?? 'postgres://securedata_api:api_dev@localhost:5433/securedata',
+  /** Rol securedata_api, por el pooler de Supabase en modo transacción (ver .env.example). Se lee al crear el pool. */
+  get databaseUrl() {
+    return requireDbUrl('DATABASE_URL_API');
+  },
   sessionSecret: new TextEncoder().encode(process.env.SESSION_SECRET ?? DEV_SECRET),
   sessionHours: 8,
   /**
@@ -27,7 +34,19 @@ export const config = {
   allowedOrigins: [
     ...(process.env.ALLOWED_ORIGINS ?? 'http://localhost:5173,http://localhost:5174,http://localhost:5180').split(',').map((s) => s.trim()),
     `chrome-extension://${process.env.EXTENSION_ID ?? 'kinpmadcicacoodohlbipajehcgmfcim'}`,
+    ...(process.env.TOKEN_ORIGINS ?? '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean),
   ],
+  /**
+   * Orígenes en otro dominio que la API (el panel en GitHub Pages): reciben el token al iniciar sesión y
+   * lo mandan como Authorization: Bearer, porque la cookie entre sitios no viaja. También pueden modificar datos.
+   */
+  tokenOrigins: (process.env.TOKEN_ORIGINS ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean),
   /**
    * Confiar en X-Forwarded-For (la IP real del cliente) solo detrás de un proxy propio. Sin proxy,
    * cualquiera podría inventar ese encabezado para esquivar el límite de intentos.

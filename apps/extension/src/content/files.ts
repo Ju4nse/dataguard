@@ -29,6 +29,8 @@ import { askAboutFiles, setChecking, setIdle } from './ui';
 
 export interface FileGuardOptions {
   siteName: string;
+  /** El usuario pausó DataGuard en esta pestaña: los archivos pasan sin revisar. */
+  paused: () => boolean;
   policy: () => Policy;
   registry: () => PseudonymRegistry;
   organizacion: () => string | null;
@@ -164,7 +166,7 @@ export async function reviewFiles(files: File[], o: FileGuardOptions): Promise<F
     for (const f of protectedFiles.values()) download(f);
     return null;
   }
-  // Los que no se pudieron leer no se suben con "Subir protegidos": solo con "Subir el original".
+  // Los que no se pudieron leer no se suben con "Subir protegidos".
   const unreadableSet = new Set(unreadable.map((u) => u.file));
   return files.filter((f) => !unreadableSet.has(f)).map((f) => protectedFiles.get(f) ?? f);
 }
@@ -182,7 +184,7 @@ const transfer = (files: File[]) => {
 export function guardFiles(o: FileGuardOptions) {
   /** Mientras se le entrega al sitio lo ya revisado, no se vuelve a interceptar. */
   let reinjecting = false;
-  const needsReview = (files: FileList | null | undefined) => !!files && [...files].some(isReviewable);
+  const needsReview = (files: FileList | null | undefined) => !o.paused() && !!files && [...files].some(isReviewable);
   const fileInput = (e: Event) => {
     const t = realTarget(e);
     return t instanceof HTMLInputElement && t.type === 'file' ? t : null;

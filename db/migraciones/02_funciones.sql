@@ -3,7 +3,8 @@
 -- La API, después de verificar la sesión, hace en cada transacción:
 --   SET LOCAL app.user_id = '<uuid del usuario>';
 --   SET LOCAL app.aal = 'aal2';   -- solo si la sesión pasó el segundo factor
--- (Si se migra a Supabase, solo cambian app.uid() y app.aal(): auth.uid() y auth.jwt()->>'aal'.)
+-- No se usa Supabase Auth: la sesión la verifica la API y se pasa así (funciona con el pooler de
+-- Supabase en modo transacción porque set_config(..., true) dura solo la transacción).
 -- =====================================================================
 
 CREATE FUNCTION app.uid() RETURNS uuid
@@ -18,7 +19,7 @@ $$;
 
 -- Usuario de la sesión; error si no hay sesión o el usuario está desactivado.
 CREATE FUNCTION app.usuario_actual() RETURNS app.usuarios
-LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = app, pg_temp AS $$
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = app, extensions, pg_temp AS $$
 DECLARE u app.usuarios;
 BEGIN
   SELECT * INTO u FROM app.usuarios WHERE id = app.uid() AND activo;
@@ -30,7 +31,7 @@ END $$;
 
 -- Responsables y admins, con segundo factor obligatorio.
 CREATE FUNCTION app.exigir_responsable() RETURNS app.usuarios
-LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = app, pg_temp AS $$
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = app, extensions, pg_temp AS $$
 DECLARE u app.usuarios := app.usuario_actual();
 BEGIN
   IF u.rol NOT IN ('responsable', 'admin') THEN
@@ -60,7 +61,7 @@ CREATE FUNCTION app.registrar_evento(
   p_sitio         text DEFAULT NULL,
   p_decision      app.decision_usuario DEFAULT NULL
 ) RETURNS bigint
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = app, pg_temp AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = app, extensions, pg_temp AS $$
 DECLARE
   u app.usuarios := app.usuario_actual();
   nuevo_id bigint;
@@ -93,7 +94,7 @@ END $$;
  * si incluso agrupadas no llegan al mínimo, se omiten (se informa cuántas).
  */
 CREATE FUNCTION app.panel_resumen(p_desde date, p_hasta date) RETURNS jsonb
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = app, pg_temp AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = app, extensions, pg_temp AS $$
 DECLARE
   u app.usuarios := app.exigir_responsable();
   k integer;
@@ -169,7 +170,7 @@ END $$;
 -- Detalle por empleado: solo si la organización lo habilitó explícitamente.
 CREATE FUNCTION app.panel_detalle_usuarios(p_desde date, p_hasta date)
 RETURNS TABLE (usuario text, area text, eventos bigint, detecciones bigint, avisos_ignorados bigint)
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = app, pg_temp AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = app, extensions, pg_temp AS $$
 DECLARE u app.usuarios := app.exigir_responsable();
 BEGIN
   IF NOT (SELECT mostrar_detalle_usuario FROM app.organizaciones WHERE id = u.organizacion_id) THEN
@@ -192,7 +193,7 @@ END $$;
 
 -- Incidentes: el responsable marca un evento para investigar y actualiza su estado.
 CREATE FUNCTION app.incidente_crear(p_evento_id bigint) RETURNS bigint
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = app, pg_temp AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = app, extensions, pg_temp AS $$
 DECLARE u app.usuarios := app.exigir_responsable(); nuevo bigint;
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM app.eventos WHERE id = p_evento_id AND organizacion_id = u.organizacion_id) THEN
@@ -204,7 +205,7 @@ BEGIN
 END $$;
 
 CREATE FUNCTION app.incidente_actualizar(p_id bigint, p_estado app.estado_incidente) RETURNS void
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = app, pg_temp AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = app, extensions, pg_temp AS $$
 DECLARE u app.usuarios := app.exigir_responsable();
 BEGIN
   UPDATE app.incidentes SET estado = p_estado, actualizado_en = now() WHERE id = p_id AND organizacion_id = u.organizacion_id;
@@ -217,7 +218,7 @@ END $$;
 -- ---------------------------------------------------------------------
 
 CREATE FUNCTION app.exigir_admin() RETURNS app.usuarios
-LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = app, pg_temp AS $$
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = app, extensions, pg_temp AS $$
 DECLARE u app.usuarios := app.exigir_responsable();
 BEGIN
   IF u.rol <> 'admin' THEN RAISE EXCEPTION 'no autorizado: se requiere rol de admin' USING ERRCODE = '42501'; END IF;
@@ -225,7 +226,7 @@ BEGIN
 END $$;
 
 CREATE FUNCTION app.admin_crear_area(p_nombre text) RETURNS uuid
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = app, pg_temp AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = app, extensions, pg_temp AS $$
 DECLARE u app.usuarios := app.exigir_admin(); nuevo uuid;
 BEGIN
   INSERT INTO app.areas (organizacion_id, nombre) VALUES (u.organizacion_id, p_nombre) RETURNING id INTO nuevo;
@@ -235,7 +236,7 @@ END $$;
 
 -- Alta de usuarios por invitación: no existe el registro abierto.
 CREATE FUNCTION app.admin_crear_usuario(p_email text, p_nombre text, p_rol app.rol, p_area_id uuid) RETURNS uuid
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = app, pg_temp AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = app, extensions, pg_temp AS $$
 DECLARE u app.usuarios := app.exigir_admin(); nuevo uuid;
 BEGIN
   INSERT INTO app.usuarios (organizacion_id, area_id, email, nombre, rol)
@@ -245,7 +246,7 @@ BEGIN
 END $$;
 
 CREATE FUNCTION app.admin_configurar(p_mostrar_detalle_usuario boolean, p_minimo_por_grupo integer) RETURNS void
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = app, pg_temp AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = app, extensions, pg_temp AS $$
 DECLARE u app.usuarios := app.exigir_admin();
 BEGIN
   UPDATE app.organizaciones SET mostrar_detalle_usuario = p_mostrar_detalle_usuario, minimo_por_grupo = p_minimo_por_grupo

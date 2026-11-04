@@ -16,6 +16,8 @@ export interface Session {
   userId: string;
   aal: 'aal1' | 'aal2';
   mfa: MfaState;
+  /** Entró con una contraseña temporal: hasta cambiarla no puede usar nada más. */
+  cambiarPassword?: boolean;
 }
 
 /**
@@ -30,8 +32,9 @@ function forgetExpired() {
   for (const [jti, exp] of revoked) if (exp < now) revoked.delete(jti);
 }
 
-export async function setSession(c: Context, s: Session) {
-  const token = await new SignJWT({ aal: s.aal, mfa: s.mfa })
+/** Devuelve el token, para el panel en otro dominio (ver issueSession en app.ts). */
+export async function setSession(c: Context, s: Session): Promise<string> {
+  const token = await new SignJWT({ aal: s.aal, mfa: s.mfa, ...(s.cambiarPassword ? { pwd: true } : {}) })
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(s.userId)
     .setJti(crypto.randomUUID())
@@ -47,10 +50,12 @@ export async function setSession(c: Context, s: Session) {
     path: '/',
     maxAge: config.sessionHours * 3600,
   });
+  return token;
 }
 
+/** La cookie, o el encabezado Authorization: Bearer del panel en otro dominio (donde la cookie no viaja). */
 async function readToken(c: Context) {
-  const token = getCookie(c, COOKIE);
+  const token = getCookie(c, COOKIE) ?? c.req.header('authorization')?.match(/^Bearer (\S+)$/)?.[1];
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, config.sessionSecret, { algorithms: ['HS256'] });
@@ -65,7 +70,7 @@ export async function getSession(c: Context): Promise<Session | null> {
   const payload = await readToken(c);
   if (!payload) return null;
   const mfa: MfaState = payload.mfa === 'pendiente' || payload.mfa === 'configurar' ? payload.mfa : 'ok';
-  return { userId: payload.sub!, aal: payload.aal === 'aal2' ? 'aal2' : 'aal1', mfa };
+  return { userId: payload.sub!, aal: payload.aal === 'aal2' ? 'aal2' : 'aal1', mfa, cambiarPassword: payload.pwd === true };
 }
 
 async function revokeCurrent(c: Context) {

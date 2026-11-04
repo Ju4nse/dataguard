@@ -1,5 +1,5 @@
 -- =====================================================================
--- Datos de DEMO (ficticios). Solo para desarrollo local.
+-- Datos de DEMO (ficticios): npm run db:seed. No usar en una base con una empresa real.
 -- IDs fijos para usarlos en pruebas:
 --   Empresa Demo SA   aaaaaaaa-0000-0000-0000-000000000001
 --     admin           aaaaaaaa-0000-0000-0000-0000000000a1  (con 2FA)
@@ -9,6 +9,9 @@
 --   Otra Empresa SRL  bbbbbbbb-0000-0000-0000-000000000001
 --     responsable     bbbbbbbb-0000-0000-0000-0000000000b2  (con 2FA)
 --     empleado        bbbbbbbb-0000-0000-0000-0000000000e1
+--   Empresa de Prueba cccccccc-0000-0000-0000-000000000001  (sin datos simulados: se llena con el uso real)
+--     supervisor      cccccccc-0000-0000-0000-0000000000c2  supervisor@empresa-prueba.test (con 2FA)
+--     empleado        cccccccc-0000-0000-0000-0000000000e1  empleado@empresa-prueba.test
 -- =====================================================================
 
 INSERT INTO app.organizaciones (id, nombre) VALUES
@@ -32,6 +35,17 @@ INSERT INTO app.usuarios (id, organizacion_id, area_id, email, nombre, rol, mfa_
   ('aaaaaaaa-0000-0000-0000-0000000000e1', 'aaaaaaaa-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000011', 'empleado@demo.test', 'Empleado de Prueba', 'empleado', false),
   ('bbbbbbbb-0000-0000-0000-0000000000b2', 'bbbbbbbb-0000-0000-0000-000000000001', NULL, 'seguridad@otra.test', 'Responsable Otra', 'responsable', true),
   ('bbbbbbbb-0000-0000-0000-0000000000e1', 'bbbbbbbb-0000-0000-0000-000000000001', 'bbbbbbbb-0000-0000-0000-000000000011', 'empleado@otra.test', 'Empleado Otra', 'empleado', false);
+
+-- Empresa de Prueba: sin datos simulados, para mostrar el circuito real (el empleado usa la extensión o la
+-- app web y lo que se registra aparece en el panel del supervisor). Con una sola persona, el mínimo por
+-- grupo va en 1 y el detalle por empleado está habilitado; en una empresa real eso lo decide el admin.
+INSERT INTO app.organizaciones (id, nombre, minimo_por_grupo, mostrar_detalle_usuario) VALUES
+  ('cccccccc-0000-0000-0000-000000000001', 'Empresa de Prueba', 1, true);
+INSERT INTO app.areas (id, organizacion_id, nombre) VALUES
+  ('cccccccc-0000-0000-0000-000000000011', 'cccccccc-0000-0000-0000-000000000001', 'General');
+INSERT INTO app.usuarios (id, organizacion_id, area_id, email, nombre, rol, mfa_activo) VALUES
+  ('cccccccc-0000-0000-0000-0000000000c2', 'cccccccc-0000-0000-0000-000000000001', NULL, 'supervisor@empresa-prueba.test', 'Supervisor de Prueba', 'responsable', true),
+  ('cccccccc-0000-0000-0000-0000000000e1', 'cccccccc-0000-0000-0000-000000000001', 'cccccccc-0000-0000-0000-000000000011', 'empleado@empresa-prueba.test', 'Empleado Real', 'empleado', false);
 
 -- Empleados de demo por área (además del empleado de prueba en Ventas).
 INSERT INTO app.usuarios (organizacion_id, area_id, email, nombre)
@@ -84,3 +98,17 @@ BEGIN
     END LOOP;
   END LOOP;
 END $$;
+
+
+-- ---------------------------------------------------------------------
+-- Datos de DEMO: contraseña "demo1234" para todos. Secreto TOTP conocido para los que tienen 2FA,
+-- así se puede probar sin celular: npm run db:totp -- seguridad@demo.test
+-- ---------------------------------------------------------------------
+UPDATE app.usuarios SET password_hash = extensions.crypt('demo1234', extensions.gen_salt('bf', 8)) WHERE email LIKE '%.test';
+UPDATE app.usuarios SET totp_secreto = convert_to('securedata-demo-totp', 'UTF8') WHERE mfa_activo AND email LIKE '%.test';
+
+INSERT INTO app.politicas (organizacion_id, tipo, accion) VALUES
+  ('aaaaaaaa-0000-0000-0000-000000000001', 'CREDENCIAL', 'eliminar'),
+  ('aaaaaaaa-0000-0000-0000-000000000001', 'TARJETA', 'eliminar'),
+  ('aaaaaaaa-0000-0000-0000-000000000001', 'DATO_SENSIBLE', 'eliminar'),
+  ('aaaaaaaa-0000-0000-0000-000000000001', 'SALARIO', 'anonimizar');

@@ -96,7 +96,6 @@ export function askUser(o: AskOptions): Promise<Choice> {
         h('button', { class: 'btn link', value: 'proteger' }, 'Solo reemplazar'),
         h('span', { class: 'spacer' }),
         h('button', { class: 'btn', value: 'cancelar' }, 'Cancelar'),
-        !o.analysis.enforced && h('button', { class: 'btn', value: 'sin-proteger' }, 'Enviar sin proteger'),
         primary,
       ),
     ),
@@ -222,7 +221,6 @@ export function askAboutFiles(o: FileAskOptions): Promise<FileChoice> {
         canProtect && h('button', { class: 'btn link', value: 'descargar' }, 'Descargar protegido'),
         h('span', { class: 'spacer' }),
         h('button', { class: 'btn', value: 'cancelar' }, 'Cancelar'),
-        canProtect && !o.enforced && h('button', { class: 'btn', value: 'subir-original' }, 'Subir el original'),
         primary,
       ),
     ),
@@ -286,6 +284,14 @@ export function setPendingCount(count: number): void {
   if (!pill || !pillText) return;
   pill.classList.toggle('warn', count > 0);
   pillText.textContent = count === 0 ? idleText : count === 1 ? '1 dato sensible: se protege al enviar' : `${count} datos sensibles: se protegen al enviar`;
+}
+
+/** Pausado desde el popup: el indicador queda gris y lo dice. */
+export function setPaused(on: boolean): void {
+  if (!pill || !pillText) return;
+  pill.classList.remove('warn');
+  pill.classList.toggle('off', on);
+  pillText.textContent = on ? 'DataGuard pausado en esta pestaña' : idleText;
 }
 
 /** Al enviar, mientras la IA local termina de revisar el prompt (o mientras se revisa un archivo adjunto). */

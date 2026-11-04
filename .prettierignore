@@ -4,4 +4,8 @@ dist
 fixtures
 package-lock.json
 *.md
-db/init
+db/migraciones
+db/demo.sql
+supabase/functions/api/index.ts
+.claude/
+apps/extension/dist-firefox/

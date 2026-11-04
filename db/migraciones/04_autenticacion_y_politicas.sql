@@ -1,11 +1,10 @@
 -- =====================================================================
 -- Autenticación (contraseña + segundo factor TOTP) y políticas de la empresa.
--- - Las contraseñas se guardan con bcrypt (pgcrypto); la API nunca puede leer el hash.
+-- - Las contraseñas se guardan con bcrypt (pgcrypto, en el esquema extensions como en Supabase);
+--   la API nunca puede leer el hash.
 -- - El segundo factor se verifica DENTRO de la base: la API nunca ve el secreto TOTP
 --   después de que el usuario lo carga en su app autenticadora.
 -- =====================================================================
-
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 ALTER TABLE app.usuarios
   ADD COLUMN password_hash     text,
@@ -21,7 +20,7 @@ GRANT SELECT (id, organizacion_id, area_id, email, nombre, rol, mfa_activo, acti
 CREATE FUNCTION app.totp_codigo(p_secreto bytea, p_paso bigint) RETURNS text
 LANGUAGE plpgsql IMMUTABLE AS $$
 DECLARE
-  h bytea := hmac(int8send(p_paso), p_secreto, 'sha1');
+  h bytea := extensions.hmac(int8send(p_paso), p_secreto, 'sha1');
   o integer := get_byte(h, 19) & 15;
   bin bigint;
 BEGIN
@@ -49,10 +48,11 @@ END $$;
  */
 CREATE FUNCTION app.autenticar(p_email text, p_password text)
 RETURNS TABLE (usuario_id uuid, rol app.rol, requiere_2fa boolean, debe_configurar_2fa boolean)
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = app, public, pg_temp AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = app, extensions, pg_temp AS $$
 DECLARE u app.usuarios;
 BEGIN
-  SELECT * INTO u FROM app.usuarios WHERE email = p_email AND activo;
+  -- Cast explícito: `citext = text` compara como text y distinguiría mayúsculas.
+  SELECT * INTO u FROM app.usuarios WHERE email = p_email::extensions.citext AND activo;
   IF NOT FOUND OR u.password_hash IS NULL OR u.password_hash <> crypt(p_password, u.password_hash) THEN
     -- Mismo costo de cálculo que un login válido, para no revelar qué emails existen.
     PERFORM crypt(p_password, gen_salt('bf', 8));
@@ -65,7 +65,7 @@ END $$;
 
 -- Segundo paso del login: verifica el código de la app autenticadora.
 CREATE FUNCTION app.verificar_totp(p_usuario_id uuid, p_codigo text) RETURNS boolean
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = app, public, pg_temp AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = app, extensions, pg_temp AS $$
 DECLARE u app.usuarios; paso bigint;
 BEGIN
   SELECT * INTO u FROM app.usuarios WHERE id = p_usuario_id AND activo AND mfa_activo;
@@ -81,7 +81,7 @@ END $$;
 
 -- Alta del segundo factor (requiere sesión con contraseña): genera un secreto y lo devuelve UNA vez para el QR.
 CREATE FUNCTION app.totp_iniciar() RETURNS bytea
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = app, public, pg_temp AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = app, extensions, pg_temp AS $$
 DECLARE u app.usuarios := app.usuario_actual(); s bytea := gen_random_bytes(20);
 BEGIN
   IF u.mfa_activo THEN RAISE EXCEPTION 'el segundo factor ya está configurado'; END IF;
@@ -90,7 +90,7 @@ BEGIN
 END $$;
 
 CREATE FUNCTION app.totp_confirmar(p_codigo text) RETURNS boolean
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = app, public, pg_temp AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = app, extensions, pg_temp AS $$
 DECLARE u app.usuarios := app.usuario_actual(); paso bigint;
 BEGIN
   SELECT * INTO u FROM app.usuarios WHERE id = u.id;
@@ -115,13 +115,13 @@ ALTER TABLE app.politicas ENABLE ROW LEVEL SECURITY;
 
 -- Política de la organización del usuario: {"CREDENCIAL": "eliminar", ...}
 CREATE FUNCTION app.mi_politica() RETURNS jsonb
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path = app, pg_temp AS $$
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = app, extensions, pg_temp AS $$
   SELECT coalesce(jsonb_object_agg(tipo, accion), '{}')
   FROM app.politicas WHERE organizacion_id = (app.usuario_actual()).organizacion_id
 $$;
 
 CREATE FUNCTION app.admin_definir_politica(p_tipo app.tipo_dato, p_accion app.accion) RETURNS void
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = app, pg_temp AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = app, extensions, pg_temp AS $$
 DECLARE u app.usuarios := app.exigir_admin();
 BEGIN
   INSERT INTO app.politicas (organizacion_id, tipo, accion) VALUES (u.organizacion_id, p_tipo, p_accion)
@@ -138,16 +138,3 @@ GRANT EXECUTE ON FUNCTION
   app.mi_politica(),
   app.admin_definir_politica(app.tipo_dato, app.accion)
 TO securedata_api;
-
--- ---------------------------------------------------------------------
--- Datos de DEMO: contraseña "demo1234" para todos. Secreto TOTP conocido para los que tienen 2FA,
--- así se puede probar sin celular: npm run db:totp -- seguridad@demo.test
--- ---------------------------------------------------------------------
-UPDATE app.usuarios SET password_hash = crypt('demo1234', gen_salt('bf', 8));
-UPDATE app.usuarios SET totp_secreto = convert_to('securedata-demo-totp', 'UTF8') WHERE mfa_activo;
-
-INSERT INTO app.politicas (organizacion_id, tipo, accion) VALUES
-  ('aaaaaaaa-0000-0000-0000-000000000001', 'CREDENCIAL', 'eliminar'),
-  ('aaaaaaaa-0000-0000-0000-000000000001', 'TARJETA', 'eliminar'),
-  ('aaaaaaaa-0000-0000-0000-000000000001', 'DATO_SENSIBLE', 'eliminar'),
-  ('aaaaaaaa-0000-0000-0000-000000000001', 'SALARIO', 'anonimizar');

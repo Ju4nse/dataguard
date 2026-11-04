@@ -4,7 +4,17 @@
 -- nombres de archivo, nombres de columnas ni textos de prompts.
 -- =====================================================================
 
-CREATE EXTENSION IF NOT EXISTS citext;
+-- Extensiones en su propio esquema, como las tiene Supabase (en Postgres común se crea acá).
+-- Las funciones lo incluyen en su search_path; sin él, `email = …` dejaría de ignorar mayúsculas.
+CREATE SCHEMA IF NOT EXISTS extensions;
+CREATE EXTENSION IF NOT EXISTS citext WITH SCHEMA extensions;
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
+
+-- Fechas del panel (por día y por mes) en hora argentina: Supabase está en UTC.
+DO $$ BEGIN
+  EXECUTE format('ALTER DATABASE %I SET timezone = %L', current_database(), 'America/Argentina/Buenos_Aires');
+END $$;
+SET timezone = 'America/Argentina/Buenos_Aires';
 
 CREATE SCHEMA app;
 
@@ -43,7 +53,7 @@ CREATE TABLE app.usuarios (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   organizacion_id uuid NOT NULL REFERENCES app.organizaciones (id) ON DELETE CASCADE,
   area_id         uuid,
-  email           citext NOT NULL UNIQUE,
+  email           extensions.citext NOT NULL UNIQUE,
   nombre          text NOT NULL CHECK (length(nombre) BETWEEN 1 AND 200),
   rol             app.rol NOT NULL DEFAULT 'empleado',
   -- La API lo pone en true cuando el usuario configura su segundo factor (TOTP).
@@ -53,7 +63,7 @@ CREATE TABLE app.usuarios (
   -- El área tiene que ser de la misma organización que el usuario.
   FOREIGN KEY (area_id, organizacion_id) REFERENCES app.areas (id, organizacion_id)
 );
--- Nota: la autenticación (contraseñas, sesiones) la resuelve la API o Supabase Auth; acá no se guardan contraseñas.
+-- Las credenciales (contraseña, segundo factor) se agregan en 04_autenticacion_y_politicas.sql.
 
 -- Un "evento" es un archivo procesado en la web o un aviso de la extensión.
 CREATE TABLE app.eventos (

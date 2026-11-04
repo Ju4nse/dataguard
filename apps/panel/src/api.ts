@@ -1,4 +1,4 @@
-import type { DetectionType } from '@securedata/shared';
+import type { Action, DetectionType } from '@securedata/shared';
 import { api as serverApi, ApiError } from '@securedata/shared/http';
 
 export { ApiError };
@@ -6,9 +6,59 @@ export { ApiError };
 /** Demo pública (GitHub Pages, VITE_STATIC_DEMO=1): datos ficticios en el navegador, sin servidor. */
 export const STATIC_DEMO = import.meta.env.VITE_STATIC_DEMO === '1';
 
+/**
+ * API en otro dominio (GitHub Pages → Edge Function de Supabase, VITE_API_URL). Ahí la cookie no viaja:
+ * el token de la sesión se guarda en esta pestaña y va como Authorization: Bearer.
+ */
+const API_URL = import.meta.env.VITE_API_URL as string | undefined;
+const TOKEN_KEY = 'dataguard_sesion';
+
+function storedToken(): string | null {
+  try {
+    return sessionStorage.getItem(TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function storeToken(token: string | null) {
+  try {
+    if (token) sessionStorage.setItem(TOKEN_KEY, token);
+    else sessionStorage.removeItem(TOKEN_KEY);
+  } catch {
+    // Sin sessionStorage (modo privado estricto): la sesión dura hasta recargar.
+  }
+}
+
+async function remoteApi<T>(path: string, body?: unknown): Promise<T> {
+  const token = storedToken();
+  const headers: Record<string, string> = {};
+  if (body !== undefined) headers['Content-Type'] = 'application/json';
+  if (token) headers.Authorization = `Bearer ${token}`;
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}/api${path}`, {
+      method: body === undefined ? 'GET' : 'POST',
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+  } catch {
+    throw new ApiError(0, 'No se pudo conectar con el servidor de DataGuard');
+  }
+  const data = (await res.json().catch(() => ({}))) as { error?: string; token?: string };
+  if (res.status === 401 || path === '/auth/logout') storeToken(null);
+  if (!res.ok) throw new ApiError(res.status, data.error ?? 'Error inesperado');
+  if (data.token) {
+    storeToken(data.token);
+    delete data.token;
+  }
+  return data as T;
+}
+
 /** API del panel. En la demo se carga aparte (import dinámico): el panel real no incluye ese código. */
 export async function api<T>(path: string, body?: unknown): Promise<T> {
   if (STATIC_DEMO) return (await import('./demo')).demoApi<T>(path, body);
+  if (API_URL) return remoteApi<T>(path, body);
   return serverApi<T>(path, body);
 }
 
@@ -22,9 +72,11 @@ export interface Me {
     organizacion: string;
     area: string | null;
   };
-  politica: Partial<Record<DetectionType, string>>;
+  politica: Partial<Record<DetectionType, Action>>;
   aal: 'aal1' | 'aal2';
   mfa: 'ok' | 'configurar';
+  /** Entró con una contraseña temporal y todavía no la cambió. */
+  cambiarPassword?: boolean;
   /** El servidor corre con el segundo factor desactivado (modo demo). */
   mfaDesactivado?: boolean;
   /** Demo pública con datos ficticios (sin servidor). */
@@ -49,4 +101,45 @@ export interface Resumen {
   por_area: { area: string; eventos: number; detecciones: number }[];
   areas_omitidas: number;
   minimo_por_grupo: number;
+}
+
+/** Detalle por empleado: solo si la organización lo habilitó (si no, la API responde 403). */
+export interface DetalleUsuario {
+  usuario: string;
+  area: string | null;
+  eventos: number;
+  detecciones: number;
+  avisos_ignorados: number;
+}
+
+export interface Empleado {
+  id: string;
+  nombre: string;
+  email: string;
+  area_id: string | null;
+  area: string | null;
+  activo: boolean;
+  /** Todavía no entró a cambiar la contraseña temporal. */
+  pendiente_de_ingreso: boolean;
+  creado_en: string;
+}
+
+export interface Area {
+  id: string;
+  nombre: string;
+}
+
+export type EstadoIncidente = 'abierto' | 'en_revision' | 'confirmado' | 'descartado';
+
+/** Aviso de la extensión que se ignoró. Sin el empleado: fecha (sin hora) y área agrupada si es chica. */
+export interface EventoRiesgo {
+  evento_id: number;
+  fecha: string;
+  area: string;
+  sitio: string | null;
+  tipo_entrada: 'tabla' | 'documento' | 'prompt';
+  tipos: DetectionType[];
+  detecciones: number;
+  incidente_id: number | null;
+  incidente_estado: EstadoIncidente | null;
 }

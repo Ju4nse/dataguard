@@ -1,13 +1,13 @@
 /**
  * Demo pública del panel (GitHub Pages): reemplaza a la API por datos ficticios generados en el navegador.
- * Copia la base de demo (db/init/04_datos_demo.sql): Empresa Demo SA, las mismas áreas y cantidad de
+ * Copia la base de demo (db/demo.sql): Empresa Demo SA, las mismas áreas y cantidad de
  * personas, y las mismas reglas para simular eventos, pero sobre un año para que se vea la evolución.
  * El resumen se calcula igual que app.panel_resumen, incluido el mínimo de personas por grupo.
  * No se conecta a ningún servidor: la "sesión" es una marca en sessionStorage de esta pestaña.
  */
 import type { DetectionType } from '@securedata/shared';
 import { ApiError } from '@securedata/shared/http';
-import type { Me, Resumen } from './api';
+import type { Area, Empleado, EventoRiesgo, Me, Resumen } from './api';
 
 export const DEMO_PASSWORD = 'demo1234';
 const MIN_GROUP = 5;
@@ -84,7 +84,7 @@ function generate(): { events: DemoEvent[]; incidents: string[] } {
 
 let data: ReturnType<typeof generate> | null = null;
 
-/** Mismo cálculo que app.panel_resumen (db/init/02_funciones.sql). */
+/** Mismo cálculo que app.panel_resumen (db/migraciones/02_funciones.sql). */
 function resumen(desde: string, hasta: string): Resumen {
   data ??= generate();
   const ev = data.events.filter((e) => e.day >= desde && e.day <= hasta);
@@ -126,6 +126,46 @@ function resumen(desde: string, hasta: string): Resumen {
     areas_omitidas: small.length && smallPeople < MIN_GROUP ? small.length : 0,
     minimo_por_grupo: MIN_GROUP,
   };
+}
+
+const DEMO_AREAS: Area[] = AREAS.map(([nombre], i) => ({ id: `demo-area-${i + 1}`, nombre }));
+
+/** Empleados ficticios, como los de la base de demo ("Ventas 1", "RRHH 2"…). */
+function empleados(): Empleado[] {
+  return AREAS.flatMap(([area, personas], i) =>
+    Array.from({ length: personas }, (_, n) => ({
+      id: `demo-${i + 1}-${n + 1}`,
+      nombre: `${area} ${n + 1}`,
+      email: `${area.toLowerCase()}${n + 1}@demo.test`,
+      area_id: DEMO_AREAS[i]!.id,
+      area,
+      activo: true,
+      pendiente_de_ingreso: false,
+      creado_en: '2025-09-01T12:00:00Z',
+    })),
+  ).sort((a, b) => a.nombre.localeCompare(b.nombre));
+}
+
+/** Mismo criterio que app.panel_eventos_riesgo: avisos ignorados, sin el empleado y con las áreas chicas agrupadas. */
+function riesgo(desde: string, hasta: string): EventoRiesgo[] {
+  data ??= generate();
+  const people = new Map(AREAS);
+  return data.events
+    .map((e, i) => ({ e, i }))
+    .filter(({ e }) => e.extension && e.ignored && e.day >= desde && e.day <= hasta)
+    .sort((a, b) => b.e.day.localeCompare(a.e.day))
+    .slice(0, 200)
+    .map(({ e, i }) => ({
+      evento_id: i + 1,
+      fecha: e.day,
+      area: (people.get(e.area) ?? 0) >= MIN_GROUP ? e.area : 'Otras áreas',
+      sitio: i % 2 ? 'claude.ai' : 'chatgpt.com',
+      tipo_entrada: 'prompt' as const,
+      tipos: [...new Set(e.detections.map((d) => d.tipo))].sort(),
+      detecciones: e.detections.reduce((n, d) => n + d.cantidad, 0),
+      incidente_id: null,
+      incidente_estado: null,
+    }));
 }
 
 /** Respaldo en memoria si sessionStorage no está disponible (dura hasta recargar la página). */
@@ -170,6 +210,7 @@ function me(): Me {
 }
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
+const READ_ONLY = 'La demo es de solo lectura: en una instalación real este cambio se guarda.';
 
 /** Misma firma que api() de @securedata/shared/http, respondiendo como la API real. */
 export async function demoApi<T>(path: string, body?: unknown): Promise<T> {
@@ -199,7 +240,23 @@ export async function demoApi<T>(path: string, body?: unknown): Promise<T> {
       if (!DATE.test(desde) || !DATE.test(hasta)) throw new ApiError(400, 'Fechas inválidas (AAAA-MM-DD)');
       return resumen(desde, hasta) as T;
     }
+    case '/panel/riesgo': {
+      if (me().usuario.rol === 'empleado') throw new ApiError(403, 'Solo para supervisores');
+      const params = new URLSearchParams(query);
+      const desde = params.get('desde') ?? '';
+      const hasta = params.get('hasta') ?? '';
+      if (!DATE.test(desde) || !DATE.test(hasta)) throw new ApiError(400, 'Fechas inválidas (AAAA-MM-DD)');
+      return riesgo(desde, hasta) as T;
+    }
+    case '/supervisor/empleados':
+      if (body === undefined) {
+        if (me().usuario.rol === 'empleado') throw new ApiError(403, 'Solo para supervisores');
+        return { empleados: empleados(), areas: DEMO_AREAS } as T;
+      }
+      throw new ApiError(403, READ_ONLY);
     default:
+      // Altas, cambios de política, incidentes…: la demo no guarda nada.
+      if (body !== undefined) throw new ApiError(403, READ_ONLY);
       throw new ApiError(404, 'No disponible en la demo');
   }
 }

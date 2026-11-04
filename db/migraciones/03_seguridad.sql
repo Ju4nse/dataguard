@@ -4,18 +4,22 @@
 --   · NO puede insertar, modificar ni borrar tablas directamente (solo vía funciones).
 --   · Puede leer solo SUS filas (RLS): su usuario, su organización, sus eventos.
 --   · El panel solo se lee con app.panel_* (agregados, rol + segundo factor).
--- La contraseña de abajo es SOLO para desarrollo local.
+-- La contraseña del rol la pone npm run db:migrate (SECUREDATA_API_PASSWORD en .env): no está en el repo.
 -- =====================================================================
 
-CREATE ROLE securedata_api LOGIN PASSWORD 'api_dev' NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS;
+DO $$ BEGIN
+  -- Los roles son de todo el servidor: si la base se recrea (db:reset), el rol ya existe.
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'securedata_api') THEN
+    CREATE ROLE securedata_api LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS;
+  END IF;
+END $$;
 
-REVOKE ALL ON SCHEMA public FROM PUBLIC;
 REVOKE ALL ON SCHEMA app FROM PUBLIC;
 REVOKE ALL ON ALL TABLES IN SCHEMA app FROM PUBLIC;
 REVOKE ALL ON ALL FUNCTIONS IN SCHEMA app FROM PUBLIC;
 ALTER DEFAULT PRIVILEGES IN SCHEMA app REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
 
-GRANT USAGE ON SCHEMA app TO securedata_api;
+GRANT USAGE ON SCHEMA app, extensions TO securedata_api;
 
 -- Lectura (filtrada por RLS) de lo propio.
 GRANT SELECT ON app.organizaciones, app.areas, app.usuarios, app.eventos, app.detecciones TO securedata_api;

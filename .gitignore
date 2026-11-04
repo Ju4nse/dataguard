@@ -15,3 +15,15 @@ equivalencias*.csv
 
 # Secreto de sesión del panel online (npm run panel:online)
 .env.panel
+
+# Videos: renders y capturas de control (pesados, se regeneran)
+videos/**/renders/
+videos/**/snapshots/
+
+# Generado por npm run api:edge (se despliega con npm run api:deploy)
+supabase/functions/api/index.ts
+
+# Locales: worktrees de Claude Code, estado del CLI de Supabase y videos (pesados)
+.claude/worktrees/
+supabase/.temp/
+videos/

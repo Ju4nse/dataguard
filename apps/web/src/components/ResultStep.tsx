@@ -1,6 +1,6 @@
 import { cellToString } from '@securedata/detector';
 import { downloadTable } from '../lib/files';
-import { useStore } from '../store';
+import { CHARTS_ENABLED, useStore } from '../store';
 import { ResultSummary } from './ResultSummary';
 import { TranslateResponse } from './TranslateResponse';
 import { Button, Card, Icon } from './ui';
@@ -53,10 +53,12 @@ export function ResultStep() {
               <Icon name="download" className="h-4 w-4" />
               Descargar {formatLabel} protegido
             </Button>
-            <Button variant="secondary" onClick={openCharts} disabled={aiProgress !== null}>
-              <Icon name="chart" className="h-4 w-4" />
-              Ver gráficos
-            </Button>
+            {CHARTS_ENABLED && (
+              <Button variant="secondary" onClick={openCharts} disabled={aiProgress !== null}>
+                <Icon name="chart" className="h-4 w-4" />
+                Ver gráficos
+              </Button>
+            )}
             {sheets.length > 1 && (
               <select
                 aria-label="Hoja"

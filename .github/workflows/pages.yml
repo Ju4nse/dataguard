@@ -1,6 +1,6 @@
 name: Deploy a GitHub Pages
 
-# Publica la app web como demo estática: todo corre en el navegador, sin API ni panel.
+# Publica la app web como demo estática (todo corre en el navegador) y el panel, conectado a la API en Supabase.
 # Incluye el modelo de IA local, generado acá a partir del original (ver README, "IA local").
 on:
   push:
@@ -35,13 +35,14 @@ jobs:
         env:
           BASE_PATH: /${{ github.event.repository.name }}/
           VITE_STATIC_DEMO: '1'
-      - name: Demo del panel (datos ficticios, sin servidor) en /panel/
+      # El panel se conecta a la API publicada como Edge Function de Supabase (npm run api:edge, ver README).
+      - name: Panel en /panel/
         run: |
           npm run build -w @securedata/panel
           cp -r apps/panel/dist apps/web/dist/panel
         env:
           BASE_PATH: /${{ github.event.repository.name }}/panel/
-          VITE_STATIC_DEMO: '1'
+          VITE_API_URL: https://nxqzryeutttqbslvlrjg.supabase.co/functions/v1
 
       # Modelo de IA: se cuantiza una vez y queda en caché mientras no cambie el script ni la revisión.
       - name: Caché del modelo de IA

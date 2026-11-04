@@ -1,7 +1,9 @@
 import pg from 'pg';
 import { config } from './config';
+import { pgConfig } from './pgConfig';
 
-export const pool = new pg.Pool({ connectionString: config.databaseUrl, max: 10 });
+// Pocas conexiones: el pooler de Supabase del plan gratis admite pocas por rol.
+export const pool = new pg.Pool({ ...pgConfig(config.databaseUrl), max: 5 });
 
 export interface DbSession {
   userId: string;

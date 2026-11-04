@@ -7,11 +7,12 @@ import { PseudonymRegistry } from '@securedata/detector';
 import type { Decision, Message } from '../lib/messages';
 import { analyzePrompt, protectPrompt, toDetections, type PromptAnalysis } from '../lib/protect';
 import { getSettings, onSettingsChanged, type Settings } from '../lib/storage';
+import type { TabRequest, TabStateRequest, TabStatus } from '../lib/tabs';
 import { createAiClient } from './ai';
 import { readText, writeText } from './editor';
 import { guardFiles } from './files';
 import { clickableFrom, composerFrom, findComposer, findSendButton, isDisabled, isSendButton, type Composer, type Site } from './sites';
-import { askUser, mountIndicator, setAiActive, setChecking, setPendingCount, showCopyFallback, type Choice } from './ui';
+import { askUser, mountIndicator, setAiActive, setChecking, setPaused, setPendingCount, showCopyFallback, type Choice } from './ui';
 
 /** Al enviar, cuánto se espera a la IA local como mucho (la primera vez carga el modelo del disco); después, solo reglas. */
 const AI_SEND_TIMEOUT_MS = 12_000;
@@ -28,6 +29,8 @@ export async function guard(site: Site) {
   let registry = new PseudonymRegistry();
   /** Mientras el aviso está abierto o se envía lo ya revisado, no se vuelve a interceptar. */
   let busy = false;
+  /** El usuario pausó DataGuard en esta pestaña desde el popup: no se revisa nada. */
+  let paused = false;
 
   const policy = () => settings.session?.politica ?? {};
   const report = async (a: PromptAnalysis, decision: Decision) => {
@@ -42,9 +45,27 @@ export async function guard(site: Site) {
   mountIndicator({ rows: () => registry.entries(), forget: () => (registry = new PseudonymRegistry()) });
   setAiActive(ai.active());
 
+  const pause = (on: boolean) => {
+    paused = on;
+    setPaused(on);
+  };
+  try {
+    const req: TabStateRequest = { tipo: 'pestana-estado' };
+    pause((await chrome.runtime.sendMessage(req)) === true);
+  } catch {
+    // Sin service worker se protege igual.
+  }
+  chrome.runtime.onMessage.addListener((message: TabRequest, sender, sendResponse: (r: TabStatus) => void) => {
+    if (sender.id !== chrome.runtime.id || sender.tab) return; // solo desde el popup
+    if (message?.tipo === 'pestana-pausar') pause(message.pausada);
+    else if (message?.tipo !== 'pestana-consultar') return;
+    sendResponse({ sitio: site.name, pausada: paused });
+  });
+
   // Archivos adjuntos (clip, arrastrar o pegar): mismos seudónimos y misma política que los prompts.
   guardFiles({
     siteName: site.name,
+    paused: () => paused,
     policy,
     registry: () => registry,
     organizacion: () => settings.session?.organizacion ?? null,
@@ -157,7 +178,7 @@ export async function guard(site: Site) {
   window.addEventListener(
     'keydown',
     (e) => {
-      if (e.key !== 'Enter' || e.shiftKey || e.isComposing) return;
+      if (paused || e.key !== 'Enter' || e.shiftKey || e.isComposing) return;
       const composer = composerFrom(site, e.target);
       if (!composer) return;
       if (busy || intercept(composer)) block(e);
@@ -169,7 +190,7 @@ export async function guard(site: Site) {
     'click',
     (e) => {
       const button = clickableFrom(e.target);
-      if (!button || busy) return;
+      if (paused || !button || busy) return;
       const composer = findComposer(site);
       if (composer && isSendButton(site, button, composer) && intercept(composer)) block(e);
     },
@@ -179,7 +200,7 @@ export async function guard(site: Site) {
   window.addEventListener(
     'submit',
     (e) => {
-      if (busy || !(e.target instanceof HTMLFormElement)) return;
+      if (paused || busy || !(e.target instanceof HTMLFormElement)) return;
       const composer = findComposer(site);
       if (composer && e.target.contains(composer) && intercept(composer)) block(e);
     },
@@ -193,15 +214,16 @@ export async function guard(site: Site) {
     'input',
     (e) => {
       const composer = composerFrom(site, e.target);
-      if (!composer) return;
+      if (paused || !composer) return;
       ai.prepare();
       clearTimeout(timer);
       timer = setTimeout(async () => {
         const text = readText(composer);
+        if (paused) return;
         if (!busy) setPendingCount(countIn(text)); // si ya se está enviando, el indicador muestra eso
         if (!ai.active() || !text.trim() || ai.has(text)) return;
         await ai.request(text, AI_SEND_TIMEOUT_MS);
-        if (!busy && readText(composer) === text) setPendingCount(countIn(text));
+        if (!busy && !paused && readText(composer) === text) setPendingCount(countIn(text));
       }, 500);
     },
     true,

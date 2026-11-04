@@ -135,10 +135,30 @@ export function Login({ onDone }: { onDone: () => void }) {
         </div>
       )}
       {demoMode && !STATIC_DEMO && step === 'password' && (
-        <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-inset ring-amber-200">
-          <strong className="font-semibold">Modo demo, sin segundo factor.</strong> Entrá con <code className="font-mono">seguridad@demo.test</code> y la
-          contraseña. Los usuarios que todavía no configuraron el segundo factor (como gerente) igual piden el QR.
-        </p>
+        <div className="space-y-2 rounded-lg bg-amber-50 px-3 py-2.5 text-sm text-amber-900 ring-1 ring-inset ring-amber-200">
+          <p>
+            <strong className="font-semibold">Modo demo, sin segundo factor.</strong> Contraseña <code className="font-mono">demo1234</code>. Empresa Demo SA
+            tiene datos ficticios; Empresa de Prueba muestra lo que registra <code className="font-mono">empleado@empresa-prueba.test</code> con la extensión.
+          </p>
+          <div className="flex flex-wrap gap-x-4">
+            {[
+              ['seguridad@demo.test', 'Empresa Demo SA'],
+              ['supervisor@empresa-prueba.test', 'Empresa de Prueba'],
+            ].map(([account, label]) => (
+              <button
+                key={account}
+                type="button"
+                className="min-h-10 font-semibold underline-offset-2 hover:underline"
+                onClick={() => {
+                  setEmail(account!);
+                  setPassword('demo1234');
+                }}
+              >
+                Entrar a {label}
+              </button>
+            ))}
+          </div>
+        </div>
       )}
       <form onSubmit={submit} className="space-y-4">
         {step === 'password' ? (

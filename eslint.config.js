@@ -5,7 +5,18 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['**/dist/**', '**/node_modules/**', '.cache/**', 'fixtures/**', 'apps/web/public/**'] },
+  {
+    ignores: [
+      '.claude/**',
+      'supabase/functions/api/index.ts',
+      '**/dist/**',
+      '**/dist-firefox/**',
+      '**/node_modules/**',
+      '.cache/**',
+      'fixtures/**',
+      'apps/web/public/**',
+    ],
+  },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
