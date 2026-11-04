@@ -27,6 +27,13 @@ export const verify2fa = (codigo: string) => api<{ estado: LoginState }>('/auth/
 export const changePassword = (actual: string, nueva: string) => api<{ estado: LoginState }>('/auth/password', { actual, nueva });
 export const logout = () => api('/auth/logout', {});
 
+/** El servidor corre sin segundo factor (solo demo): se ofrecen las cuentas de prueba. */
+export const demoMode = () =>
+  api<{ mfaDesactivado?: boolean }>('/salud').then(
+    (r) => !!r.mfaDesactivado,
+    () => false,
+  );
+
 /** Envía SOLO metadatos: tipos y cantidades. Nunca contenido, nombre de archivo ni nombres de columnas. */
 export async function sendEvent(e: {
   tipoEntrada: 'tabla' | 'documento' | 'prompt';

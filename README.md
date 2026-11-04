@@ -127,13 +127,13 @@ El modelo se puede ajustar a textos como los de DataGuard sin que pese más (cam
 2. Abrí [`entrenamiento/entrenar_gliner.ipynb`](entrenamiento/entrenar_gliner.ipynb) en Google Colab ([abrir directo](https://colab.research.google.com/github/Ju4nse/dataguard/blob/main/entrenamiento/entrenar_gliner.ipynb)) (GPU T4 gratis), subí los dos archivos y ejecutá todo (~30-45 min). Entrena desde `urchade/gliner_multi_pii-v1`, compara antes/después, exporta a ONNX, lo comprime con `quantize-model.py --plegado` y lo guarda en tu Google Drive.
 3. Copiá `model_ft_w8p.onnx` a `.cache/modelos/gliner_multi_pii-v1/onnx/` y medilo: `npm run eval:ia -- --modelo onnx/model_ft_w8p.onnx`. Si mejora, recalibrá (`npm run calibrar:ia -- --modelo …`) y recién al final corré una vez `--control`: si no le gana al modelo actual en el set de control, no se usa.
 
-## Panel en GitHub Pages (API en Supabase)
+## App web y panel en GitHub Pages (API en Supabase)
 
-El panel se publica en [`/dataguard/panel/`](https://ju4nse.github.io/dataguard/panel/) y se conecta a la base real: la API corre como Edge Function de Supabase (`supabase/functions/api`, la misma app de `apps/api/src/app.ts`), así que anda aunque esta PC esté apagada.
+La app web ([`/dataguard/`](https://ju4nse.github.io/dataguard/)) y el panel ([`/dataguard/panel/`](https://ju4nse.github.io/dataguard/panel/)) se conectan a la base real: la API corre como Edge Function de Supabase (`supabase/functions/api`, la misma app de `apps/api/src/app.ts`), así que anda aunque esta PC esté apagada.
 
 - **Cuentas** (contraseña `demo1234`): `seguridad@demo.test` (Empresa Demo SA, datos ficticios) y `supervisor@empresa-prueba.test` (Empresa de Prueba, sin datos simulados: muestra lo que registra `empleado@empresa-prueba.test` con la extensión, con detalle por empleado).
 - **Publicar la API:** `npx supabase login` una vez (en una terminal propia) y `npm run api:deploy`. Empaqueta la API, carga sus secretos desde `.env`/`.env.panel` y la despliega. Por defecto va **sin segundo factor** (demo); con datos reales, `npm run api:deploy -- --con-2fa`.
-- **Sesión:** la cookie no viaja entre `github.io` y `supabase.co`, así que al origen de Pages (`TOKEN_ORIGINS`) la API le devuelve el token y el panel lo manda como `Authorization: Bearer` (guardado en la pestaña, `sessionStorage`).
+- **Sesión:** la cookie no viaja entre `github.io` y `supabase.co`, así que al origen de Pages (`TOKEN_ORIGINS`) la API le devuelve el token y el panel lo manda como `Authorization: Bearer` (en `localStorage`, compartido entre la app web y el panel: se inicia sesión una vez). La extensión toma esa misma sesión (`apps/extension/src/content/dataguard.ts`).
 - **Extensión:** en el popup, *Servidor* → `https://nxqzryeutttqbslvlrjg.supabase.co/functions/v1`.
 - **Límites:** el límite de intentos y las sesiones cerradas viven en memoria, y Supabase puede correr varias copias de la función: protegen menos que con una sola API. Si el proyecto se pausa (plan gratis, 7 días sin uso), el panel no anda hasta restaurarlo.
 

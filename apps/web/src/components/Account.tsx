@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { ApiError, changePassword, fetchSession, login, logout, verify2fa } from '../lib/api';
+import { ApiError, changePassword, demoMode, fetchSession, login, logout, verify2fa } from '../lib/api';
 import { useStore } from '../store';
 import { Button, Icon, inputClass } from './ui';
 
@@ -65,6 +65,12 @@ function LoginDialog({ onClose }: { onClose: () => void }) {
   const [repetida, setRepetida] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  /** El servidor corre sin segundo factor (demo): se ofrece la cuenta de empleado de prueba. */
+  const [demo, setDemo] = useState(false);
+
+  useEffect(() => {
+    void demoMode().then(setDemo);
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -141,6 +147,24 @@ function LoginDialog({ onClose }: { onClose: () => void }) {
           <div className="space-y-4">
             <Field label="Email" type="email" autoComplete="username" required autoFocus value={email} onChange={(e) => setEmail(e.target.value)} />
             <Field label="Contraseña" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+            {demo && (
+              <div className="rounded-lg bg-amber-50 px-3 py-2.5 text-sm text-amber-900 ring-1 ring-inset ring-amber-200">
+                <p>
+                  <strong className="font-semibold">Demo.</strong> Lo que hagas con <code className="font-mono">empleado@empresa-prueba.test</code> lo ve{' '}
+                  <code className="font-mono">supervisor@empresa-prueba.test</code> en el panel (contraseña <code className="font-mono">demo1234</code>).
+                </p>
+                <button
+                  type="button"
+                  className="min-h-10 font-semibold underline-offset-2 hover:underline"
+                  onClick={() => {
+                    setEmail('empleado@empresa-prueba.test');
+                    setPassword('demo1234');
+                  }}
+                >
+                  Completar con el empleado de prueba
+                </button>
+              </div>
+            )}
           </div>
         ) : step === 'cambiar' ? (
           <div className="space-y-4">
